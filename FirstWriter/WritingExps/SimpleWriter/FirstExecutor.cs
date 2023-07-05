@@ -22,7 +22,6 @@ namespace SimpleWriter
 
          string fileName = @$"d://temp/ATT/{_fileName}.txt";
          await using FileStream fileStream = File.Open(fileName, FileMode.Create, FileAccess.Write);
-         await using BinaryWriter writer = new BinaryWriter(fileStream, textCreator.Encoding);
 
          using IEnumerator<byte[]> textBytesSource = textCreator.GenerateBytes().GetEnumerator();
          using IEnumerator<byte[]> numberBytesSource = numbersCreator.GenerateBytes().GetEnumerator();
@@ -38,7 +37,7 @@ namespace SimpleWriter
             line.AddRange(splitter);
             line.AddRange(textBytesSource.Current);
             line.AddRange(newLine);
-            await writer.BaseStream.WriteAsync(line.ToArray());
+            await fileStream.WriteAsync(line.ToArray());
             textBytesSource.MoveNext();
             numberBytesSource.MoveNext();
          }

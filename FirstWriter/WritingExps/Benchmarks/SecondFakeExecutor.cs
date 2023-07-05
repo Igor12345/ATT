@@ -1,30 +1,29 @@
 ﻿using ContentGenerator;
 
-namespace SimpleWriter;
+namespace Benchmarks;
 
-internal class SecondExecutor
+internal class SecondFakeExecutor
 {
    private readonly string _fileName;
    private readonly long _lines;
 
-   public SecondExecutor(string fileName, long lines)
+   public SecondFakeExecutor(string fileName, long lines)
    {
       _fileName = fileName;
       _lines = lines;
    }
 
-   public async Task CreateFile()
+   public int CreateFile()
    {
       LinesCreator linesCreator = new LinesCreator();
       byte[] line = new byte[19 + 4 + 1024];
 
-      string fileName = @$"d://temp/ATT/{_fileName}.txt";
-      await using FileStream fileStream = File.Open(fileName, FileMode.Create, FileAccess.Write);
-         
+      int result = 0;
       for (int i = 0; i < _lines; i++)
       {
          int length = linesCreator.NextLine(line);
-         await fileStream.WriteAsync(line, 0, length);
+         result+=length;
       }
+      return result;
    }
 }
