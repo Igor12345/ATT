@@ -72,6 +72,16 @@ await using (InfoLogger logger = new InfoLogger(fileName, $"{Encoding.UTF8.BodyN
 }
 
 Console.WriteLine("________________________________________________________________________________");
+
+Console.WriteLine("Creating third big file");
+fileName = "third";
+await using (InfoLogger logger = new InfoLogger(fileName, $"{Encoding.UTF8.BodyName} - {lines}"))
+{
+   ThirdExecutor thirdExecutor = new ThirdExecutor(fileName, lines);
+   await thirdExecutor.CreateFile();
+}
+
+Console.WriteLine("________________________________________________________________________________");
 Console.ReadLine();
 
 FileCreator fileCreator = new FileCreator(creator);
