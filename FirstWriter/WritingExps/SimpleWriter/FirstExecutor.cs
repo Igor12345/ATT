@@ -2,12 +2,12 @@
 
 namespace SimpleWriter
 {
-   internal class Executor 
+   internal class FirstExecutor 
    {
       private readonly string _fileName;
       private readonly long _lines;
 
-      public Executor(string fileName, long lines)
+      public FirstExecutor(string fileName, long lines)
       {
          _fileName = fileName;
          _lines = lines;

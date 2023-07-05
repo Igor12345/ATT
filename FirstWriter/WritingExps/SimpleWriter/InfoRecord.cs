@@ -39,6 +39,6 @@ internal class InfoRecord
       }
 
       return
-         $"File {_fileName} ({_additionalInfo}) was processed for {_stopwatch.Elapsed.Seconds} sec and {_stopwatch.ElapsedMilliseconds} milliseconds.";
+         $"File {_fileName} ({_additionalInfo}) was processed for {_stopwatch.Elapsed.Minutes} minutes, {_stopwatch.Elapsed.Seconds} seconds and {_stopwatch.Elapsed.Milliseconds} milliseconds. Total: {_stopwatch.Elapsed.TotalMilliseconds} ";
    }
 }

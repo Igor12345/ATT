@@ -12,10 +12,10 @@ namespace ContentGenerator
       private readonly List<string> _created = new List<string>();
 
       //todo what's new
-      private readonly Random _random = new();
+      private Random Random { get; init; }
 
       public static ITextCreator NumbersCreator => new TextCreator(19, Encoding.ASCII, false)
-         { MinByte = 48, MaxByte = 57 };
+         { MinByte = 48, MaxByte = 57, Random = new(1) };
 
       public TextCreator(int maxStringLength = 1024, Encoding? encoding = null, bool memoryMode = false)
       {
@@ -24,6 +24,7 @@ namespace ContentGenerator
          _encoding = encoding ?? Encoding.ASCII;
          MinByte = 32;
          MaxByte = 126;
+         Random = new(2);
       }
 
       public Encoding Encoding => _encoding;
@@ -42,12 +43,12 @@ namespace ContentGenerator
 
          while (true)
          {
-            int length = _random.Next(1, _maxStringLength);
+            int length = Random.Next(1, _maxStringLength);
             byte[] bytes = new byte[length];
 
             for (int i = 0; i < length; i++)
             {
-               bytes[i] = (byte)_random.Next(MinByte, MaxByte);
+               bytes[i] = (byte)Random.Next(MinByte, MaxByte);
             }
 
             string str = _encoding.GetString(bytes);
@@ -56,16 +57,17 @@ namespace ContentGenerator
             yield return str;
          }
       }
+
       public IEnumerable<byte[]> GenerateBytes()
       {
          while (true)
          {
-            int length = _random.Next(1, _maxStringLength);
+            int length = Random.Next(1, _maxStringLength);
             byte[] bytes = new byte[length];
 
             for (int i = 0; i < length; i++)
             {
-               bytes[i] = (byte)_random.Next(MinByte, MaxByte);
+               bytes[i] = (byte)Random.Next(MinByte, MaxByte);
             }
 
             yield return bytes;

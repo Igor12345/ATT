@@ -51,14 +51,24 @@ ITextCreator utf32 = new TextConvertor(creator, Encoding.UTF32);
 // }
 // Console.ReadLine();
 
-Console.WriteLine("Creating big file");
+Console.WriteLine("Creating first big file");
 
 string fileName = "first";
 long lines = 10_000_000;
 await using(InfoLogger logger = new InfoLogger(fileName, $"{Encoding.UTF8.BodyName} - {lines}"))
 {
-   Executor executor = new Executor(fileName, lines);
-   await executor.CreateFile();
+   FirstExecutor firstExecutor = new FirstExecutor(fileName, lines);
+   await firstExecutor.CreateFile();
+}
+
+Console.WriteLine("________________________________________________________________________________");
+
+Console.WriteLine("Creating second big file");
+fileName = "second";
+await using (InfoLogger logger = new InfoLogger(fileName, $"{Encoding.UTF8.BodyName} - {lines}"))
+{
+   SecondExecutor secondExecutor = new SecondExecutor(fileName, lines);
+   await secondExecutor.CreateFile();
 }
 
 Console.WriteLine("________________________________________________________________________________");
