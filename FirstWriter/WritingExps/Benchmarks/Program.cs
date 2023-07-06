@@ -2,4 +2,5 @@
 
 using BenchmarkDotNet.Running;
 
-var summary = BenchmarkRunner.Run<RandomBenchmark>();
+// var summary = BenchmarkRunner.Run<RandomBenchmark>();
+var summaryComparer = BenchmarkRunner.Run<StringsComparisonBenchmark>();

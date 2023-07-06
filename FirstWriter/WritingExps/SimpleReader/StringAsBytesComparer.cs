@@ -2,13 +2,7 @@
 
 public class StringAsBytesComparer
 {
-   private readonly byte[] _eol;
-
-   public StringAsBytesComparer(byte[] eol)
-   {
-      _eol = eol;
-   }
-
+   
    public static int Compare(Span<byte> strA, Span<byte> strB)
    {
       //todo

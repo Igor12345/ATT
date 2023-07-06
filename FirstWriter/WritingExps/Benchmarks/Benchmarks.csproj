@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ContentGenerator\ContentGenerator.csproj" />
+    <ProjectReference Include="..\SimpleReader\SimpleReader.csproj" />
   </ItemGroup>
 
 </Project>

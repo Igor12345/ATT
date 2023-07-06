@@ -14,7 +14,7 @@ internal class ThirdFakeExecutor
    {
       _fileName = fileName;
       _lines = lines;
-      _maxLineLength = 19 + 4 + 1024;
+      _maxLineLength = ConstValues.MaxNumberLength + 4 + ConstValues.MaxTextLength;
    }
 
    [Benchmark(Baseline = true)]
