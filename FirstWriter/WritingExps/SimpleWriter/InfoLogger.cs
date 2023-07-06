@@ -1,6 +1,6 @@
 ﻿namespace SimpleWriter;
 
-internal class InfoLogger : IAsyncDisposable
+internal class InfoLogger : IAsyncDisposable, IDisposable
 {
    private readonly string _fileName;
    readonly InfoRecord _record;
@@ -12,6 +12,7 @@ internal class InfoLogger : IAsyncDisposable
 
    public void Dispose()
    {
+      _record.Stop();
       string fileName = @$"d://temp/ATT/{_fileName}.log";
       using var stream = File.CreateText(fileName);
       stream.WriteLine(_record.PrintResult());

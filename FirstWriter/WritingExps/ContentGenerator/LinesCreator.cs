@@ -18,8 +18,8 @@ public class LinesCreator
    public LinesCreator()
    {
       _encoding = Encoding.UTF8;
-      _maxNumberLength = 19;
-      _maxTextLength = 1024;
+      _maxNumberLength = ConstValues.MaxNumberLength;
+      _maxTextLength = ConstValues.MaxTextLength;
       MinNumberByte = 48;
       MaxNumberByte = 57;
       MinTextByte = 32;
@@ -75,6 +75,30 @@ public class LinesCreator
       }
       line[start + numberLength + 2 + textLength] = _newLine[0];
       line[start + numberLength + 3 + textLength] = _newLine[1];
+
+      return numberLength + textLength + 4;
+   }
+
+   public int NextLine(Span<byte> line)
+   {
+      int numberLength = _randomNumbers.Next(1, _maxNumberLength);
+
+      for (int i = 0; i < numberLength; i++)
+      {
+         //Next NextInt64?
+         line[i] = (byte)_randomNumbers.Next(MinNumberByte, MaxNumberByte);
+      }
+      line[numberLength] = _splitter[0];
+      line[numberLength + 1] = _splitter[1];
+
+      int textLength = _randomNumbers.Next(1, _maxTextLength);
+
+      for (int i = numberLength + 2; i < numberLength + 2 + textLength; i++)
+      {
+         line[i] = (byte)_randomText.Next(MinTextByte, MaxTextByte);
+      }
+      line[numberLength + 2 + textLength] = _newLine[0];
+      line[numberLength + 3 + textLength] = _newLine[1];
 
       return numberLength + textLength + 4;
    }

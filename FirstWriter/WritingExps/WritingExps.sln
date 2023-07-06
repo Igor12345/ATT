@@ -3,11 +3,15 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.4.33205.214
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimpleWriter", "SimpleWriter\SimpleWriter.csproj", "{6B9B6BBC-3A7C-47F5-AEB5-9FA98A17CD28}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SimpleWriter", "SimpleWriter\SimpleWriter.csproj", "{6B9B6BBC-3A7C-47F5-AEB5-9FA98A17CD28}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ContentGenerator", "ContentGenerator\ContentGenerator.csproj", "{633C7206-820A-47CE-BA54-EDCC18871647}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ContentGenerator", "ContentGenerator\ContentGenerator.csproj", "{633C7206-820A-47CE-BA54-EDCC18871647}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Benchmarks", "Benchmarks\Benchmarks.csproj", "{ED6A7CD8-D726-455A-A446-02DFBC0D2963}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Benchmarks", "Benchmarks\Benchmarks.csproj", "{ED6A7CD8-D726-455A-A446-02DFBC0D2963}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimpleReader", "SimpleReader\SimpleReader.csproj", "{BF7B0104-3E0B-45B7-89C0-70F05CC8F6EA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoreTests", "CoreTests\CoreTests.csproj", "{D79D301A-980A-415F-88EF-D048B77C6CA1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,6 +31,14 @@ Global
 		{ED6A7CD8-D726-455A-A446-02DFBC0D2963}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{ED6A7CD8-D726-455A-A446-02DFBC0D2963}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{ED6A7CD8-D726-455A-A446-02DFBC0D2963}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BF7B0104-3E0B-45B7-89C0-70F05CC8F6EA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BF7B0104-3E0B-45B7-89C0-70F05CC8F6EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BF7B0104-3E0B-45B7-89C0-70F05CC8F6EA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BF7B0104-3E0B-45B7-89C0-70F05CC8F6EA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D79D301A-980A-415F-88EF-D048B77C6CA1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D79D301A-980A-415F-88EF-D048B77C6CA1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D79D301A-980A-415F-88EF-D048B77C6CA1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D79D301A-980A-415F-88EF-D048B77C6CA1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
