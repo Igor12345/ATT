@@ -9,9 +9,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ContentGenerator", "Content
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Benchmarks", "Benchmarks\Benchmarks.csproj", "{ED6A7CD8-D726-455A-A446-02DFBC0D2963}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimpleReader", "SimpleReader\SimpleReader.csproj", "{BF7B0104-3E0B-45B7-89C0-70F05CC8F6EA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SimpleReader", "SimpleReader\SimpleReader.csproj", "{BF7B0104-3E0B-45B7-89C0-70F05CC8F6EA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoreTests", "CoreTests\CoreTests.csproj", "{D79D301A-980A-415F-88EF-D048B77C6CA1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CoreTests", "CoreTests\CoreTests.csproj", "{D79D301A-980A-415F-88EF-D048B77C6CA1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReaderTests", "ReaderTests\ReaderTests.csproj", "{329640AC-7B98-407E-BC96-B0D54EF51505}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,6 +41,10 @@ Global
 		{D79D301A-980A-415F-88EF-D048B77C6CA1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D79D301A-980A-415F-88EF-D048B77C6CA1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D79D301A-980A-415F-88EF-D048B77C6CA1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{329640AC-7B98-407E-BC96-B0D54EF51505}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{329640AC-7B98-407E-BC96-B0D54EF51505}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{329640AC-7B98-407E-BC96-B0D54EF51505}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{329640AC-7B98-407E-BC96-B0D54EF51505}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

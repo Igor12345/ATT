@@ -7,3 +7,4 @@ public record struct ReadingResult
    public string Message;
 }
 
+public record struct Result(bool Success, string Message);

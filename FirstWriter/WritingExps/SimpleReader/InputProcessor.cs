@@ -1,36 +1,34 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Text;
 
-namespace SimpleReader
+namespace SimpleReader;
+
+public class InputProcessor
 {
-   internal class InputProcessor
+   public async Task<Result> ReadRecords(string path, byte[] buffer, LineRecord[] records)
    {
-      private readonly byte[] _eol;
+      await using FileStream stream = File.OpenRead(path);
+      RecordsRetriever retriever = new RecordsRetriever(stream);
+      var readingResult = await retriever.ReadChunk(buffer, 0, buffer.Length);
+      if (!readingResult.Success)
+         return new Result(false, readingResult.Message);
 
-      public InputProcessor(byte[] eol)
-      {
-         _eol = eol;
-      }
+      var encoding = Encoding.UTF8;
+      RecordsExtractor extractor =
+         new RecordsExtractor(encoding.GetBytes(Environment.NewLine), encoding.GetBytes(". "));
+      return extractor.SplitOnRecords(buffer, records);
+   }
 
-      public void SplitOnLines(Span<byte> buffer, int[] linesPositions)
-      {
-         //compare with 
-         // foreach (byte b in buffer)
-         // {
-         //    
-         // }
-         int lineIndex = 0;
-         for (int i = 0; i < buffer.Length - 1; i++)
-         {
-            if (buffer[i] == _eol[0] && buffer[i + 1] == _eol[1])
-            {
-               linesPositions[lineIndex++] = i;
-               i++;
-            }
-         }
-      }
+   public async Task<Result> ReadMemoryRecords(string path, byte[] buffer, LineMemory[] records)
+   {
+      await using FileStream stream = File.OpenRead(path);
+      RecordsRetriever retriever = new RecordsRetriever(stream);
+      var readingResult = await retriever.ReadChunk(buffer, 0, buffer.Length);
+      if (!readingResult.Success)
+         return new Result(false, readingResult.Message);
+
+      var encoding = Encoding.UTF8;
+      RecordsExtractor extractor =
+         new RecordsExtractor(encoding.GetBytes(Environment.NewLine), encoding.GetBytes(". "));
+      return extractor.SplitOnMemoryRecords(buffer, records);
    }
 }

@@ -150,7 +150,8 @@ public class PriorityQueue<TElement, TPriority>
    {
       ArgumentNullException.ThrowIfNull(items);
 
-      _nodes = EnumerableHelpers.ToArray(items, out _size);
+      // _nodes = EnumerableHelpers.ToArray(items, out _size);
+      _nodes = items.ToArray();
       _comparer = InitializeComparer(comparer);
 
       if (_size > 1)

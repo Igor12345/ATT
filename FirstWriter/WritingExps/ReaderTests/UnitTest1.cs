@@ -1,0 +1,104 @@
+using System.Diagnostics;
+using System.Text;
+using SimpleReader;
+
+namespace ReaderTests
+{
+   public class UnitTest1
+   {
+      [Fact]
+      public async Task CanRead()
+      {
+         InputProcessor inputProcessor = new InputProcessor();
+         string fileName = "fourth";
+         string path = @$"d://temp/ATT/{fileName}.txt";
+         byte[] bytes = new byte[100_000];
+         LineRecord[] records = new LineRecord[10_000];
+         var result = await inputProcessor.ReadRecords(path, bytes, records);
+
+         var first = records[0];
+
+         Assert.True(result.Success);
+      }
+
+      [Fact]
+      public async Task CanSort()
+      {
+         byte[] bytes = new byte[2_000_000_000];
+         LineRecord[] records = new LineRecord[100000];
+
+         InputProcessor inputProcessor = new InputProcessor();
+         string fileName = "fourth";
+         string path = @$"d://temp/ATT/{fileName}.txt";
+         Result result = await inputProcessor.ReadRecords(path, bytes, records);
+
+         Stopwatch stopwatch = Stopwatch.StartNew();
+         RecordsSorter sorter = new RecordsSorter();
+         var sorted = sorter.Sort(records);
+
+         stopwatch.Stop();
+
+         LineAsString[] originalRecords = ConvertToStrings(records);
+         LineAsString[] sortedRecords = ConvertToStrings(sorted);
+
+         var min = stopwatch.Elapsed.Minutes;
+         var sec = stopwatch.Elapsed.Seconds;
+         var total = stopwatch.Elapsed.TotalMilliseconds;
+
+         Assert.Equal(sorted.Length, records.Length);
+      }
+
+      [Fact]
+      public async Task CanSortOnSite()
+      {
+         byte[] bytes = new byte[2_000_000_000];
+         LineMemory[] records = new LineMemory[100000];
+
+         InputProcessor inputProcessor = new InputProcessor();
+         string fileName = "fourth";
+         string path = @$"d://temp/ATT/{fileName}.txt";
+         Result result = await inputProcessor.ReadMemoryRecords(path, bytes, records);
+
+         Stopwatch stopwatch = Stopwatch.StartNew();
+         InSiteRecordsSorter sorter = new InSiteRecordsSorter(bytes);
+         var sorted = sorter.Sort(records);
+
+         stopwatch.Stop();
+
+         LineAsString[] originalRecords = ConvertToStrings(records, bytes);
+         LineAsString[] sortedRecords = ConvertToStrings(sorted, bytes);
+
+         var min = stopwatch.Elapsed.Minutes;
+         var sec = stopwatch.Elapsed.Seconds;
+         var total = stopwatch.Elapsed.TotalMilliseconds;
+
+         Assert.Equal(sorted.Length, records.Length);
+      }
+
+      private LineAsString[] ConvertToStrings(LineMemory[] lineRecords, byte[] source)
+      {
+         Encoding encoding = Encoding.UTF8;
+
+         LineAsString[] result = new LineAsString[lineRecords.Length];
+         for (int i = 0; i < lineRecords.Length; i++)
+         {
+            result[i] = new LineAsString(lineRecords[i].Number,
+               encoding.GetString(source[lineRecords[i].From..lineRecords[i].To]));
+         }
+         return result;
+
+      }
+
+      private LineAsString[] ConvertToStrings(LineRecord[] lineRecords)
+      {
+         Encoding encoding = Encoding.UTF8;
+
+         LineAsString[] result = new LineAsString[lineRecords.Length];
+         for (int i = 0; i < lineRecords.Length; i++)
+         {
+            result[i] = new LineAsString(lineRecords[i].Number, encoding.GetString(lineRecords[i].Text));
+         }
+         return result;
+      }
+   }
+}

@@ -3,7 +3,7 @@
 public class StringAsBytesComparer
 {
    
-   public static int Compare(Span<byte> strA, Span<byte> strB)
+   public static int Compare(ReadOnlySpan<byte> strA, ReadOnlySpan<byte> strB)
    {
       //todo
       if (strA == null)
@@ -40,31 +40,31 @@ public class StringAsBytesComparer
       {
          if (strA[++i] != strB[i])
          {
-            diffOffset = i + 0;
+            diffOffset = i;
             break;
          }
 
          if (strA[++i] != strB[i])
          {
-            diffOffset = i + 1;
+            diffOffset = i;
             break;
          }
 
          if (strA[++i] != strB[i])
          {
-            diffOffset = i + 2;
+            diffOffset = i;
             break;
          }
 
          if (strA[++i] != strB[i])
          {
-            diffOffset = i + 3;
+            diffOffset = i;
             break;
          }
 
          if (strA[++i] != strB[i])
          {
-            diffOffset = i + 4;
+            diffOffset = i;
             break;
          }
 

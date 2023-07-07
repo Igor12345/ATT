@@ -1,17 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace SimpleReader
+﻿namespace SimpleReader
 {
-   internal class RecordsSorter
+   public class RecordsSorter
    {
-      public int Sort()
+      public LineRecord[] Sort(LineRecord[] input)
       {
-         PriorityQueue<byte[], int> priorityQueue=new PriorityQueue<byte[], int>();
-         return 0;
+         return input.Order(new RecordsComparer()).ToArray();
       }
    }
 }

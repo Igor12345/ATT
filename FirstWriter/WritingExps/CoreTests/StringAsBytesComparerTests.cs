@@ -15,6 +15,7 @@ namespace CoreTests
       [InlineData("ab", "abc")]
       [InlineData("abcdefg", "abcdefg")]
       [InlineData("abcdefg", "abc2defg")]
+      [InlineData("abcdef", "abcdefg")]
       public void ShouldCorrectlyCompareStrings(string left, string right)
       {
          Span<byte> leftSpan = new byte[left.Length];
