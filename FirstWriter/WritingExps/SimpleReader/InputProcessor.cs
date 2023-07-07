@@ -6,6 +6,7 @@ public class InputProcessor
 {
    public async Task<Result> ReadRecords(string path, byte[] buffer, LineRecord[] records)
    {
+      var file = File.OpenHandle(path);
       await using FileStream stream = File.OpenRead(path);
       RecordsRetriever retriever = new RecordsRetriever(stream);
       var readingResult = await retriever.ReadChunk(buffer, 0, buffer.Length);
