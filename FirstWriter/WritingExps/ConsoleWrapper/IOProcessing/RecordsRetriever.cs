@@ -34,11 +34,9 @@ namespace ConsoleWrapper.IOProcessing
          _encoding = Guard.NotNull(encoding, nameof(encoding));
       }
 
-      public async Task<ReadingResult> ReadChunk(byte[] buffer, int offset, int count)
+      public async Task<ReadingResult> ReadChunkAsync(byte[] buffer, CancellationToken cancellationToken)
       {
-         // using BinaryReader reader = new BinaryReader(_inputStream, _encoding, true);
-         // reader.BaseStream.Position = offset;
-         int length = await _inputStream.ReadAsync(buffer, offset, count);
+         int length = await _inputStream.ReadAsync(buffer, 0,buffer.Length, cancellationToken);
          return new ReadingResult() { Success = true, Size = length };
       }
    }

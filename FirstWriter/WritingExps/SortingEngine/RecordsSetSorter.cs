@@ -1,26 +1,41 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Buffers;
+using System.Diagnostics;
+using System.Text;
+using InfoStructure.Parameters;
 using OneOf;
 using OneOf.Types;
+using SortingEngine.Entities;
+using SortingEngine.RowData;
 using SortingEngine.RuntimeConfiguration;
+using SortingEngine.Sorters;
 
 namespace SortingEngine
 {
    public class RecordsSetSorter
    {
+      private readonly Encoding _encoding;
       private byte[]? _inputBuffer;
       private IConfig _configuration;
+      private PoolsManager _poolsManager = new PoolsManager();
 
-      public async Task<Result> SortAsync(IBytesProducer producer)
+      public RecordsSetSorter(Encoding encoding)
+      {
+         _encoding = Guard.NotNull(encoding, nameof(encoding));
+      }
+
+      public event EventHandler<SortingCompletedEventArgs> SortingCompleted;
+
+      public async Task<Result> SortAsync(IBytesProducer producer, CancellationToken cancellationToken)
       {
          try
          {
             byte[] inputStorage = RentInputStorage();
             int length = 0;
-
             //make something more fancy
             while (length >= 0)
             {
-               var result = await producer.PopulateAsync(inputStorage);
+               var result = await producer.PopulateAsync(inputStorage, cancellationToken);
 
                if (!result.Success)
                {
@@ -29,7 +44,7 @@ namespace SortingEngine
 
                length = result.Size;
 
-               ProcessRecords(_inputBuffer);
+               ProcessRecords(inputStorage);
             }
 
             return new Result(true, "");
@@ -75,7 +90,15 @@ namespace SortingEngine
 
       private void ProcessRecords(byte[] inputBuffer)
       {
+         RecordsExtractor extractor =
+            new RecordsExtractor(_encoding.GetBytes(Environment.NewLine), _encoding.GetBytes(". "));
+         LineMemory[] records = _poolsManager.AcquireRecordsArray();
+         Result result = extractor.SplitOnMemoryRecords(inputBuffer, records);
 
+         InSiteRecordsSorter sorter = new InSiteRecordsSorter(inputBuffer);
+         LineMemory[] sorted = sorter.Sort(records);
+
+         OnSortingCompleted(new SortingCompletedEventArgs(sorted, inputBuffer));
       }
 
       private byte[] RentInputStorage()
@@ -83,6 +106,11 @@ namespace SortingEngine
          //todo introduce buffer manager
          _inputBuffer ??= new byte[_configuration.InputBufferSize];
          return _inputBuffer;
+      }
+
+      private void OnSortingCompleted(SortingCompletedEventArgs e)
+      {
+         SortingCompleted?.Invoke(this, e);
       }
    }
    public record struct ReadingResult
@@ -92,11 +120,31 @@ namespace SortingEngine
       public string Message;
    }
 
+   public class SortingCompletedEventArgs : EventArgs
+   {
+      public SortingCompletedEventArgs(LineMemory[] sorted, byte[] source)
+      {
+         Sorted = Guard.NotNull(sorted, nameof(sorted));
+         Source = Guard.NotNull(source, nameof(source));
+      }
+
+      public LineMemory[] Sorted { get; init; }
+      public byte[] Source { get; init; }
+   }
+
    public record struct Result(bool Success, string Message);
 
    public interface IBytesProducer
    {
       Task<OneOf<Result<int>, Error<string>>> PopulateAsyncFunc(byte[] buffer);
-      Task<ReadingResult> PopulateAsync(byte[] buffer);
+      Task<ReadingResult> PopulateAsync(byte[] buffer, CancellationToken cancellationToken);
+   }
+
+   public class PoolsManager
+   {
+      public LineMemory[] AcquireRecordsArray()
+      {
+         return new LineMemory[2_000_000];
+      }
    }
 }

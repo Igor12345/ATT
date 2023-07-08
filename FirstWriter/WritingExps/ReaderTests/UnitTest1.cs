@@ -1,6 +1,10 @@
 using System.Diagnostics;
+using System.IO;
 using System.Text;
 using SimpleReader;
+using SortingEngine;
+using SortingEngine.Entities;
+using SortingEngine.Sorters;
 
 namespace ReaderTests
 {
@@ -99,6 +103,23 @@ namespace ReaderTests
             result[i] = new LineAsString(lineRecords[i].Number, encoding.GetString(lineRecords[i].Text));
          }
          return result;
+      }
+
+      [Fact]
+      public void StringTest()
+      {
+         int i=12;
+         string result = i.ToString("D4");
+         string d = result;
+
+         string fileName = @"d://temp/ATT/second.txt";
+         string path1 = Path.GetDirectoryName(fileName);
+         var file= Path.GetFileNameWithoutExtension(fileName);
+         string dirName = $"{file}_{Guid.NewGuid()}";
+         ReadOnlySpan<char> path2 = Path.GetDirectoryName(@"d://temp/ATT/".AsSpan());
+         var path3 = Path.GetDirectoryName(@"d://temp/ATT".AsSpan());
+         var path4 = Path.GetDirectoryName(@"d://temp/ATT/second".AsSpan());
+
       }
    }
 }

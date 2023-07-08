@@ -7,6 +7,7 @@ using SortingEngine;
 
 namespace ConsoleWrapper.IOProcessing;
 
+//todo rename
 internal class LongFileReader : IBytesProducer, IDisposable
 {
    private readonly string _fullFileName;
@@ -25,16 +26,19 @@ internal class LongFileReader : IBytesProducer, IDisposable
         throw new NotImplementedException();
     }
 
-    public async Task<ReadingResult> PopulateAsync(byte[] buffer)
+    public async Task<ReadingResult> PopulateAsync(byte[] buffer, CancellationToken cancellationToken)
    {
       await using FileStream stream = File.OpenRead(_fullFileName);
       if (_lastPosition > 0)
          stream.Seek(_lastPosition, SeekOrigin.Begin);
 
       RecordsRetriever retriever = new RecordsRetriever(stream);
-      var readingResult = await retriever.ReadChunk(buffer, 0, buffer.Length);
+      var readingResult = await retriever.ReadChunkAsync(buffer, cancellationToken);
       if (!readingResult.Success)
          return readingResult;
+
+      _lastPosition += readingResult.Size;
+      return readingResult;
    }
 
     public void Dispose()

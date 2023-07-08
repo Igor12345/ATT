@@ -1,4 +1,5 @@
 using SimpleReader;
+using SortingEngine.Comparators;
 
 namespace CoreTests
 {

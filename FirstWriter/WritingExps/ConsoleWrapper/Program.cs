@@ -1,9 +1,10 @@
 ﻿using System.Text;
+using ConsoleWrapper.IOProcessing;
 using SortingEngine;
 
 namespace ConsoleWrapper
 {
-   internal class Program
+    internal class Program
    {
       static void Main(string[] args)
       {
@@ -27,13 +28,14 @@ namespace ConsoleWrapper
             }
          }
 
+         Encoding encoding;
          while (true)
          {
             Console.WriteLine("Enter encoding or Y if ASCII or X to exit");
             encodingName = Console.ReadLine() ?? "";
             if (encodingName.ToUpper() == "X")
                return;
-            if (TrySelectEncoding(encodingName, out Encoding encoding))
+            if (TrySelectEncoding(encodingName, out encoding))
             {
                break;
             }
@@ -41,10 +43,17 @@ namespace ConsoleWrapper
             Console.WriteLine("Encoding does not exist");
          }
 
-         RecordsSetSorter sorter = new RecordsSetSorter();
+         RecordsSetSorter sorter = new RecordsSetSorter(encoding);
+         IntermediateResultsWriter writer = IntermediateResultsWriter.Create(path);
+         sorter.SortingCompleted += (o, eventArgs) => writer.WriteRecordsAsync(o, eventArgs).Wait();
       }
 
-      private static bool TrySelectEncoding(string encodingName, out Encoding? encoding)
+      private static void SortingCompleted(object? sender, SortingCompletedEventArgs e)
+      {
+         throw new NotImplementedException();
+      }
+
+      private static bool TrySelectEncoding(string encodingName, out Encoding encoding)
       {
          if (string.Equals(encodingName, "ASCII", StringComparison.OrdinalIgnoreCase))
          {
@@ -62,7 +71,7 @@ namespace ConsoleWrapper
             return true;
          }
 
-         encoding = null;
+         encoding = Encoding.Default;
          return false;
       }
    }

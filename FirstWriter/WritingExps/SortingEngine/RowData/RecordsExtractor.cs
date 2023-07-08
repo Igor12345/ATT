@@ -1,6 +1,7 @@
-﻿using SortingEngine.Entities;
+﻿using System.Buffers;
+using SortingEngine.Entities;
 
-namespace SortingEngine.RowDataHandlers
+namespace SortingEngine.RowData
 {
    public class RecordsExtractor
    {
@@ -53,7 +54,7 @@ namespace SortingEngine.RowDataHandlers
 
          return new Result(true, "");
       }
-      public Result SplitOnMemoryRecords(Span<byte> input, LineMemory[] records)
+      public Result SplitOnMemoryRecords(byte[] input, LineMemory[] records)
       {
          int lineIndex = 0;
          int endLine = 0;
@@ -105,15 +106,17 @@ namespace SortingEngine.RowDataHandlers
          {
             if (lineSpan[i] == _lineDelimiter[0] && lineSpan[i + 1] == _lineDelimiter[1])
             {
-               Span<char> chars = new char[i];
+               char[] chars = ArrayPool<char>.Shared.Rent(i);
                for (int j = 0; j < i; j++)
                {
                   //todo encoding
                   chars[j] = (char)lineSpan[j];
                }
-               var success = long.TryParse(chars, out long number);
+
+               bool success = long.TryParse(chars, out long number);
+               ArrayPool<char>.Shared.Return(chars);
                //todo !success
-               return new LineMemory(number, startIndex+i+2, startIndex+lineSpan.Length);
+               return new LineMemory(number, startIndex + i + 2, startIndex + lineSpan.Length);
             }
          }
 

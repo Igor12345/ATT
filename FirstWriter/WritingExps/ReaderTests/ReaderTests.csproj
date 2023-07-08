@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SimpleReader\SimpleReader.csproj" />
+    <ProjectReference Include="..\SortingEngine\SortingEngine.csproj" />
   </ItemGroup>
 
 </Project>
