@@ -1,4 +1,4 @@
-﻿using InfoStructure.Parameters;
+﻿using Infrastructure.Parameters;
 using SortingEngine;
 
 namespace ConsoleWrapper.IOProcessing;

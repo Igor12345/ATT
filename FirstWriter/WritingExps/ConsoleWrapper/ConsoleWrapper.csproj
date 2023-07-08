@@ -8,7 +8,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Infostructure\InfoStructure.csproj" />
     <ProjectReference Include="..\SortingEngine\SortingEngine.csproj" />
   </ItemGroup>
 

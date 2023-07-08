@@ -1,6 +1,6 @@
 ﻿using System.IO;
 using System.Text;
-using InfoStructure.Parameters;
+using Infrastructure.Parameters;
 using OneOf;
 using OneOf.Types;
 using SortingEngine;

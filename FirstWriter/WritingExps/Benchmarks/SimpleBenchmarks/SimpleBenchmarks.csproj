@@ -12,9 +12,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ContentGenerator\ContentGenerator.csproj" />
-    <ProjectReference Include="..\SimpleReader\SimpleReader.csproj" />
-    <ProjectReference Include="..\SortingEngine\SortingEngine.csproj" />
+    <ProjectReference Include="..\..\ContentGenerator\ContentGenerator.csproj" />
+    <ProjectReference Include="..\..\SimpleReader\SimpleReader.csproj" />
+    <ProjectReference Include="..\..\SortingEngine\SortingEngine.csproj" />
   </ItemGroup>
 
 </Project>

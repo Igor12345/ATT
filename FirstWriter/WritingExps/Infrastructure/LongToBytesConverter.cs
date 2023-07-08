@@ -1,6 +1,6 @@
 ﻿using System.Buffers;
 
-namespace InfoStructure;
+namespace Infrastructure;
 
 public class LongToBytesConverter : IDisposable, IAsyncDisposable
 {
