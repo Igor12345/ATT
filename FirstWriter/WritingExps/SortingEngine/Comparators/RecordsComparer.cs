@@ -1,4 +1,6 @@
-﻿namespace SimpleReader;
+﻿using SortingEngine.Entities;
+
+namespace SortingEngine.Comparators;
 
 internal class RecordsComparer : IComparer<LineRecord>
 {

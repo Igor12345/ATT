@@ -2,6 +2,7 @@
 using BenchmarkDotNet.Attributes;
 using System.Text;
 using SimpleReader;
+using SortingEngine.Comparators;
 
 [MemoryDiagnoser()]
 public class StringsComparisonBenchmark

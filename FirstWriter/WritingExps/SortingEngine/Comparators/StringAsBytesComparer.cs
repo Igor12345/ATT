@@ -1,21 +1,10 @@
-﻿namespace SimpleReader;
+﻿namespace SortingEngine.Comparators;
 
 public class StringAsBytesComparer
 {
-   
+   //todo link to GitHub
    public static int Compare(ReadOnlySpan<byte> strA, ReadOnlySpan<byte> strB)
    {
-      //todo
-      if (strA == null)
-      {
-         return -1;
-      }
-
-      if (strB == null)
-      {
-         return 1;
-      }
-
       if (strA.Length == 0 && strB.Length == 0)
          return 0;
 
@@ -76,11 +65,7 @@ public class StringAsBytesComparer
          // we already see a difference in the unrolled loop above
          return strA[diffOffset] - strB[diffOffset];
       }
-
-      // now go back to slower code path and do comparison on 4 bytes one time.
-      // Following code also take advantage of the fact strings will 
-      // use even numbers of characters (runtime will have a extra zero at the end.)
-      // so even if length is 1 here, we can still do the comparsion.  
+      
       while (length > 0)
       {
          int c;
@@ -91,9 +76,7 @@ public class StringAsBytesComparer
             return c;
          }
       }
-
-      // At this point, we have compared all the characters in at least one string.
-      // The longer string will be larger.
+      
       return strA.Length - strB.Length;
    }
 }

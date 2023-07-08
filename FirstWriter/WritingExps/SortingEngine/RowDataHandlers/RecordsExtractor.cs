@@ -1,6 +1,8 @@
-﻿namespace SimpleReader
+﻿using SortingEngine.Entities;
+
+namespace SortingEngine.RowDataHandlers
 {
-   internal class RecordsExtractor
+   public class RecordsExtractor
    {
       private readonly byte[] _eol;
       private readonly byte[] _lineDelimiter;

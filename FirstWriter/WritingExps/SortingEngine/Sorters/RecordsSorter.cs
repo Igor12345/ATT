@@ -1,4 +1,7 @@
-﻿namespace SimpleReader
+﻿using SortingEngine.Comparators;
+using SortingEngine.Entities;
+
+namespace SortingEngine.Sorters
 {
    public class RecordsSorter
    {

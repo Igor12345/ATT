@@ -1,4 +1,4 @@
-﻿namespace SimpleReader;
+﻿namespace SortingEngine.Entities;
 
 public readonly record struct LineRecord(long Number, byte[] Text);
 public readonly record struct LineMemory(long Number, int From, int To);
