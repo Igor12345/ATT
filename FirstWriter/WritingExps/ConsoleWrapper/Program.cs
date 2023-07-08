@@ -6,16 +6,15 @@ namespace ConsoleWrapper
 {
     internal class Program
    {
-      static void Main(string[] args)
+      static async Task Main(string[] args)
       {
          string path = "";
-         string encodingName = "";
          while (true)
          {
-            Console.WriteLine("Hi, enter the full file name. Or 'X' to exit.");
+            Console.WriteLine("Hi, enter the full name of the file. Or 'X' to exit.");
             path = Console.ReadLine() ?? "";
 
-            if(path.ToUpper()=="X")
+            if (path.ToUpper() == "X")
                return;
             if (!string.IsNullOrEmpty(path))
             {
@@ -32,7 +31,7 @@ namespace ConsoleWrapper
          while (true)
          {
             Console.WriteLine("Enter encoding or Y if ASCII or X to exit");
-            encodingName = Console.ReadLine() ?? "";
+            var encodingName = Console.ReadLine() ?? "";
             if (encodingName.ToUpper() == "X")
                return;
             if (TrySelectEncoding(encodingName, out encoding))
@@ -43,9 +42,15 @@ namespace ConsoleWrapper
             Console.WriteLine("Encoding does not exist");
          }
 
+         CancellationTokenSource cts = new CancellationTokenSource();
+
          RecordsSetSorter sorter = new RecordsSetSorter(encoding);
-         IntermediateResultsDirector writer = IntermediateResultsDirector.Create(path);
-         sorter.SortingCompleted += (o, eventArgs) => writer.WriteRecordsAsync(o, eventArgs).Wait();
+         IntermediateResultsDirector chunksDirector = IntermediateResultsDirector.Create(path, cts.Token);
+         sorter.SortingCompleted += (o, eventArgs) => chunksDirector.WriteRecordsAsync(o, eventArgs).Wait();
+         IBytesProducer bytesReader = new LongFileReader(path, encoding);
+         var result = await sorter.SortAsync(bytesReader, cts.Token);
+
+         Console.WriteLine(result.Success ? "Success" : $"Error: {result.Message}");
       }
 
       private static void SortingCompleted(object? sender, SortingCompletedEventArgs e)
@@ -53,6 +58,7 @@ namespace ConsoleWrapper
          throw new NotImplementedException();
       }
 
+      //todo another class
       private static bool TrySelectEncoding(string encodingName, out Encoding encoding)
       {
          if (string.Equals(encodingName, "ASCII", StringComparison.OrdinalIgnoreCase))

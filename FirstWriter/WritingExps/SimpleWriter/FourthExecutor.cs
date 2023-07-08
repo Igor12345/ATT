@@ -19,7 +19,7 @@ internal class FourthExecutor
 
    public void CreateFile()
    {
-      LinesCreator linesCreator = new LinesCreator();
+      using LinesCreator linesCreator = new LinesCreator();
       Span<byte> line = new byte[_maxLineLength * _chunkSize];
 
       string fileName = @$"d://temp/ATT/{_fileName}.txt";
