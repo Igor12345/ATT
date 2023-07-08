@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -120,6 +121,23 @@ namespace ReaderTests
          var path3 = Path.GetDirectoryName(@"d://temp/ATT".AsSpan());
          var path4 = Path.GetDirectoryName(@"d://temp/ATT/second".AsSpan());
 
+      }
+
+      [Fact]
+      public void MultipleReturn()
+      {
+         var buffer = ArrayPool<int>.Shared.Rent(5);
+         for (int i = 0; i < 5; i++)
+         {
+            buffer[i] = i;
+         }
+         var result = buffer.ToArray();
+
+         ArrayPool<int>.Shared.Return(buffer);
+         ArrayPool<int>.Shared.Return(buffer);
+         ArrayPool<int>.Shared.Return(buffer);
+
+         Assert.Equal(result[4], 4);
       }
    }
 }

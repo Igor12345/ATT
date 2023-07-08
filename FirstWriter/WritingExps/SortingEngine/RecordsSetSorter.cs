@@ -132,7 +132,11 @@ namespace SortingEngine
       public byte[] Source { get; init; }
    }
 
-   public record struct Result(bool Success, string Message);
+   public record struct Result(bool Success, string Message)
+   {
+      public static Result Ok = new Result(true, "");
+      public static Result Error(string message) => new Result(false, message);
+   };
 
    public interface IBytesProducer
    {

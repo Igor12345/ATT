@@ -32,8 +32,8 @@ internal class LongFileReader : IBytesProducer, IDisposable
       if (_lastPosition > 0)
          stream.Seek(_lastPosition, SeekOrigin.Begin);
 
-      RecordsRetriever retriever = new RecordsRetriever(stream);
-      var readingResult = await retriever.ReadChunkAsync(buffer, cancellationToken);
+      RecordsReader reader = new RecordsReader(stream);
+      var readingResult = await reader.ReadChunkAsync(buffer, cancellationToken);
       if (!readingResult.Success)
          return readingResult;
 

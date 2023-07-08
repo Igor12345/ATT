@@ -63,18 +63,20 @@ namespace SortingEngine.RowData
             if (input[i] == _eol[0] && input[i + 1] == _eol[1])
             {
                var startLine = endLine;
-               endLine = i;
+               //todo
+               //text will include eof. the question with the last line.
+               endLine = i + 1;
                LineMemory line = ExtractMemoryRecord(input[startLine..endLine], startLine);
                records[lineIndex++] = line;
                i++;
 
                //todo
                if (lineIndex >= records.Length)
-                  return new Result(true, "");
+                  return Result.Ok;
             }
          }
 
-         return new Result(true, "");
+         return Result.Ok;
       }
 
       private LineRecord ExtractRecord(Span<byte> lineSpan)
@@ -116,7 +118,8 @@ namespace SortingEngine.RowData
                bool success = long.TryParse(chars, out long number);
                ArrayPool<char>.Shared.Return(chars);
                //todo !success
-               return new LineMemory(number, startIndex + i + 2, startIndex + lineSpan.Length);
+               //text will include ". "
+               return new LineMemory(number, startIndex + i, startIndex + lineSpan.Length);
             }
          }
 

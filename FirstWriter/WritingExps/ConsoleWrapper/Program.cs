@@ -44,7 +44,7 @@ namespace ConsoleWrapper
          }
 
          RecordsSetSorter sorter = new RecordsSetSorter(encoding);
-         IntermediateResultsWriter writer = IntermediateResultsWriter.Create(path);
+         IntermediateResultsDirector writer = IntermediateResultsDirector.Create(path);
          sorter.SortingCompleted += (o, eventArgs) => writer.WriteRecordsAsync(o, eventArgs).Wait();
       }
 

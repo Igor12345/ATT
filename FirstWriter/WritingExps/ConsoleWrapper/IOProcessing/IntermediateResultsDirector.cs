@@ -3,25 +3,30 @@ using SortingEngine;
 
 namespace ConsoleWrapper.IOProcessing;
 
-internal class IntermediateResultsWriter
+internal class IntermediateResultsDirector
 {
-   private volatile int _lastFileNumber = 0;
+   private volatile int _lastFileNumber;
    private string _path = null!;
+   private readonly RecordsWriter _writer;
+   private CancellationToken _cancellationToken;
 
-   private IntermediateResultsWriter()
+   private IntermediateResultsDirector()
    {
+      _writer = new RecordsWriter();
    }
 
-   public static IntermediateResultsWriter Create(string path)
+   public static IntermediateResultsDirector Create(string path, CancellationToken token = default)
    {
-      IntermediateResultsWriter writer = new IntermediateResultsWriter();
-      writer.Init(path);
-      return writer;
+      IntermediateResultsDirector instance = new IntermediateResultsDirector();
+      instance.Init(path, token);
+      return instance;
    }
 
-   public void Init(string path)
+   public void Init(string path, CancellationToken cancellationToken)
    {
+      _cancellationToken = cancellationToken;
       path = Guard.PathExist(path);
+
       var sourceDir = Path.GetDirectoryName(path.AsSpan());
       string fileName = "";
       if (File.Exists(path))
@@ -34,19 +39,15 @@ internal class IntermediateResultsWriter
       Directory.CreateDirectory(_path);
    }
 
-   public async Task WriteRecordsAsync(object? sender, SortingCompletedEventArgs eventArgs)
+   public async Task<Result> WriteRecordsAsync(object? sender, SortingCompletedEventArgs eventArgs)
    {
       var records = eventArgs.Sorted;
       var sourceBytes = eventArgs.Source;
 
       string fileName = GetNextFileName();
       var fullFileName = Path.Combine(_path, fileName);
-      await using FileStream fileStream = File.Open(fullFileName, FileMode.Create, FileAccess.Write);
 
-      for (int i = 0; i < records.Length; i++)
-      {
-         await fileStream.WriteAsync(sourceBytes[records[i].From..records[i].To]).ConfigureAwait(false);
-      }
+      return await _writer.WriteRecords(fullFileName, records, sourceBytes.AsMemory(), _cancellationToken);
    }
 
    private string GetNextFileName()

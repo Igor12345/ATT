@@ -4,31 +4,31 @@ using SortingEngine;
 
 namespace ConsoleWrapper.IOProcessing
 {
-   public class RecordsRetriever
+   public class RecordsReader
    {
       private readonly Func<Stream> _streamFactory;
       private readonly Stream _inputStream;
       private readonly Encoding _encoding;
 
-      public RecordsRetriever(Func<Stream> streamFactory)
+      public RecordsReader(Func<Stream> streamFactory)
       {
          _streamFactory = Guard.NotNull(streamFactory, nameof(streamFactory));
          _encoding = Encoding.UTF8;
       }
 
-      public RecordsRetriever(Func<Stream> streamFactory, Encoding encoding)
+      public RecordsReader(Func<Stream> streamFactory, Encoding encoding)
       {
          _streamFactory = Guard.NotNull(streamFactory, nameof(streamFactory));
          _encoding = Guard.NotNull(encoding, nameof(encoding));
       }
 
-      public RecordsRetriever(Stream inputStream)
+      public RecordsReader(Stream inputStream)
       {
          _inputStream = Guard.NotNull(inputStream, nameof(inputStream));
          _encoding = Encoding.UTF8;
       }
 
-      public RecordsRetriever(Stream inputStream, Encoding encoding)
+      public RecordsReader(Stream inputStream, Encoding encoding)
       {
          _inputStream = Guard.NotNull(inputStream, nameof(inputStream));
          _encoding = Guard.NotNull(encoding, nameof(encoding));
