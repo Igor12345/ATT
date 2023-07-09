@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Diagnostics;
+using System.Text;
 using ConsoleWrapper.IOProcessing;
 using SortingEngine;
 
@@ -14,7 +15,7 @@ namespace ConsoleWrapper
             Console.WriteLine("Hi, enter the full name of the file. Or 'X' to exit.");
             //todo
             // path = Console.ReadLine() ?? "";
-            path = @"d:\\Temp\\ATT\\onlyLetters";
+            path = @"d:\\Temp\\ATT\\onlyLetters_middle2";
             if (path.ToUpper() == "X")
                return;
             if (!string.IsNullOrEmpty(path))
@@ -49,9 +50,15 @@ namespace ConsoleWrapper
          IntermediateResultsDirector chunksDirector = IntermediateResultsDirector.Create(path, cts.Token);
          sorter.SortingCompleted += (o, eventArgs) => chunksDirector.WriteRecordsAsync(o, eventArgs).Wait();
          IBytesProducer bytesReader = new LongFileReader(path, encoding);
+
+         Stopwatch sw = Stopwatch.StartNew();
+
          var result = await sorter.SortAsync(bytesReader, cts.Token);
 
-         Console.WriteLine(result.Success ? "Success" : $"Error: {result.Message}");
+         sw.Stop();
+         Console.WriteLine(result.Success
+            ? $"Success - {sw.Elapsed.TotalMinutes} min, {sw.Elapsed.Seconds} sec; Total: {sw.Elapsed.TotalSeconds} sec, {sw.Elapsed.TotalMilliseconds} ms"
+            : $"Error: {result.Message}");
       }
 
       private static void SortingCompleted(object? sender, SortingCompletedEventArgs e)

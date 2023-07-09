@@ -1,5 +1,4 @@
-﻿using System.IO;
-using System.Text;
+﻿using System.Text;
 using Infrastructure.Parameters;
 using OneOf;
 using OneOf.Types;
@@ -14,8 +13,6 @@ internal class LongFileReader : IBytesProducer, IDisposable
    private readonly Encoding _encoding;
    private FileStream _stream;
    private long _lastPosition = 0;
-
-   private int suffix = 0;
 
    public LongFileReader(string fullFileName, Encoding encoding)
    {
@@ -39,13 +36,7 @@ internal class LongFileReader : IBytesProducer, IDisposable
       var readingResult = await reader.ReadChunkAsync(buffer, offset, cancellationToken);
       if (!readingResult.Success)
          return readingResult;
-
-      //todo remove
-      suffix++;
-      File.WriteAllBytes(
-         _fullFileName + $"__{suffix}; offset-{offset}; last-{_lastPosition}; read-{readingResult.Size}", buffer);
-
-
+      
       _lastPosition += readingResult.Size;
       return readingResult;
    }

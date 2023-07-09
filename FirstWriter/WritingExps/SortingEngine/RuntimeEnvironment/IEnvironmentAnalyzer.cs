@@ -11,7 +11,7 @@ namespace SortingEngine.RuntimeEnvironment
    {
       public IConfig SuggestConfig()
       {
-         int inputBufferSize = 1024 * 1024;
+         int inputBufferSize = Int32.MaxValue-1000;
 
          var config = RuntimeConfig.Create(conf => conf
             .UseInputBuffer(inputBufferSize)

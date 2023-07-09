@@ -35,7 +35,7 @@ namespace SortingEngine
          try
          {
             byte[] inputStorage = RentInputStorage();
-            int length = 0;
+            int length = 1;
             //make something more fancy
             while (length > 0)
             {
