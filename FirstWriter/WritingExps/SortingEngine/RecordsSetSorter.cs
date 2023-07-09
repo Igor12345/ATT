@@ -139,7 +139,7 @@ namespace SortingEngine
             new RecordsExtractor(_configuration.Encoding.GetBytes(Environment.NewLine),
                _configuration.Encoding.GetBytes(". "));
          LineMemory[] sorted;
-         LineMemory[]? records = null;
+         LineMemory[] records = null!;
          try
          {
             records = _poolsManager.AcquireRecordsArray();

@@ -12,7 +12,7 @@ namespace SortingEngine.RuntimeEnvironment
    {
       public IConfig SuggestConfig(string path, Encoding encoding)
       {
-         int inputBufferSize = Int32.MaxValue-1000;
+         int inputBufferSize = 1024 * 1024 * 512;
          int mergeBuffer = 1024 * 1024;
 
          var config = RuntimeConfig.Create(conf => conf
