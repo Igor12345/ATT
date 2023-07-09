@@ -7,6 +7,7 @@ namespace SortingEngine.RowData
    {
       private readonly byte[] _eol;
       private readonly byte[] _lineDelimiter;
+      
 
       public RecordsExtractor(byte[] eol, byte[] lineDelimiter)
       {
@@ -54,14 +55,17 @@ namespace SortingEngine.RowData
 
          return new Result(true, "");
       }
-      public Result SplitOnMemoryRecords(byte[] input, LineMemory[] records)
+
+      public ExtractionResult SplitOnMemoryRecords(ReadOnlySpan<byte> input, LineMemory[] records)
       {
          int lineIndex = 0;
          int endLine = 0;
+         int endOfLastLine = -1;
          for (int i = 0; i < input.Length - 1; i++)
          {
             if (input[i] == _eol[0] && input[i + 1] == _eol[1])
             {
+               endOfLastLine = i + 1;
                var startLine = endLine;
                //todo
                //text will include eof. the question with the last line.
@@ -70,13 +74,16 @@ namespace SortingEngine.RowData
                records[lineIndex++] = line;
                i++;
 
-               //todo
+               //todo !!! Need additional buffer for lines
                if (lineIndex >= records.Length)
-                  return Result.Ok;
+               {
+                  var reminder = ConvertToString(input[(endOfLastLine + 1)..]);
+                  return ExtractionResult.Ok(lineIndex, endOfLastLine + 1);
+               }
             }
          }
-
-         return Result.Ok;
+         var reminder2 = ConvertToString(input[(endOfLastLine + 1)..]);
+         return ExtractionResult.Ok(lineIndex, endOfLastLine + 1);
       }
 
       private LineRecord ExtractRecord(Span<byte> lineSpan)
@@ -102,21 +109,21 @@ namespace SortingEngine.RowData
 
       }
 
-      private LineMemory ExtractMemoryRecord(Span<byte> lineSpan, int startIndex)
+      private LineMemory ExtractMemoryRecord(ReadOnlySpan<byte> lineSpan, int startIndex)
       {
+         Span<char> chars = stackalloc char[20];
          for (int i = 0; i < lineSpan.Length - 1; i++)
          {
             if (lineSpan[i] == _lineDelimiter[0] && lineSpan[i + 1] == _lineDelimiter[1])
             {
-               char[] chars = ArrayPool<char>.Shared.Rent(i);
                for (int j = 0; j < i; j++)
                {
                   //todo encoding
                   chars[j] = (char)lineSpan[j];
                }
 
-               bool success = long.TryParse(chars, out long number);
-               ArrayPool<char>.Shared.Return(chars);
+               bool success = long.TryParse(chars, out var number);
+
                //todo !success
                //text will include ". "
                return new LineMemory(number, startIndex + i, startIndex + lineSpan.Length);
@@ -124,8 +131,14 @@ namespace SortingEngine.RowData
          }
 
          //todo
-         throw new InvalidOperationException($"wrong line {lineSpan.ToString()}");
+         throw new InvalidOperationException($"wrong line {ConvertToString(lineSpan)}");
 
+      }
+
+      //todo
+      private string ConvertToString(ReadOnlySpan<byte> lineSpan)
+      {
+         return new string(lineSpan.ToArray().Select(b => (char)b).ToArray());
       }
 
       private void AddRecord(Span<byte> line, int startLine, int endLine, LineRecord[] records)

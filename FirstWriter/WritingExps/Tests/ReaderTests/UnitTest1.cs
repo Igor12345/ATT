@@ -62,7 +62,7 @@ namespace ReaderTests
          InputProcessor inputProcessor = new InputProcessor();
          string fileName = "fourth";
          string path = @$"d://temp/ATT/{fileName}.txt";
-         Result result = await inputProcessor.ReadMemoryRecords(path, bytes, records);
+         var result = await inputProcessor.ReadMemoryRecords(path, bytes, records);
 
          Stopwatch stopwatch = Stopwatch.StartNew();
          InSiteRecordsSorter sorter = new InSiteRecordsSorter(bytes);

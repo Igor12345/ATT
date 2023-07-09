@@ -4,7 +4,7 @@ using SortingEngine;
 
 namespace ConsoleWrapper
 {
-    internal class Program
+   internal class Program
    {
       static async Task Main(string[] args)
       {
@@ -12,8 +12,9 @@ namespace ConsoleWrapper
          while (true)
          {
             Console.WriteLine("Hi, enter the full name of the file. Or 'X' to exit.");
-            path = Console.ReadLine() ?? "";
-
+            //todo
+            // path = Console.ReadLine() ?? "";
+            path = @"d:\\Temp\\ATT\\onlyLetters";
             if (path.ToUpper() == "X")
                return;
             if (!string.IsNullOrEmpty(path))
@@ -61,16 +62,14 @@ namespace ConsoleWrapper
       //todo another class
       private static bool TrySelectEncoding(string encodingName, out Encoding encoding)
       {
-         if (string.Equals(encodingName, "ASCII", StringComparison.OrdinalIgnoreCase))
+         if (string.Equals(encodingName, "ASCII", StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(encodingName, "UTF8", StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(encodingName, "Y", StringComparison.OrdinalIgnoreCase))
          {
             encoding = Encoding.UTF8;
             return true;
          }
-         if (string.Equals(encodingName, "UTF8", StringComparison.OrdinalIgnoreCase))
-         {
-            encoding = Encoding.UTF8;
-            return true;
-         }
+
          if (string.Equals(encodingName, "UTF32", StringComparison.OrdinalIgnoreCase))
          {
             encoding = Encoding.UTF32;

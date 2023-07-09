@@ -22,13 +22,13 @@ public class InputProcessor
       return extractor.SplitOnRecords(buffer, records);
    }
 
-   public async Task<Result> ReadMemoryRecords(string path, byte[] buffer, LineMemory[] records)
+   public async Task<ReadingResult> ReadMemoryRecords(string path, byte[] buffer, LineMemory[] records)
    {
       await using FileStream stream = File.OpenRead(path);
       RecordsRetriever retriever = new RecordsRetriever(stream);
       var readingResult = await retriever.ReadChunk(buffer, 0, buffer.Length);
       if (!readingResult.Success)
-         return new Result(false, readingResult.Message);
+         return ReadingResult.Error(readingResult.Message);
 
       var encoding = Encoding.UTF8;
       RecordsExtractor extractor =

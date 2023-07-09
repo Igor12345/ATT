@@ -15,6 +15,8 @@ internal class LongFileReader : IBytesProducer, IDisposable
    private FileStream _stream;
    private long _lastPosition = 0;
 
+   private int suffix = 0;
+
    public LongFileReader(string fullFileName, Encoding encoding)
    {
       _fullFileName = Guard.FileExist(fullFileName);
@@ -26,16 +28,23 @@ internal class LongFileReader : IBytesProducer, IDisposable
         throw new NotImplementedException();
     }
 
-    public async Task<ReadingResult> PopulateAsync(byte[] buffer, CancellationToken cancellationToken)
+    public async Task<ReadingResult> ReadBytesAsync(byte[] buffer, int offset,
+       CancellationToken cancellationToken)
    {
       await using FileStream stream = File.OpenRead(_fullFileName);
       if (_lastPosition > 0)
          stream.Seek(_lastPosition, SeekOrigin.Begin);
 
       RecordsReader reader = new RecordsReader(stream);
-      var readingResult = await reader.ReadChunkAsync(buffer, cancellationToken);
+      var readingResult = await reader.ReadChunkAsync(buffer, offset, cancellationToken);
       if (!readingResult.Success)
          return readingResult;
+
+      //todo remove
+      suffix++;
+      File.WriteAllBytes(
+         _fullFileName + $"__{suffix}; offset-{offset}; last-{_lastPosition}; read-{readingResult.Size}", buffer);
+
 
       _lastPosition += readingResult.Size;
       return readingResult;

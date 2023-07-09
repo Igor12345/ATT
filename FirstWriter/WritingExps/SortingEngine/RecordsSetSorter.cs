@@ -1,20 +1,25 @@
-﻿using System.Text;
+﻿using System.Buffers;
+using System.Text;
 using Infrastructure.Parameters;
 using OneOf;
 using OneOf.Types;
 using SortingEngine.Entities;
 using SortingEngine.RowData;
 using SortingEngine.RuntimeConfiguration;
+using SortingEngine.RuntimeEnvironment;
 using SortingEngine.Sorters;
 
 namespace SortingEngine
 {
+   //todo dispose, return _remainingBytes
    public class RecordsSetSorter
    {
       private readonly Encoding _encoding;
       private byte[]? _inputBuffer;
       private IConfig _configuration;
       private PoolsManager _poolsManager = new PoolsManager();
+      private byte[]? _remainedBytes;
+      private int _remindedBytesLength;
 
       public RecordsSetSorter(Encoding encoding)
       {
@@ -25,23 +30,34 @@ namespace SortingEngine
 
       public async Task<Result> SortAsync(IBytesProducer producer, CancellationToken cancellationToken)
       {
+         Init();
+
          try
          {
             byte[] inputStorage = RentInputStorage();
             int length = 0;
             //make something more fancy
-            while (length >= 0)
+            while (length > 0)
             {
-               var result = await producer.PopulateAsync(inputStorage, cancellationToken);
+               if (_remainedBytes != null)
+               {
+                  _remainedBytes.CopyTo(inputStorage, 0);
+               }
+
+               ReadingResult result = await producer.ReadBytesAsync(inputStorage, _remindedBytesLength, cancellationToken);
 
                if (!result.Success)
                {
                   return new Result(false, result.Message);
                }
 
+               if(result.Size==0)
+                  break;
+
                length = result.Size;
 
-               ProcessRecords(inputStorage);
+               var slice = inputStorage.AsMemory()[..result.Size];
+               ProcessRecords(slice);
             }
 
             return new Result(true, "");
@@ -52,48 +68,83 @@ namespace SortingEngine
          }
       }
 
-      public async Task<OneOf<Success, Error<string>>> SortFuncAsync(IBytesProducer producer)
+      private void Init()
       {
-         try
-         {
-            byte[] inputStorage = RentInputStorage();
-            int length = 0;
-
-            //make something more fancy
-            while (length >= 0)
-            {
-               var result = await producer.PopulateAsyncFunc(inputStorage);
-               string error = "";
-               result.Switch(
-                  r => length = r.Value,
-                  e => error = e.Value);
-
-               //todo !!! not functional
-               if (!string.IsNullOrEmpty(error))
-               {
-                  return new Error<string>(error);
-               }
-
-               ProcessRecords(_inputBuffer);
-            }
-
-            return new Success();
-         }
-         catch (Exception e)
-         {
-            return new Error<string>(e.Message);
-         }
+         IEnvironmentAnalyzer analyzer = new EnvironmentAnalyzer();
+         _configuration = analyzer.SuggestConfig();
       }
 
-      private void ProcessRecords(byte[] inputBuffer)
+      // public async Task<OneOf<Success, Error<string>>> SortFuncAsync(IBytesProducer producer)
+      // {
+      //    try
+      //    {
+      //       byte[] inputStorage = RentInputStorage();
+      //       int length = 0;
+      //
+      //       //make something more fancy
+      //       while (length >= 0)
+      //       {
+      //          var result = await producer.PopulateAsyncFunc(inputStorage);
+      //          string error = "";
+      //          result.Switch(
+      //             r => length = r.Value,
+      //             e => error = e.Value);
+      //
+      //          //todo !!! not functional
+      //          if (!string.IsNullOrEmpty(error))
+      //          {
+      //             return new Error<string>(error);
+      //          }
+      //
+      //          ProcessRecords(_inputBuffer);
+      //       }
+      //
+      //       return new Success();
+      //    }
+      //    catch (Exception e)
+      //    {
+      //       return new Error<string>(e.Message);
+      //    }
+      // }
+
+      private void ProcessRecords(ReadOnlyMemory<byte> inputBuffer)
       {
          RecordsExtractor extractor =
             new RecordsExtractor(_encoding.GetBytes(Environment.NewLine), _encoding.GetBytes(". "));
          LineMemory[] records = _poolsManager.AcquireRecordsArray();
-         Result result = extractor.SplitOnMemoryRecords(inputBuffer, records);
+
+         //todo array vs slice
+         ExtractionResult result = extractor.SplitOnMemoryRecords(inputBuffer.Span, records);
+
+         if (!result.Success)
+         {
+            //todo
+            throw new InvalidOperationException(result.Message);
+         }
+
+         _remindedBytesLength = inputBuffer.Length - result.StartRemainingBytes;
+         if (_remindedBytesLength > 0)
+         {
+            if (_remainedBytes != null && _remainedBytes.Length < _remindedBytesLength)
+            {
+               ArrayPool<byte>.Shared.Return(_remainedBytes);
+               _remainedBytes = null;
+            }
+
+            _remainedBytes ??= ArrayPool<byte>.Shared.Rent(_remindedBytesLength);
+            inputBuffer.Span[result.StartRemainingBytes..].CopyTo(_remainedBytes);
+         }
+         else
+         {
+            if (_remainedBytes != null)
+            {
+               ArrayPool<byte>.Shared.Return(_remainedBytes);
+               _remainedBytes = null;
+            }
+         }
 
          InSiteRecordsSorter sorter = new InSiteRecordsSorter(inputBuffer);
-         LineMemory[] sorted = sorter.Sort(records);
+         LineMemory[] sorted = sorter.Sort(records[..result.Size]);
 
          OnSortingCompleted(new SortingCompletedEventArgs(sorted, inputBuffer));
       }
@@ -108,44 +159,6 @@ namespace SortingEngine
       private void OnSortingCompleted(SortingCompletedEventArgs e)
       {
          SortingCompleted?.Invoke(this, e);
-      }
-   }
-   public record struct ReadingResult
-   {
-      public bool Success;
-      public int Size;
-      public string Message;
-   }
-
-   public class SortingCompletedEventArgs : EventArgs
-   {
-      public SortingCompletedEventArgs(LineMemory[] sorted, byte[] source)
-      {
-         Sorted = Guard.NotNull(sorted, nameof(sorted));
-         Source = Guard.NotNull(source, nameof(source));
-      }
-
-      public LineMemory[] Sorted { get; init; }
-      public byte[] Source { get; init; }
-   }
-
-   public record struct Result(bool Success, string Message)
-   {
-      public static Result Ok = new Result(true, "");
-      public static Result Error(string message) => new Result(false, message);
-   };
-
-   public interface IBytesProducer
-   {
-      Task<OneOf<Result<int>, Error<string>>> PopulateAsyncFunc(byte[] buffer);
-      Task<ReadingResult> PopulateAsync(byte[] buffer, CancellationToken cancellationToken);
-   }
-
-   public class PoolsManager
-   {
-      public LineMemory[] AcquireRecordsArray()
-      {
-         return new LineMemory[2_000_000];
       }
    }
 }

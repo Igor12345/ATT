@@ -24,9 +24,9 @@ public class StringAsBytesComparer
       int length = Math.Min(strA.Length, strB.Length);
       int diffOffset = -1;
 
-      int i = 2;
+      int i = 0;
       // unroll the loop
-      while (length >= 5)
+      while (length > 5)
       {
          if (strA[++i] != strB[i])
          {

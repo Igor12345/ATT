@@ -34,10 +34,11 @@ namespace ConsoleWrapper.IOProcessing
          _encoding = Guard.NotNull(encoding, nameof(encoding));
       }
 
-      public async Task<ReadingResult> ReadChunkAsync(byte[] buffer, CancellationToken cancellationToken)
+      //todo memory
+      public async Task<ReadingResult> ReadChunkAsync(byte[] buffer, int offset, CancellationToken cancellationToken)
       {
-         int length = await _inputStream.ReadAsync(buffer, 0,buffer.Length, cancellationToken);
-         return new ReadingResult() { Success = true, Size = length };
+         int length = await _inputStream.ReadAsync(buffer, offset, buffer.Length - offset, cancellationToken);
+         return new ReadingResult() { Success = true, Size = length + offset };
       }
    }
 }

@@ -47,7 +47,7 @@ internal class IntermediateResultsDirector
       string fileName = GetNextFileName();
       var fullFileName = Path.Combine(_path, fileName);
 
-      return await _writer.WriteRecords(fullFileName, records, sourceBytes.AsMemory(), _cancellationToken);
+      return await _writer.WriteRecords(fullFileName, records, sourceBytes, _cancellationToken);
    }
 
    private string GetNextFileName()
