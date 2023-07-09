@@ -1,12 +1,9 @@
 ﻿using System.Buffers;
-using System.Text;
-using Infrastructure.Parameters;
 using OneOf;
 using OneOf.Types;
 using SortingEngine.Entities;
 using SortingEngine.RowData;
 using SortingEngine.RuntimeConfiguration;
-using SortingEngine.RuntimeEnvironment;
 using SortingEngine.Sorters;
 
 namespace SortingEngine
@@ -14,7 +11,6 @@ namespace SortingEngine
    //todo dispose, return _remainingBytes
    public class RecordsSetSorter
    {
-      private readonly Encoding _encoding;
       private byte[]? _inputBuffer;
       private IConfig _configuration;
       private PoolsManager _poolsManager;
@@ -25,9 +21,9 @@ namespace SortingEngine
 
       public event EventHandler<SortingCompletedEventArgs>? OutputBufferFull;
 
-      public RecordsSetSorter(Encoding encoding)
+      public RecordsSetSorter(IConfig configuration)
       {
-         _encoding = Guard.NotNull(encoding, nameof(encoding));
+         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
       }
 
       public async Task<Result> SortAsync(IBytesProducer producer, CancellationToken cancellationToken)
@@ -51,14 +47,15 @@ namespace SortingEngine
                   _remainedBytes.CopyTo(inputStorage, 0);
                }
 
-               ReadingResult result = await producer.ReadBytesAsync(inputStorage, _remindedBytesLength, cancellationToken);
+               ReadingResult result =
+                  await producer.ReadBytesAsync(inputStorage, _remindedBytesLength, cancellationToken);
 
                if (!result.Success)
                {
                   return new Result(false, result.Message);
                }
 
-               if(result.Size==0)
+               if (result.Size == 0)
                   break;
 
                length = result.Size;
@@ -100,9 +97,6 @@ namespace SortingEngine
 
       private void Init()
       {
-         IEnvironmentAnalyzer analyzer = new EnvironmentAnalyzer();
-         _configuration = analyzer.SuggestConfig();
-
          _poolsManager = new PoolsManager(10, _configuration.RecordsBufferSize);
       }
 
@@ -142,7 +136,8 @@ namespace SortingEngine
       private void ProcessRecords(ReadOnlyMemory<byte> inputBuffer)
       {
          RecordsExtractor extractor =
-            new RecordsExtractor(_encoding.GetBytes(Environment.NewLine), _encoding.GetBytes(". "));
+            new RecordsExtractor(_configuration.Encoding.GetBytes(Environment.NewLine),
+               _configuration.Encoding.GetBytes(". "));
          LineMemory[] sorted;
          LineMemory[]? records = null;
          try
@@ -186,6 +181,7 @@ namespace SortingEngine
          {
             _poolsManager.Return(records);
          }
+
          OnSortingCompleted(new SortingCompletedEventArgs(sorted, inputBuffer));
       }
 

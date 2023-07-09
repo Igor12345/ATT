@@ -1,5 +1,4 @@
-﻿using Infrastructure.Parameters;
-using SortingEngine;
+﻿using SortingEngine;
 
 namespace ConsoleWrapper.IOProcessing;
 
@@ -25,18 +24,9 @@ internal class IntermediateResultsDirector
    public void Init(string path, CancellationToken cancellationToken)
    {
       _cancellationToken = cancellationToken;
-      path = Guard.PathExist(path);
-
-      var sourceDir = Path.GetDirectoryName(path.AsSpan());
-      string fileName = "";
-      if (File.Exists(path))
-      {
-         fileName = Path.GetFileNameWithoutExtension(path);
-      }
-
-      string dirName = $"{fileName}_{Guid.NewGuid()}";
-      _path = Path.Combine(sourceDir.ToString(), dirName);
-      Directory.CreateDirectory(_path);
+      _path = path;
+      if (!Directory.Exists(_path))
+         Directory.CreateDirectory(_path);
    }
 
    public async Task<Result> WriteRecordsAsync(SortingCompletedEventArgs eventArgs)

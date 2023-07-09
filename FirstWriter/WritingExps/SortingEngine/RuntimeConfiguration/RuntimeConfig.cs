@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using Infrastructure.Parameters;
+using System.Text;
 
 namespace SortingEngine.RuntimeConfiguration;
 
@@ -13,7 +14,7 @@ internal class RuntimeConfig : IConfig
    public string TemporaryFolder { get; private set; }
    public int MergeBufferSize { get; private set; }
    public int OutputBufferSize { get; private set; }
-   public Encoding Encoding { get; private set; }
+   public Encoding Encoding { get; private set; } = Encoding.UTF8;
    public int RecordsBufferSize { get; private set; }
 
    public static IConfig Create(Action<IConfigBuilder> buildConfig)
@@ -38,8 +39,28 @@ internal class RuntimeConfig : IConfig
          return this;
       }
 
-      public IConfigBuilder UseFolder(string folderForChunks)
+      public IConfigBuilder UseFolder(string sourceFile, string folderForChunks)
       {
+         if (string.IsNullOrEmpty(folderForChunks))
+         {
+            sourceFile = Guard.PathExist(sourceFile);
+
+            var sourceDir = Path.GetDirectoryName(sourceFile.AsSpan());
+            string fileName = "";
+            if (File.Exists(sourceFile))
+            {
+               fileName = Path.GetFileNameWithoutExtension(sourceFile);
+            }
+
+            string dirName = $"{fileName}_{Guid.NewGuid()}";
+            folderForChunks = Path.Combine(sourceDir.ToString(), dirName);
+         }
+
+         if (folderForChunks.Equals("temp", StringComparison.OrdinalIgnoreCase))
+         {
+            folderForChunks = Directory.CreateTempSubdirectory().FullName;
+         }
+
          _config.TemporaryFolder = folderForChunks;
          return this;
       }

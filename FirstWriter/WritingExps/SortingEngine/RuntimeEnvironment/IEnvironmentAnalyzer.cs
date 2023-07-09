@@ -3,14 +3,14 @@ using SortingEngine.RuntimeConfiguration;
 
 namespace SortingEngine.RuntimeEnvironment
 {
-   internal interface IEnvironmentAnalyzer
+   public interface IEnvironmentAnalyzer
    {
-      IConfig SuggestConfig();
+      IConfig SuggestConfig(string path, Encoding encoding);
    }
 
-   internal class EnvironmentAnalyzer : IEnvironmentAnalyzer
+   public class EnvironmentAnalyzer : IEnvironmentAnalyzer
    {
-      public IConfig SuggestConfig()
+      public IConfig SuggestConfig(string path, Encoding encoding)
       {
          int inputBufferSize = Int32.MaxValue-1000;
          int mergeBuffer = 1024 * 1024;
@@ -18,9 +18,9 @@ namespace SortingEngine.RuntimeEnvironment
          var config = RuntimeConfig.Create(conf => conf
             .UseInputBuffer(inputBufferSize)
             .UseMergeBuffer(mergeBuffer)
-            .UseFolder("")
+            .UseFolder(path, "")
             //todo merge with the preset config
-            .UseEncoding(Encoding.UTF8));
+            .UseEncoding(encoding));
          return config;
       }
    }

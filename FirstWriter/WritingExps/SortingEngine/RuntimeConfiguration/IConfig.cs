@@ -2,7 +2,7 @@
 
 namespace SortingEngine.RuntimeConfiguration
 {
-   internal interface IConfig
+   public interface IConfig
    {
       int InputBufferSize { get; }
       string TemporaryFolder { get; }

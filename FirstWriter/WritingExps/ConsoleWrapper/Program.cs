@@ -2,6 +2,7 @@
 using System.Text;
 using ConsoleWrapper.IOProcessing;
 using SortingEngine;
+using SortingEngine.RuntimeEnvironment;
 
 namespace ConsoleWrapper
 {
@@ -45,9 +46,13 @@ namespace ConsoleWrapper
          }
 
          CancellationTokenSource cts = new CancellationTokenSource();
+         
+         IEnvironmentAnalyzer analyzer = new EnvironmentAnalyzer();
+         var configuration = analyzer.SuggestConfig(path, encoding);
 
-         RecordsSetSorter sorter = new RecordsSetSorter(encoding);
-         IntermediateResultsDirector chunksDirector = IntermediateResultsDirector.Create(path, cts.Token);
+         RecordsSetSorter sorter = new RecordsSetSorter(configuration);
+         IntermediateResultsDirector chunksDirector =
+            IntermediateResultsDirector.Create(configuration.TemporaryFolder, cts.Token);
          ResultWriter resultWriter = ResultWriter.Create(path, cts.Token);
          sorter.SortingCompleted += (o, eventArgs) => chunksDirector.WriteRecords(eventArgs);
          sorter.OutputBufferFull += (o, eventArgs) => resultWriter.WriteOutput(eventArgs);
