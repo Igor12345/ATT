@@ -4,7 +4,7 @@ namespace Infrastructure.Parameters
 {
    public static class Guard
    {
-      public static T NotNull<T>([DisallowNull] T value, string name)
+      public static T NotNull<T>(T value, string name)
       {
          return value ?? throw new ArgumentNullException(name);
       }

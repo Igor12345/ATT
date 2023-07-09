@@ -34,8 +34,13 @@ namespace SortingEngine
 
          try
          {
+            //todo check filesize and write to final if small
+
             byte[] inputStorage = RentInputStorage();
             int length = 1;
+
+            //split stage
+
             //make something more fancy
             while (length > 0)
             {
@@ -60,12 +65,26 @@ namespace SortingEngine
                ProcessRecords(slice);
             }
 
+            _inputBuffer = null;
+            _remainedBytes = null;
+            _poolsManager.DeleteArrays();
+
+            GC.Collect(2, GCCollectionMode.Aggressive, true, true);
+
+            //merge stage
+            await MergeToOneFileAsync();
+
             return new Result(true, "");
          }
          catch (Exception e)
          {
             return new Result(false, e.Message);
          }
+      }
+
+      private async Task<Result> MergeToOneFileAsync()
+      {
+         FilesMerger merger = new FilesMerger();
       }
 
       private void Init()
@@ -111,41 +130,49 @@ namespace SortingEngine
       {
          RecordsExtractor extractor =
             new RecordsExtractor(_encoding.GetBytes(Environment.NewLine), _encoding.GetBytes(". "));
-         LineMemory[] records = _poolsManager.AcquireRecordsArray();
-
-         //todo array vs slice
-         ExtractionResult result = extractor.SplitOnMemoryRecords(inputBuffer.Span, records);
-
-         if (!result.Success)
+         LineMemory[] sorted;
+         LineMemory[]? records = null;
+         try
          {
-            //todo
-            throw new InvalidOperationException(result.Message);
-         }
+            records = _poolsManager.AcquireRecordsArray();
 
-         _remindedBytesLength = inputBuffer.Length - result.StartRemainingBytes;
-         if (_remindedBytesLength > 0)
-         {
-            if (_remainedBytes != null && _remainedBytes.Length < _remindedBytesLength)
+            //todo array vs slice
+            ExtractionResult result = extractor.SplitOnMemoryRecords(inputBuffer.Span, records);
+
+            if (!result.Success)
             {
-               ArrayPool<byte>.Shared.Return(_remainedBytes);
-               _remainedBytes = null;
+               //todo
+               throw new InvalidOperationException(result.Message);
             }
 
-            _remainedBytes ??= ArrayPool<byte>.Shared.Rent(_remindedBytesLength);
-            inputBuffer.Span[result.StartRemainingBytes..].CopyTo(_remainedBytes);
-         }
-         else
-         {
-            if (_remainedBytes != null)
+            _remindedBytesLength = inputBuffer.Length - result.StartRemainingBytes;
+            if (_remindedBytesLength > 0)
             {
-               ArrayPool<byte>.Shared.Return(_remainedBytes);
-               _remainedBytes = null;
+               if (_remainedBytes != null && _remainedBytes.Length < _remindedBytesLength)
+               {
+                  ArrayPool<byte>.Shared.Return(_remainedBytes);
+                  _remainedBytes = null;
+               }
+
+               _remainedBytes ??= ArrayPool<byte>.Shared.Rent(_remindedBytesLength);
+               inputBuffer.Span[result.StartRemainingBytes..].CopyTo(_remainedBytes);
             }
+            else
+            {
+               if (_remainedBytes != null)
+               {
+                  ArrayPool<byte>.Shared.Return(_remainedBytes);
+                  _remainedBytes = null;
+               }
+            }
+
+            InSiteRecordsSorter sorter = new InSiteRecordsSorter(inputBuffer);
+            sorted = sorter.Sort(records[..result.Size]);
          }
-
-         InSiteRecordsSorter sorter = new InSiteRecordsSorter(inputBuffer);
-         LineMemory[] sorted = sorter.Sort(records[..result.Size]);
-
+         finally
+         {
+            _poolsManager.Return(records);
+         }
          OnSortingCompleted(new SortingCompletedEventArgs(sorted, inputBuffer));
       }
 
