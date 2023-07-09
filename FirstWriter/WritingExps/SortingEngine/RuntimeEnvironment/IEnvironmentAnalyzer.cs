@@ -1,4 +1,5 @@
-﻿using SortingEngine.RuntimeConfiguration;
+﻿using System.Text;
+using SortingEngine.RuntimeConfiguration;
 
 namespace SortingEngine.RuntimeEnvironment
 {
@@ -17,7 +18,9 @@ namespace SortingEngine.RuntimeEnvironment
          var config = RuntimeConfig.Create(conf => conf
             .UseInputBuffer(inputBufferSize)
             .UseMergeBuffer(mergeBuffer)
-            .UseFolder(""));
+            .UseFolder("")
+            //todo merge with the preset config
+            .UseEncoding(Encoding.UTF8));
          return config;
       }
    }

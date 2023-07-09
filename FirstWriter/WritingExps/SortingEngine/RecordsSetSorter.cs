@@ -17,16 +17,18 @@ namespace SortingEngine
       private readonly Encoding _encoding;
       private byte[]? _inputBuffer;
       private IConfig _configuration;
-      private PoolsManager _poolsManager = new PoolsManager();
+      private PoolsManager _poolsManager;
       private byte[]? _remainedBytes;
       private int _remindedBytesLength;
+
+      public event EventHandler<SortingCompletedEventArgs>? SortingCompleted;
+
+      public event EventHandler<SortingCompletedEventArgs>? OutputBufferFull;
 
       public RecordsSetSorter(Encoding encoding)
       {
          _encoding = Guard.NotNull(encoding, nameof(encoding));
       }
-
-      public event EventHandler<SortingCompletedEventArgs> SortingCompleted;
 
       public async Task<Result> SortAsync(IBytesProducer producer, CancellationToken cancellationToken)
       {
@@ -69,6 +71,7 @@ namespace SortingEngine
             _remainedBytes = null;
             _poolsManager.DeleteArrays();
 
+
             GC.Collect(2, GCCollectionMode.Aggressive, true, true);
 
             //merge stage
@@ -84,13 +87,23 @@ namespace SortingEngine
 
       private async Task<Result> MergeToOneFileAsync()
       {
-         FilesMerger merger = new FilesMerger();
+         FilesMerger merger = new FilesMerger(_configuration);
+         merger.OutputBufferFull += (o, eventArgs) => MergerOnOutputBufferFull(o, eventArgs);
+         var result = await merger.MergeWithOrder();
+         return result;
+      }
+
+      private void MergerOnOutputBufferFull(object? sender, SortingCompletedEventArgs e)
+      {
+         OnOutputBufferFull(e);
       }
 
       private void Init()
       {
          IEnvironmentAnalyzer analyzer = new EnvironmentAnalyzer();
          _configuration = analyzer.SuggestConfig();
+
+         _poolsManager = new PoolsManager(10, _configuration.RecordsBufferSize);
       }
 
       // public async Task<OneOf<Success, Error<string>>> SortFuncAsync(IBytesProducer producer)
@@ -186,6 +199,11 @@ namespace SortingEngine
       private void OnSortingCompleted(SortingCompletedEventArgs e)
       {
          SortingCompleted?.Invoke(this, e);
+      }
+
+      protected virtual void OnOutputBufferFull(SortingCompletedEventArgs e)
+      {
+         OutputBufferFull?.Invoke(this, e);
       }
    }
 }

@@ -16,17 +16,21 @@ internal class DataChunkManager : IAsyncDisposable
    private readonly LineMemory[] _recordsStorage;
    private byte[]? _remainedBytes;
    private int _remindedBytesLength;
+   private RecordsExtractor _extractor;
 
-   public DataChunkManager(string file, Memory<byte> rowStorage, LineMemory[] recordsStorage)
+   public DataChunkManager(string file, Memory<byte> rowStorage, LineMemory[] recordsStorage, Encoding encoding)
    {
       _rowStorage = rowStorage;
       _recordsStorage = recordsStorage;
+      _encoding = encoding;
       _dataSource = File.OpenRead(file);
+      _extractor =
+         new RecordsExtractor(_encoding.GetBytes(Environment.NewLine), _encoding.GetBytes(". "));
    }
 
    public async IAsyncEnumerable<LineMemory> GetRecordsAsync()
    {
-      RecordsExtractor extractor =
+      _extractor =
          new RecordsExtractor(_encoding.GetBytes(Environment.NewLine), _encoding.GetBytes(". "));
       while (true)
       {
@@ -35,7 +39,7 @@ internal class DataChunkManager : IAsyncDisposable
             break;
          _currentPosition = 0;
          //todo repetition
-         ExtractionResult result = extractor.SplitOnMemoryRecords(_rowStorage.Span, _recordsStorage);
+         ExtractionResult result = _extractor.SplitOnMemoryRecords(_rowStorage.Span, _recordsStorage);
          _remindedBytesLength = _rowStorage.Length - result.StartRemainingBytes;
          if (_remindedBytesLength > 0)
          {
@@ -63,6 +67,58 @@ internal class DataChunkManager : IAsyncDisposable
       }
    }
 
+   public async Task<(bool, LineMemory)> TryGetNextLineAsync()
+   {
+      if (NeedLoadLines())
+      {
+         ExtractionResult result = await LoadLinesAsync();
+         if (result is { Success: true, Size: 0 })
+         {
+            return (false, default);
+         }
+
+         return (true, _recordsStorage[_currentPosition++]);
+      }
+      return (true, _recordsStorage[_currentPosition++]);
+   }
+
+   private bool NeedLoadLines()
+   {
+      return _currentPosition >= _recordsStorage.Length - 1;
+   }
+
+   private async Task<ExtractionResult> LoadLinesAsync()
+   {
+      int received = await _dataSource.ReadAsync(_rowStorage[..^_remindedBytesLength]);
+      if (received == 0)
+         return ExtractionResult.Ok(0, -1);
+      _currentPosition = 0;
+      //todo repetition
+      ExtractionResult result = _extractor.SplitOnMemoryRecords(_rowStorage.Span, _recordsStorage);
+      _remindedBytesLength = _rowStorage.Length - result.StartRemainingBytes;
+      if (_remindedBytesLength > 0)
+      {
+         if (_remainedBytes != null && _remainedBytes.Length < _remindedBytesLength)
+         {
+            ArrayPool<byte>.Shared.Return(_remainedBytes);
+            _remainedBytes = null;
+         }
+
+         _remainedBytes ??= ArrayPool<byte>.Shared.Rent(_remindedBytesLength);
+         _rowStorage[result.StartRemainingBytes..].CopyTo(_rowStorage);
+      }
+      else
+      {
+         if (_remainedBytes != null)
+         {
+            ArrayPool<byte>.Shared.Return(_remainedBytes);
+            _remainedBytes = null;
+         }
+      }
+
+      return result;
+   }
+
    public ValueTask DisposeAsync()
    {
       if (_remainedBytes != null)
@@ -70,14 +126,7 @@ internal class DataChunkManager : IAsyncDisposable
          ArrayPool<byte>.Shared.Return(_remainedBytes);
       }
 
-      _dataSource?.Dispose();
+      _dataSource.Dispose();
       return ValueTask.CompletedTask;
-   }
-
-   public async Task<LineMemory> GetNextLineAsync()
-   {
-      await foreach (LineMemory line in GetRecordsAsync())
-         yield return line;
-      yield break;
    }
 }

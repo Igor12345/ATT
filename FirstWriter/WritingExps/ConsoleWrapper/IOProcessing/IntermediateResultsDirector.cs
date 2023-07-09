@@ -39,7 +39,7 @@ internal class IntermediateResultsDirector
       Directory.CreateDirectory(_path);
    }
 
-   public async Task<Result> WriteRecordsAsync(object? sender, SortingCompletedEventArgs eventArgs)
+   public async Task<Result> WriteRecordsAsync(SortingCompletedEventArgs eventArgs)
    {
       var records = eventArgs.Sorted;
       var sourceBytes = eventArgs.Source;
@@ -48,6 +48,11 @@ internal class IntermediateResultsDirector
       var fullFileName = Path.Combine(_path, fileName);
 
       return await _writer.WriteRecords(fullFileName, records, sourceBytes, _cancellationToken);
+   }
+
+   public Result WriteRecords(SortingCompletedEventArgs eventArgs)
+   {
+      return WriteRecordsAsync(eventArgs).GetAwaiter().GetResult();
    }
 
    private string GetNextFileName()

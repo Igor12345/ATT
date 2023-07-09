@@ -1,4 +1,6 @@
-﻿namespace SortingEngine.RuntimeConfiguration;
+﻿using System.Text;
+
+namespace SortingEngine.RuntimeConfiguration;
 
 internal class RuntimeConfig : IConfig
 {
@@ -11,6 +13,8 @@ internal class RuntimeConfig : IConfig
    public string TemporaryFolder { get; private set; }
    public int MergeBufferSize { get; private set; }
    public int OutputBufferSize { get; private set; }
+   public Encoding Encoding { get; private set; }
+   public int RecordsBufferSize { get; private set; }
 
    public static IConfig Create(Action<IConfigBuilder> buildConfig)
    {
@@ -49,6 +53,18 @@ internal class RuntimeConfig : IConfig
       public IConfigBuilder UseOutputBuffer(int outputBuffer)
       {
          _config.OutputBufferSize = outputBuffer;
+         return this;
+      }
+
+      public IConfigBuilder UseRecordsBuffer(int recordsBuffer)
+      {
+         _config.RecordsBufferSize = recordsBuffer;
+         return this;
+      }
+
+      public IConfigBuilder UseEncoding(Encoding encoding)
+      {
+         _config.Encoding = encoding;
          return this;
       }
    }

@@ -48,7 +48,9 @@ namespace ConsoleWrapper
 
          RecordsSetSorter sorter = new RecordsSetSorter(encoding);
          IntermediateResultsDirector chunksDirector = IntermediateResultsDirector.Create(path, cts.Token);
-         sorter.SortingCompleted += (o, eventArgs) => chunksDirector.WriteRecordsAsync(o, eventArgs).Wait();
+         ResultWriter resultWriter = ResultWriter.Create(path, cts.Token);
+         sorter.SortingCompleted += (o, eventArgs) => chunksDirector.WriteRecords(eventArgs);
+         sorter.OutputBufferFull += (o, eventArgs) => resultWriter.WriteOutput(eventArgs);
          IBytesProducer bytesReader = new LongFileReader(path, encoding);
 
          Stopwatch sw = Stopwatch.StartNew();
@@ -57,8 +59,8 @@ namespace ConsoleWrapper
 
          sw.Stop();
          Console.WriteLine(result.Success
-            ? $"Success - {sw.Elapsed.TotalMinutes} min, {sw.Elapsed.Seconds} sec; Total: {sw.Elapsed.TotalSeconds} sec, {sw.Elapsed.TotalMilliseconds} ms"
-            : $"Error: {result.Message}");
+            ? $"---> Success - {sw.Elapsed.TotalMinutes} min, {sw.Elapsed.Seconds} sec; Total: {sw.Elapsed.TotalSeconds} sec, {sw.Elapsed.TotalMilliseconds} ms"
+            : $"---> Error: {result.Message}");
       }
 
       private static void SortingCompleted(object? sender, SortingCompletedEventArgs e)

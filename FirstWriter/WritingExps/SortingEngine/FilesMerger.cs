@@ -7,21 +7,22 @@ namespace SortingEngine;
 internal class FilesMerger
 {
    private readonly IConfig _config;
-   private string[] _files;
+   private string[] _files = null!;
 
-   private LineMemory[] _outputBuffer;
+   private LineMemory[] _outputBuffer = null!;
    private int _lastLine;
    private Memory<byte> _inputBuffer;
-   public event EventHandler<SortingCompletedEventArgs> SortingCompleted;
+   public event EventHandler<SortingCompletedEventArgs>? OutputBufferFull;
+
    public FilesMerger(IConfig config)
    {
       //todo static vs Guard
       _config = config ?? throw new ArgumentNullException(nameof(config));
    }
 
-   public async Task<Result> MergeWithOrder(string directory)
+   public async Task<Result> MergeWithOrder()
    {
-      _files = Directory.GetFiles(directory);
+      _files = Directory.GetFiles(_config.TemporaryFolder);
 
       CreateBuffers();
 
@@ -36,7 +37,7 @@ internal class FilesMerger
          //todo configure LineMemory creation
          int from = i * _config.MergeBufferSize;
          int to = (i + 1) * _config.MergeBufferSize;
-         managers[i] = new DataChunkManager(_files[i], _inputBuffer[from..to], new LineMemory[1000]);
+         managers[i] = new DataChunkManager(_files[i], _inputBuffer[from..to], new LineMemory[1000], _config.Encoding);
       }
 
       //todo replace on real storage
@@ -46,8 +47,9 @@ internal class FilesMerger
 
       for (int i = 0; i < _files.Length; i++)
       {
-         LineMemory line = await managers[i].GetNextLineAsync();
-         priorityQueue.Enqueue(line, line);
+         (bool hasLine, LineMemory line) = await managers[i].TryGetNextLineAsync();
+         if (hasLine)
+            priorityQueue.Enqueue(line, line);
       }
 
       while (true)
@@ -58,25 +60,24 @@ internal class FilesMerger
          _outputBuffer[_lastLine++] = line;
          if (_lastLine >= _outputBuffer.Length)
          {
-            OnSortingCompleted(new SortingCompletedEventArgs(_outputBuffer, _inputBuffer));
+            OnOutputBufferFull(new SortingCompletedEventArgs(_outputBuffer, _inputBuffer));
             _lastLine = 0;
          }
       }
-      OnSortingCompleted(new SortingCompletedEventArgs(_outputBuffer[.._lastLine], _inputBuffer));
+
+      OnOutputBufferFull(new SortingCompletedEventArgs(_outputBuffer[.._lastLine], _inputBuffer));
       //todo flush output
       return Result.Ok;
-   }
-
-
-
-   private void OnSortingCompleted(SortingCompletedEventArgs e)
-   {
-      SortingCompleted?.Invoke(this, e);
    }
 
    private void CreateBuffers()
    {
       _inputBuffer = new byte[_config.MergeBufferSize * _files.Length].AsMemory();
       _outputBuffer = new LineMemory[_config.OutputBufferSize];
+   }
+
+   protected virtual void OnOutputBufferFull(SortingCompletedEventArgs e)
+   {
+      OutputBufferFull?.Invoke(this, e);
    }
 }
