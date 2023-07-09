@@ -18,6 +18,8 @@ namespace SortingEngine.RuntimeEnvironment
          var config = RuntimeConfig.Create(conf => conf
             .UseInputBuffer(inputBufferSize)
             .UseMergeBuffer(mergeBuffer)
+            .UseRecordsBuffer(2_000_000)
+            .UseOutputBuffer(1_000)
             .UseFolder(path, "")
             //todo merge with the preset config
             .UseEncoding(encoding));

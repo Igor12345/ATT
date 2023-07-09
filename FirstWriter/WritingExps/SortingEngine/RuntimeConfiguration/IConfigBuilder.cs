@@ -2,7 +2,7 @@
 
 namespace SortingEngine.RuntimeConfiguration;
 
-internal interface IConfigBuilder
+public interface IConfigBuilder
 {
    IConfigBuilder UseInputBuffer(int inputBufferSize);
    IConfigBuilder UseFolder(string sourceFile, string folderForChunks);
