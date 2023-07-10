@@ -4,7 +4,7 @@ using SortingEngine.RuntimeConfiguration;
 
 namespace SortingEngine;
 
-internal class FilesMerger
+internal class StreamsMergeExecutor
 {
    private readonly IConfig _config;
    private string[] _files = null!;
@@ -14,7 +14,7 @@ internal class FilesMerger
    private Memory<byte> _inputBuffer;
    public event EventHandler<SortingCompletedEventArgs>? OutputBufferFull;
 
-   public FilesMerger(IConfig config)
+   public StreamsMergeExecutor(IConfig config)
    {
       //todo static vs Guard
       _config = config ?? throw new ArgumentNullException(nameof(config));
@@ -40,9 +40,10 @@ internal class FilesMerger
          managers[i] = new DataChunkManager(_files[i], _inputBuffer[from..to], new LineMemory[1000], _config.Encoding);
       }
 
+      var comparer = new InSiteRecordsComparer(_inputBuffer);
       //todo replace on real storage
       PriorityQueue<LineMemory, LineMemory> priorityQueue =
-         new PriorityQueue<LineMemory, LineMemory>(new InSiteRecordsComparer(_inputBuffer));
+         new PriorityQueue<LineMemory, LineMemory>();
 
 
       for (int i = 0; i < _files.Length; i++)

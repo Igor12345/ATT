@@ -84,7 +84,7 @@ namespace SortingEngine
 
       private async Task<Result> MergeToOneFileAsync()
       {
-         FilesMerger merger = new FilesMerger(_configuration);
+         StreamsMergeExecutor merger = new StreamsMergeExecutor(_configuration);
          merger.OutputBufferFull += (o, eventArgs) => MergerOnOutputBufferFull(o, eventArgs);
          var result = await merger.MergeWithOrder();
          return result;

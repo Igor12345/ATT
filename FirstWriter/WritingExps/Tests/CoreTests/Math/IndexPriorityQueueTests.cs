@@ -23,7 +23,7 @@ namespace CoreTests.Math
       }
 
       [Fact]
-      public void ShouldBeAbleAddValuesToQueue()
+      public void ShouldBeAbleToAddValuesToQueue()
       {
          var queue = CreateSampleQueue(new[] { (23, 4) });
 
@@ -31,7 +31,7 @@ namespace CoreTests.Math
       }
 
       [Fact]
-      public void ShouldBeAblePeekValuesFromQueueMultipleTimes()
+      public void ShouldBeAbleToPeekValuesFromQueueMultipleTimes()
       {
          var queue = CreateSampleQueue(new[] { (23, 4) });
 
@@ -47,7 +47,7 @@ namespace CoreTests.Math
       }
 
       [Fact]
-      public void ShouldBeAbleDequeueFromQueueOnlyOnes()
+      public void ShouldBeAbleDequeueFromQueueOnlyOnce()
       {
          var queue = CreateSampleQueue(new[] { (23, 4) });
 
