@@ -7,7 +7,7 @@ public class SortingCompletedEventArgs : EventArgs
 {
    public SortingCompletedEventArgs(LineMemory[] sorted, ReadOnlyMemory<byte> source)
    {
-      Sorted = Guard.NotNull(sorted, nameof(sorted));
+      Sorted = Guard.NotNull(sorted);
       Source = source;
    }
 

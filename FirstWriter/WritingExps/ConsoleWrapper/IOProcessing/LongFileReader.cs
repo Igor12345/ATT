@@ -17,7 +17,7 @@ internal class LongFileReader : IBytesProducer, IDisposable
    public LongFileReader(string fullFileName, Encoding encoding)
    {
       _fullFileName = Guard.FileExist(fullFileName);
-      _encoding = Guard.NotNull(encoding, nameof(encoding));
+      _encoding = Guard.NotNull(encoding);
    }
 
     public Task<OneOf<Result<int>, Error<string>>> PopulateAsyncFunc(byte[] buffer)

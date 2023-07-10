@@ -1,12 +1,13 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 namespace Infrastructure.Parameters
 {
    public static class Guard
    {
-      public static T NotNull<T>(T value, string name)
+      public static T NotNull<T>(T value, [CallerArgumentExpression("value")] string paramName = null)
       {
-         return value ?? throw new ArgumentNullException(name);
+         return value ?? throw new ArgumentNullException(paramName);
       }
 
       public static string FileExist(string fileName)

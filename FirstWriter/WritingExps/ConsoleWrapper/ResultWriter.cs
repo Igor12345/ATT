@@ -23,8 +23,12 @@ internal class ResultWriter
       path = Guard.FileExist(path);
       var fileName = Path.GetFileNameWithoutExtension(path);
       var extension = Path.GetExtension(path);
-      string resultFile = $"{fileName}_sorted.{extension}";
-      ResultWriter instance = new ResultWriter(resultFile, token);
+      string delimiter = extension.Length > 0 ? "." : "";
+      string resultFile = $"{fileName}_sorted{delimiter}{extension}";
+      //todo
+      string directory = Path.GetDirectoryName(path);
+      string pathToResult = Path.Combine(directory, resultFile);
+      ResultWriter instance = new ResultWriter(pathToResult, token);
       return instance;
    }
 

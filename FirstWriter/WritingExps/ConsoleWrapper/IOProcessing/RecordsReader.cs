@@ -12,26 +12,26 @@ namespace ConsoleWrapper.IOProcessing
 
       public RecordsReader(Func<Stream> streamFactory)
       {
-         _streamFactory = Guard.NotNull(streamFactory, nameof(streamFactory));
+         _streamFactory = Guard.NotNull(streamFactory);
          _encoding = Encoding.UTF8;
       }
 
       public RecordsReader(Func<Stream> streamFactory, Encoding encoding)
       {
-         _streamFactory = Guard.NotNull(streamFactory, nameof(streamFactory));
-         _encoding = Guard.NotNull(encoding, nameof(encoding));
+         _streamFactory = Guard.NotNull(streamFactory);
+         _encoding = Guard.NotNull(encoding);
       }
 
       public RecordsReader(Stream inputStream)
       {
-         _inputStream = Guard.NotNull(inputStream, nameof(inputStream));
+         _inputStream = Guard.NotNull(inputStream);
          _encoding = Encoding.UTF8;
       }
 
       public RecordsReader(Stream inputStream, Encoding encoding)
       {
-         _inputStream = Guard.NotNull(inputStream, nameof(inputStream));
-         _encoding = Guard.NotNull(encoding, nameof(encoding));
+         _inputStream = Guard.NotNull(inputStream);
+         _encoding = Guard.NotNull(encoding);
       }
 
       //todo memory
