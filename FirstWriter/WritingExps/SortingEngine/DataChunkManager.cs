@@ -17,6 +17,7 @@ internal class DataChunkManager : IAsyncDisposable
    private byte[]? _remainedBytes;
    private int _remindedBytesLength;
    private RecordsExtractor _extractor;
+   private int _loadedLines;
 
    public DataChunkManager(string file, Memory<byte> rowStorage, LineMemory[] recordsStorage, Encoding encoding)
    {
@@ -77,6 +78,7 @@ internal class DataChunkManager : IAsyncDisposable
             return (false, default);
          }
 
+         _loadedLines = result.Size;
          return (true, _recordsStorage[_currentPosition++]);
       }
       return (true, _recordsStorage[_currentPosition++]);
@@ -84,7 +86,7 @@ internal class DataChunkManager : IAsyncDisposable
 
    private bool NeedLoadLines()
    {
-      return _currentPosition >= _recordsStorage.Length - 1;
+      return _currentPosition >= _loadedLines;
    }
 
    private async Task<ExtractionResult> LoadLinesAsync()
