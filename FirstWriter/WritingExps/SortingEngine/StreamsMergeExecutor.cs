@@ -1,6 +1,7 @@
 ﻿using SortingEngine.Comparators;
 using SortingEngine.Entities;
 using SortingEngine.RuntimeConfiguration;
+using SortingEngine.Sorters;
 
 namespace SortingEngine;
 
@@ -40,24 +41,25 @@ internal class StreamsMergeExecutor
          managers[i] = new DataChunkManager(_files[i], _inputBuffer[from..to], new LineMemory[1000], _config.Encoding);
       }
 
-      var comparer = new InSiteRecordsComparer(_inputBuffer);
-      //todo replace on real storage
-      PriorityQueue<LineMemory, LineMemory> priorityQueue =
-         new PriorityQueue<LineMemory, LineMemory>();
+      IComparer<LineMemory> comparer = new InSiteRecordsComparer(_inputBuffer);
+      IndexPriorityQueue<LineMemory, IComparer<LineMemory>> queue =
+         new IndexPriorityQueue<LineMemory, IComparer<LineMemory>>(_files.Length, comparer);
 
 
       for (int i = 0; i < _files.Length; i++)
       {
          (bool hasLine, LineMemory line) = await managers[i].TryGetNextLineAsync();
          if (hasLine)
-            priorityQueue.Enqueue(line, line);
+            queue.Enqueue(line, i);
       }
 
-      while (true)
+      while (queue.Any())
       {
-         if (priorityQueue.Count == 0)
-            break;
-         var line = priorityQueue.Dequeue();
+         var (line, streamIndex) = queue.Dequeue();
+         var (lineAvailable, nextLine) = await managers[streamIndex].TryGetNextLineAsync();
+         if(lineAvailable)
+            queue.Enqueue(nextLine, streamIndex);
+
          _outputBuffer[_lastLine++] = line;
          if (_lastLine >= _outputBuffer.Length)
          {
