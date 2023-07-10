@@ -35,13 +35,18 @@ namespace SortingEngine.Sorters
          Swim(_currentSize);
       }
 
+      public void Enqueue((T item, int key) value)
+      {
+         Enqueue(value.item, value.key);
+      }
+
       public (T, int) Dequeue()
       {
          if (!Any())
             throw new InvalidOperationException("There are no items in the queue.");
          var top = _items[0];
          Exchange(0, _currentSize);
-         _items[_currentSize] = default;
+         _items[_currentSize--] = default;
          Sink(0);
          return top;
       }
