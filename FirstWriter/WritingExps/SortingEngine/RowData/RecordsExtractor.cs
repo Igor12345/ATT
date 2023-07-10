@@ -125,8 +125,9 @@ namespace SortingEngine.RowData
                bool success = long.TryParse(chars, out var number);
 
                //todo !success
+               //todo check last index ????
                //text will include ". "
-               return new LineMemory(number, startIndex + i, startIndex + lineSpan.Length);
+               return new LineMemory(number, startIndex + i, startIndex + lineSpan.Length + 1);
             }
          }
 
