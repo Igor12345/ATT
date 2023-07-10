@@ -6,12 +6,10 @@ internal class IntermediateResultsDirector
 {
    private volatile int _lastFileNumber;
    private string _path = null!;
-   private readonly RecordsWriter _writer;
    private CancellationToken _cancellationToken;
 
    private IntermediateResultsDirector()
    {
-      _writer = new RecordsWriter();
    }
 
    public static IntermediateResultsDirector Create(string path, CancellationToken token = default)
@@ -37,7 +35,8 @@ internal class IntermediateResultsDirector
       string fileName = GetNextFileName();
       var fullFileName = Path.Combine(_path, fileName);
 
-      return await _writer.WriteRecords(fullFileName, records, sourceBytes, _cancellationToken);
+      await using RecordsWriter writer = RecordsWriter.Create(fullFileName);
+      return await writer.WriteRecords(records, sourceBytes, _cancellationToken);
    }
 
    public Result WriteRecords(SortingCompletedEventArgs eventArgs)

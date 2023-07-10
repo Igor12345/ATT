@@ -1,21 +1,17 @@
 ﻿using ConsoleWrapper.IOProcessing;
 using Infrastructure.Parameters;
 using SortingEngine;
-using System.Threading;
 
 namespace ConsoleWrapper;
 
-internal class ResultWriter
+internal class ResultWriter : IAsyncDisposable
 {
-   private string _path = null!;
    private readonly CancellationToken _token;
-   private readonly RecordsWriter _writer;
-   
-   private ResultWriter(string path, CancellationToken token)
+   private RecordsWriter _writer = null!;
+
+   private ResultWriter(CancellationToken token)
    {
-      _path = path;
       _token = token;
-      _writer = new RecordsWriter();
    }
 
    public static ResultWriter Create(string path, CancellationToken token)
@@ -26,9 +22,12 @@ internal class ResultWriter
       string delimiter = extension.Length > 0 ? "." : "";
       string resultFile = $"{fileName}_sorted{delimiter}{extension}";
       //todo
-      string directory = Path.GetDirectoryName(path);
+      string? directory = Path.GetDirectoryName(path);
       string pathToResult = Path.Combine(directory, resultFile);
-      ResultWriter instance = new ResultWriter(pathToResult, token);
+      ResultWriter instance = new ResultWriter(token)
+      {
+         _writer = RecordsWriter.Create(pathToResult)
+      };
       return instance;
    }
 
@@ -41,6 +40,11 @@ internal class ResultWriter
    {
       var records = eventArgs.Sorted;
       var sourceBytes = eventArgs.Source;
-      return await _writer.WriteRecords(_path, records, sourceBytes, _token);
+      return await _writer.WriteRecords(records, sourceBytes, _token);
+   }
+
+   public ValueTask DisposeAsync()
+   {
+      return _writer.DisposeAsync();
    }
 }
