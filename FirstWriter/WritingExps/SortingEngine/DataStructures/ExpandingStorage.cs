@@ -8,24 +8,23 @@ namespace SortingEngine.DataStructures
    {
       private readonly int _chunkSize;
       //todo either use lock or remove volatile
-      private volatile int _lastBuffer;
+      private volatile int _lastBuffer = -1;
       private long _currentIndex;
-      private readonly Dictionary<int, LinesChunk<T>> _buffers;
+      private readonly List<T[]> _buffers;
 
       public ExpandingStorage(int chunkSize)
       {
          _chunkSize = Guard.Positive(chunkSize);
-         _buffers = new Dictionary<int, LinesChunk<T>>();
+         _buffers = new List<T[]>();
       }
 
-      private LinesChunk<T> RentSpace()
+      private void RentSpace()
       {
          T[] array = ArrayPool<T>.Shared.Rent(_chunkSize);
-         int index = Interlocked.Increment(ref _lastBuffer);
-         var chunk = new LinesChunk<T>(index, array);
-         _buffers.Add(index, chunk);
+         
+         Interlocked.Increment(ref _lastBuffer);
+         _buffers.Add(array);
          _currentIndex = 0;
-         return chunk;
       }
 
       public T this[long i]
@@ -34,8 +33,8 @@ namespace SortingEngine.DataStructures
          {
             //todo possible error, but I'm not expect it in real cases
             int buffer = (int)(i / _chunkSize);
-            int position = (int)(i%_chunkSize);
-            return _buffers[buffer].Buffer[position];
+            int position = (int)(i % _chunkSize);
+            return _buffers[buffer][position];
          }
       }
 
@@ -43,12 +42,12 @@ namespace SortingEngine.DataStructures
 
       public void CopyTo(T[] destination, int length)
       {
-         for (int i = 0; i < _lastBuffer; i++)
+         for (int i = 0; i <= _lastBuffer; i++)
          {
             int from = i * _chunkSize;
             int right = (i + 1) * _chunkSize;
             int to = Math.Min(right, length);
-            _buffers[i].Buffer.CopyTo(destination.AsSpan(from..to));
+            _buffers[i].AsSpan(..to).CopyTo(destination.AsSpan(from..to));
             if (right >= length)
                break;
          }
@@ -56,9 +55,9 @@ namespace SortingEngine.DataStructures
 
       public void Add(T item)
       {
-         if (_currentIndex >= _chunkSize)
+         if (_lastBuffer < 0 || _currentIndex >= _chunkSize)
             RentSpace();
-         _buffers[_lastBuffer].Buffer[_currentIndex++] = item;
+         _buffers[_lastBuffer][_currentIndex++] = item;
       }
 
       public void Clear()
@@ -68,15 +67,13 @@ namespace SortingEngine.DataStructures
 
       public void Dispose()
       {
-         foreach (var linesChunk in _buffers)
+         foreach (var buffer in _buffers)
          {
-            ArrayPool<T>.Shared.Return(linesChunk.Value.Buffer);
+            ArrayPool<T>.Shared.Return(buffer);
          }
 
-         _lastBuffer = 0;
+         _lastBuffer = -1;
          _currentIndex = 0;
       }
    }
-
-   public record struct LinesChunk<T>(int Index, T[] Buffer);
 }

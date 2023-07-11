@@ -55,6 +55,7 @@ internal class StreamsMergeExecutor
          if (hasLine)
          {
             queue.Enqueue(line, i);
+            //todo remove
             if (line.Number == 8446805350952162698 || line.Number == 1243027978022674890)
             {
                var text = ByteToStringConverter.Convert(_inputBuffer[line.From..line.To]);

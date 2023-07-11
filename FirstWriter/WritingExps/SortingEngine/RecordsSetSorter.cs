@@ -140,15 +140,15 @@ namespace SortingEngine
                _configuration.Encoding.GetBytes(". "));
          LineMemory[] sorted;
 
-         using ExpandingStorage<LineMemory> recordsPool =
+         using ExpandingStorage<LineMemory> recordsStorage =
             new ExpandingStorage<LineMemory>(_configuration.RecordsBufferSize);
 
          //todo array vs slice
-         ExtractionResult result = extractor.SplitOnMemoryRecords(inputBuffer.Span, recordsPool);
+         ExtractionResult result = extractor.SplitOnMemoryRecords(inputBuffer.Span, recordsStorage);
 
          if (!result.Success)
          {
-            //todo
+            //todo railway
             throw new InvalidOperationException(result.Message);
          }
 
@@ -160,7 +160,7 @@ namespace SortingEngine
          }
 
          InSiteRecordsSorter sorter = new InSiteRecordsSorter(inputBuffer);
-         sorted = sorter.Sort(recordsPool, result.Size);
+         sorted = sorter.Sort(recordsStorage, result.Size);
 
          OnSortingCompleted(new SortingCompletedEventArgs(sorted, inputBuffer));
       }

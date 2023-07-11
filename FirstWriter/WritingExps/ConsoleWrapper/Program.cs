@@ -10,6 +10,9 @@ namespace ConsoleWrapper
    {
       static async Task Main(string[] args)
       {
+         //todo!!! handle lack eol on the last line
+         //do not split small files
+
          string path = "";
          while (true)
          {
