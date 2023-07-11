@@ -1,6 +1,9 @@
 ﻿using System.Diagnostics;
 using System.Text;
 using ConsoleWrapper.IOProcessing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using SortingEngine;
 using SortingEngine.RuntimeEnvironment;
 
@@ -12,6 +15,24 @@ namespace ConsoleWrapper
       {
          //todo!!! handle lack eol on the last line
          //do not split small files
+
+         IHostBuilder hostBuilder = Host.CreateDefaultBuilder();
+         hostBuilder.ConfigureServices((context, services) => services.AddHostedService<Worker>());
+         hostBuilder.ConfigureLogging((hostContext, configLogging) =>
+         {
+            configLogging.AddConsole();
+            configLogging.AddDebug();
+         });
+         // hostBuilder.ConfigureAppConfiguration()
+
+         HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+         builder.Services.AddHostedService<Worker>();
+         var config = builder.Configuration;
+         IHost host = hostBuilder.Build();
+         
+         host.Run();
+
+         return;
 
          string path = "";
          while (true)
@@ -95,6 +116,21 @@ namespace ConsoleWrapper
 
          encoding = Encoding.Default;
          return false;
+      }
+   }
+
+   internal class Worker : IHostedService
+   {
+      public async Task StartAsync(CancellationToken cancellationToken)
+      {
+         Console.WriteLine("Hi from service");
+         await Task.Delay(2);
+      }
+
+      public async Task StopAsync(CancellationToken cancellationToken)
+      {
+         Console.WriteLine("Bye service");
+         await Task.Delay(2);
       }
    }
 }
