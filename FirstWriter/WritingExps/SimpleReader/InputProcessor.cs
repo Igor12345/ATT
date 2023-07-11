@@ -22,17 +22,17 @@ public class InputProcessor
       return extractor.SplitOnRecords(buffer, records);
    }
 
-   public async Task<ExtractionResult> ReadMemoryRecords(string path, byte[] buffer, LineMemory[] records)
-   {
-      await using FileStream stream = File.OpenRead(path);
-      RecordsRetriever retriever = new RecordsRetriever(stream);
-      var readingResult = await retriever.ReadChunk(buffer, 0, buffer.Length);
-      if (!readingResult.Success)
-         return ExtractionResult.Error(readingResult.Message);
-
-      var encoding = Encoding.UTF8;
-      RecordsExtractor extractor =
-         new RecordsExtractor(encoding.GetBytes(Environment.NewLine), encoding.GetBytes(". "));
-      return extractor.SplitOnMemoryRecords(buffer, records);
-   }
+   // public async Task<ExtractionResult> ReadMemoryRecords(string path, byte[] buffer, LineMemory[] records)
+   // {
+   //    await using FileStream stream = File.OpenRead(path);
+   //    RecordsRetriever retriever = new RecordsRetriever(stream);
+   //    var readingResult = await retriever.ReadChunk(buffer, 0, buffer.Length);
+   //    if (!readingResult.Success)
+   //       return ExtractionResult.Error(readingResult.Message);
+   //
+   //    var encoding = Encoding.UTF8;
+   //    RecordsExtractor extractor =
+   //       new RecordsExtractor(encoding.GetBytes(Environment.NewLine), encoding.GetBytes(". "));
+   //    return extractor.SplitOnMemoryRecords(buffer, records);
+   // }
 }

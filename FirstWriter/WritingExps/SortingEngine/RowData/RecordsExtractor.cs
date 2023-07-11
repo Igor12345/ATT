@@ -1,5 +1,5 @@
-﻿using System.Buffers;
-using Infrastructure.ByteOperations;
+﻿using Infrastructure.ByteOperations;
+using SortingEngine.DataStructures;
 using SortingEngine.Entities;
 
 namespace SortingEngine.RowData
@@ -57,7 +57,7 @@ namespace SortingEngine.RowData
          return new Result(true, "");
       }
 
-      public ExtractionResult SplitOnMemoryRecords(ReadOnlySpan<byte> input, LineMemory[] records)
+      public ExtractionResult SplitOnMemoryRecords(ReadOnlySpan<byte> input, ExpandingStorage<LineMemory> records)
       {
          int lineIndex = 0;
          int endLine = 0;
@@ -72,14 +72,10 @@ namespace SortingEngine.RowData
                //text will include eof. the question with the last line.
                endLine = i + 1;
                LineMemory line = ExtractMemoryRecord(input[startLine..endLine], startLine);
-               records[lineIndex++] = line;
-               i++;
 
-               //todo !!! Need additional buffer for lines
-               if (lineIndex >= records.Length)
-               {
-                  return ExtractionResult.Ok(lineIndex, endOfLastLine + 1);
-               }
+               records.Add(line);
+               lineIndex++;
+               i++;
             }
          }
          return ExtractionResult.Ok(lineIndex, endOfLastLine + 1);

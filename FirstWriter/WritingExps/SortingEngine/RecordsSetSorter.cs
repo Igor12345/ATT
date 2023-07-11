@@ -1,6 +1,7 @@
 ﻿using System.Buffers;
 using OneOf;
 using OneOf.Types;
+using SortingEngine.DataStructures;
 using SortingEngine.Entities;
 using SortingEngine.RowData;
 using SortingEngine.RuntimeConfiguration;
@@ -138,34 +139,28 @@ namespace SortingEngine
             new RecordsExtractor(_configuration.Encoding.GetBytes(Environment.NewLine),
                _configuration.Encoding.GetBytes(". "));
          LineMemory[] sorted;
-         LineMemory[] records = null!;
-         try
+
+         using ExpandingStorage<LineMemory> recordsPool =
+            new ExpandingStorage<LineMemory>(_configuration.RecordsBufferSize);
+
+         //todo array vs slice
+         ExtractionResult result = extractor.SplitOnMemoryRecords(inputBuffer.Span, recordsPool);
+
+         if (!result.Success)
          {
-            records = _poolsManager.AcquireRecordsArray();
-
-            //todo array vs slice
-            ExtractionResult result = extractor.SplitOnMemoryRecords(inputBuffer.Span, records);
-
-            if (!result.Success)
-            {
-               //todo
-               throw new InvalidOperationException(result.Message);
-            }
-
-            _remindedBytesLength = inputBuffer.Length - result.StartRemainingBytes;
-            if (_remindedBytesLength > 0)
-            {
-               _remainedBytes ??= ArrayPool<byte>.Shared.Rent(Constants.MaxTextLength);
-               inputBuffer.Span[result.StartRemainingBytes..].CopyTo(_remainedBytes);
-            }
-
-            InSiteRecordsSorter sorter = new InSiteRecordsSorter(inputBuffer);
-            sorted = sorter.Sort(records[..result.Size]);
+            //todo
+            throw new InvalidOperationException(result.Message);
          }
-         finally
+
+         _remindedBytesLength = inputBuffer.Length - result.StartRemainingBytes;
+         if (_remindedBytesLength > 0)
          {
-            _poolsManager.Return(records);
+            _remainedBytes ??= ArrayPool<byte>.Shared.Rent(Constants.MaxTextLength);
+            inputBuffer.Span[result.StartRemainingBytes..].CopyTo(_remainedBytes);
          }
+
+         InSiteRecordsSorter sorter = new InSiteRecordsSorter(inputBuffer);
+         sorted = sorter.Sort(recordsPool, result.Size);
 
          OnSortingCompleted(new SortingCompletedEventArgs(sorted, inputBuffer));
       }

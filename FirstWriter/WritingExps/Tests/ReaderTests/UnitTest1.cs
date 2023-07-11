@@ -53,32 +53,32 @@ namespace ReaderTests
          Assert.Equal(sorted.Length, records.Length);
       }
 
-      [Fact]
-      public async Task CanSortOnSite()
-      {
-         byte[] bytes = new byte[2_000_000_000];
-         LineMemory[] records = new LineMemory[100000];
-
-         InputProcessor inputProcessor = new InputProcessor();
-         string fileName = "fourth";
-         string path = @$"d://temp/ATT/{fileName}.txt";
-         var result = await inputProcessor.ReadMemoryRecords(path, bytes, records);
-
-         Stopwatch stopwatch = Stopwatch.StartNew();
-         InSiteRecordsSorter sorter = new InSiteRecordsSorter(bytes);
-         var sorted = sorter.Sort(records);
-
-         stopwatch.Stop();
-
-         LineAsString[] originalRecords = ConvertToStrings(records, bytes);
-         LineAsString[] sortedRecords = ConvertToStrings(sorted, bytes);
-
-         var min = stopwatch.Elapsed.Minutes;
-         var sec = stopwatch.Elapsed.Seconds;
-         var total = stopwatch.Elapsed.TotalMilliseconds;
-
-         Assert.Equal(sorted.Length, records.Length);
-      }
+      // [Fact]
+      // public async Task CanSortOnSite()
+      // {
+      //    byte[] bytes = new byte[2_000_000_000];
+      //    LineMemory[] records = new LineMemory[100000];
+      //
+      //    InputProcessor inputProcessor = new InputProcessor();
+      //    string fileName = "fourth";
+      //    string path = @$"d://temp/ATT/{fileName}.txt";
+      //    var result = await inputProcessor.ReadMemoryRecords(path, bytes, records);
+      //
+      //    Stopwatch stopwatch = Stopwatch.StartNew();
+      //    InSiteRecordsSorter sorter = new InSiteRecordsSorter(bytes);
+      //    var sorted = sorter.Sort(records);
+      //
+      //    stopwatch.Stop();
+      //
+      //    LineAsString[] originalRecords = ConvertToStrings(records, bytes);
+      //    LineAsString[] sortedRecords = ConvertToStrings(sorted, bytes);
+      //
+      //    var min = stopwatch.Elapsed.Minutes;
+      //    var sec = stopwatch.Elapsed.Seconds;
+      //    var total = stopwatch.Elapsed.TotalMilliseconds;
+      //
+      //    Assert.Equal(sorted.Length, records.Length);
+      // }
 
       private LineAsString[] ConvertToStrings(LineMemory[] lineRecords, byte[] source)
       {

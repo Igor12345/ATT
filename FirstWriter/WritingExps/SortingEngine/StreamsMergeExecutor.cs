@@ -40,9 +40,10 @@ internal class StreamsMergeExecutor
          //todo configure LineMemory creation
          int from = i * _config.MergeBufferSize;
          int to = (i + 1) * _config.MergeBufferSize;
-         managers[i] = new DataChunkManager(_files[i], _inputBuffer[from..to], new LineMemory[1000], _config.Encoding);
+         managers[i] = new DataChunkManager(_files[i], _inputBuffer[from..to], _config.Encoding,
+            _config.RecordsBufferSize);
       }
-      
+
       IComparer<LineMemory> comparer = new InSiteRecordsComparer(_inputBuffer);
       IndexPriorityQueue<LineMemory, IComparer<LineMemory>> queue =
          new IndexPriorityQueue<LineMemory, IComparer<LineMemory>>(_files.Length, comparer);

@@ -1,44 +1,82 @@
-﻿using System;
-using System.Buffers;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using SortingEngine.Entities;
+﻿using System.Buffers;
+using Infrastructure.Parameters;
 
 namespace SortingEngine.DataStructures
 {
-   internal class ExpandingStorage<T> : IDisposable
+   //todo test
+   public class ExpandingStorage<T> : IDisposable
    {
-      private int _chunkSize;
-      private volatile int _lastIndex;
-      private Dictionary<int, LinesChunk> _buffer;
+      private readonly int _chunkSize;
+      //todo either use lock or remove volatile
+      private volatile int _lastBuffer;
+      private long _currentIndex;
+      private readonly Dictionary<int, LinesChunk<T>> _buffers;
 
-      public ExpandingStorage()
+      public ExpandingStorage(int chunkSize)
       {
-         _chunkSize = 100_000;
-         _buffer = new Dictionary<int, LinesChunk>();
+         _chunkSize = Guard.Positive(chunkSize);
+         _buffers = new Dictionary<int, LinesChunk<T>>();
       }
 
-      public LinesChunk RentSpace()
+      private LinesChunk<T> RentSpace()
       {
-         LineMemory[] array = ArrayPool<LineMemory>.Shared.Rent(_chunkSize);
-         int index = Interlocked.Increment(ref _lastIndex);
-         var chunk = new LinesChunk(index, array);
-         _buffer.Add(index, chunk);
+         T[] array = ArrayPool<T>.Shared.Rent(_chunkSize);
+         int index = Interlocked.Increment(ref _lastBuffer);
+         var chunk = new LinesChunk<T>(index, array);
+         _buffers.Add(index, chunk);
+         _currentIndex = 0;
          return chunk;
+      }
+
+      public T this[long i]
+      {
+         get
+         {
+            //todo possible error, but I'm not expect it in real cases
+            int buffer = (int)(i / _chunkSize);
+            int position = (int)(i%_chunkSize);
+            return _buffers[buffer].Buffer[position];
+         }
+      }
+
+      public long CurrentCapacity => _lastBuffer * _chunkSize;
+
+      public void CopyTo(T[] destination, int length)
+      {
+         for (int i = 0; i < _lastBuffer; i++)
+         {
+            int from = i * _chunkSize;
+            int right = (i + 1) * _chunkSize;
+            int to = Math.Min(right, length);
+            _buffers[i].Buffer.CopyTo(destination.AsSpan(from..to));
+            if (right >= length)
+               break;
+         }
+      }
+
+      public void Add(T item)
+      {
+         if (_currentIndex >= _chunkSize)
+            RentSpace();
+         _buffers[_lastBuffer].Buffer[_currentIndex++] = item;
+      }
+
+      public void Clear()
+      {
+         Dispose();
       }
 
       public void Dispose()
       {
-         foreach (var linesChunk in _buffer)
+         foreach (var linesChunk in _buffers)
          {
-            ArrayPool<LineMemory>.Shared.Return(linesChunk.Value.Buffer);
+            ArrayPool<T>.Shared.Return(linesChunk.Value.Buffer);
          }
-      }
 
-      public LinesChunk this[int i] => _buffer[i];
+         _lastBuffer = 0;
+         _currentIndex = 0;
+      }
    }
 
-   public record struct LinesChunk(int Index, LineMemory[] Buffer);
+   public record struct LinesChunk<T>(int Index, T[] Buffer);
 }
