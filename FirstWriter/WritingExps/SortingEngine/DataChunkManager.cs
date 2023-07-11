@@ -14,6 +14,7 @@ internal class DataChunkManager : IAsyncDisposable
    private readonly Memory<byte> _rowStorage;
    private int _currentPosition;
    private readonly LineMemory[] _recordsStorage;
+   private byte[]? _remainedBytes;
    private int _remindedBytesLength;
    private RecordsExtractor _extractor;
    private int _loadedLines;

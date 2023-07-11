@@ -3,6 +3,7 @@ using SortingEngine.Entities;
 using SortingEngine.RuntimeConfiguration;
 using SortingEngine.Sorters;
 using System.Collections.Generic;
+using Infrastructure.ByteOperations;
 
 namespace SortingEngine;
 
@@ -51,7 +52,13 @@ internal class StreamsMergeExecutor
       {
          (bool hasLine, LineMemory line) = await managers[i].TryGetNextLineAsync();
          if (hasLine)
+         {
             queue.Enqueue(line, i);
+            if (line.Number == 8446805350952162698 || line.Number == 1243027978022674890)
+            {
+               var text = ByteToStringConverter.Convert(_inputBuffer[line.From..line.To]);
+            }
+         }
       }
 
       while (queue.Any())

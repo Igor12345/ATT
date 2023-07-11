@@ -42,9 +42,9 @@ namespace SortingEngine
             //make something more fancy
             while (length > 0)
             {
-               if (_remainedBytes != null)
+               if (_remindedBytesLength > 0)
                {
-                  _remainedBytes.CopyTo(inputStorage, 0);
+                  _remainedBytes!.CopyTo(inputStorage, 0);
                }
 
                ReadingResult result =
@@ -65,7 +65,6 @@ namespace SortingEngine
             }
 
             _inputBuffer = null;
-            _remainedBytes = null;
             _poolsManager.DeleteArrays();
 
 
@@ -156,22 +155,8 @@ namespace SortingEngine
             _remindedBytesLength = inputBuffer.Length - result.StartRemainingBytes;
             if (_remindedBytesLength > 0)
             {
-               if (_remainedBytes != null && _remainedBytes.Length < _remindedBytesLength)
-               {
-                  ArrayPool<byte>.Shared.Return(_remainedBytes);
-                  _remainedBytes = null;
-               }
-
-               _remainedBytes ??= ArrayPool<byte>.Shared.Rent(_remindedBytesLength);
+               _remainedBytes ??= ArrayPool<byte>.Shared.Rent(Constants.MaxTextLength);
                inputBuffer.Span[result.StartRemainingBytes..].CopyTo(_remainedBytes);
-            }
-            else
-            {
-               if (_remainedBytes != null)
-               {
-                  ArrayPool<byte>.Shared.Return(_remainedBytes);
-                  _remainedBytes = null;
-               }
             }
 
             InSiteRecordsSorter sorter = new InSiteRecordsSorter(inputBuffer);

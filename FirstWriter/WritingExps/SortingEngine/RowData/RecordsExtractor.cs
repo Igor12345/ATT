@@ -1,4 +1,5 @@
 ﻿using System.Buffers;
+using Infrastructure.ByteOperations;
 using SortingEngine.Entities;
 
 namespace SortingEngine.RowData
@@ -77,12 +78,10 @@ namespace SortingEngine.RowData
                //todo !!! Need additional buffer for lines
                if (lineIndex >= records.Length)
                {
-                  var reminder = ConvertToString(input[(endOfLastLine + 1)..]);
                   return ExtractionResult.Ok(lineIndex, endOfLastLine + 1);
                }
             }
          }
-         var reminder2 = ConvertToString(input[(endOfLastLine + 1)..]);
          return ExtractionResult.Ok(lineIndex, endOfLastLine + 1);
       }
 
@@ -132,14 +131,8 @@ namespace SortingEngine.RowData
          }
 
          //todo
-         throw new InvalidOperationException($"wrong line {ConvertToString(lineSpan)}");
+         throw new InvalidOperationException($"wrong line {ByteToStringConverter.Convert(lineSpan)}");
 
-      }
-
-      //todo
-      private string ConvertToString(ReadOnlySpan<byte> lineSpan)
-      {
-         return new string(lineSpan.ToArray().Select(b => (char)b).ToArray());
       }
 
       private void AddRecord(Span<byte> line, int startLine, int endLine, LineRecord[] records)

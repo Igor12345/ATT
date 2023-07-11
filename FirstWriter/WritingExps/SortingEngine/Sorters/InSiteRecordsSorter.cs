@@ -14,6 +14,7 @@ public class InSiteRecordsSorter
 
    public LineMemory[] Sort(LineMemory[] input)
    {
+      //todo !!! create new big array
       return input.Order(new InSiteRecordsComparer(_source)).ToArray();
    }
 }

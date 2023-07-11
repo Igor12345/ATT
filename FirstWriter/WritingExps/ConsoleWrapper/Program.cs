@@ -16,7 +16,7 @@ namespace ConsoleWrapper
             Console.WriteLine("Hi, enter the full name of the file. Or 'X' to exit.");
             //todo
             path = Console.ReadLine() ?? "";
-            path = @"d:\\Temp\\ATT\\onlyLetters";
+            path = @"d:\\Temp\\ATT\\onlyLetters_middle2";
             if (path.ToUpper() == "X")
                return;
             if (!string.IsNullOrEmpty(path))
