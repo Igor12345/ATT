@@ -1,4 +1,4 @@
-﻿using Infrastructure;
+﻿using Infrastructure.ByteOperations;
 using SortingEngine;
 using SortingEngine.Entities;
 

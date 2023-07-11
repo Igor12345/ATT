@@ -1,5 +1,5 @@
 ﻿using System.Text;
-using Infrastructure;
+using Infrastructure.ByteOperations;
 
 namespace ContentGenerator;
 

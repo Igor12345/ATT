@@ -2,6 +2,7 @@
 using SortingEngine.Entities;
 using SortingEngine.RuntimeConfiguration;
 using SortingEngine.Sorters;
+using System.Collections.Generic;
 
 namespace SortingEngine;
 
@@ -40,7 +41,7 @@ internal class StreamsMergeExecutor
          int to = (i + 1) * _config.MergeBufferSize;
          managers[i] = new DataChunkManager(_files[i], _inputBuffer[from..to], new LineMemory[1000], _config.Encoding);
       }
-
+      
       IComparer<LineMemory> comparer = new InSiteRecordsComparer(_inputBuffer);
       IndexPriorityQueue<LineMemory, IComparer<LineMemory>> queue =
          new IndexPriorityQueue<LineMemory, IComparer<LineMemory>>(_files.Length, comparer);
