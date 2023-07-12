@@ -38,10 +38,19 @@ internal class FileSortingService : IHostedService
       IntermediateResultsDirector chunksDirector =
          IntermediateResultsDirector.Create(configuration.TemporaryFolder, cancellationToken);
       await using ResultWriter resultWriter = ResultWriter.Create(validInput.File, cancellationToken);
-      sorter.SortingCompleted += (o, eventArgs) => chunksDirector.WriteRecords(eventArgs);
-      sorter.OutputBufferFull += (o, eventArgs) => resultWriter.WriteOutput(eventArgs);
+      sorter.SortingCompleted += (o, eventArgs) =>
+      {
+         Console.WriteLine("Writing chunk");
+         chunksDirector.WriteRecords(eventArgs);
+      };
+      sorter.OutputBufferFull += (o, eventArgs) =>
+      {
+         Console.WriteLine("Writing result");
+         resultWriter.WriteOutput(eventArgs);
+      };
       IBytesProducer bytesReader = new LongFileReader(validInput.File, validInput.Encoding);
 
+      Console.WriteLine("Before starting");
       Stopwatch sw = Stopwatch.StartNew();
 
       var result = await sorter.SortAsync(bytesReader, cancellationToken);

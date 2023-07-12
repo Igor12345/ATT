@@ -1,4 +1,5 @@
 ﻿using System.Buffers;
+using JetBrains.Profiler.Api;
 using OneOf;
 using OneOf.Types;
 using SortingEngine.DataStructures;
@@ -24,11 +25,13 @@ namespace SortingEngine
 
       public RecordsSetSorter(IConfig configuration)
       {
+         MemoryProfiler.CollectAllocations(true);
          _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
       }
 
       public async Task<Result> SortAsync(IBytesProducer producer, CancellationToken cancellationToken)
       {
+         MemoryProfiler.GetSnapshot("First");
          Init();
 
          try
@@ -62,18 +65,24 @@ namespace SortingEngine
                length = result.Size;
 
                var slice = inputStorage.AsMemory()[..result.Size];
+
+               MemoryProfiler.GetSnapshot("Second");
+
                ProcessRecords(slice);
             }
 
+            MemoryProfiler.GetSnapshot("Third");
             _inputBuffer = null;
             _poolsManager.DeleteArrays();
 
 
             GC.Collect(2, GCCollectionMode.Aggressive, true, true);
 
+            MemoryProfiler.GetSnapshot("Fourth");
             //merge stage
             await MergeToOneFileAsync();
 
+            MemoryProfiler.GetSnapshot("Last");
             return new Result(true, "");
          }
          catch (Exception e)
