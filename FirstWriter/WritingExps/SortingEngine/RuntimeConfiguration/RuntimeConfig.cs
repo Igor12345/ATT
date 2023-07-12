@@ -3,7 +3,47 @@ using System.Text;
 
 namespace SortingEngine.RuntimeConfiguration;
 
-internal class RuntimeConfig : IConfig
+public class BaseConfiguration
+{
+   public int InputBufferSize { get; set; }
+   public string TemporaryFolder { get; set; }
+   public int MergeBufferSize { get; set; }
+   public int OutputBufferSize { get; set; }
+   public int RecordsBufferSize { get; set; }
+   public int AvailableMemory { get; set; }
+}
+
+public class InputParameters
+{
+   public string Encoding { get; set; } = "UTF16";
+   public Encoding EncodingValue { get; set; }
+
+   public string? FileName { get; set; }
+}
+
+public class ValidatedInputParameters
+{
+   private ValidatedInputParameters()
+   {
+   }
+
+   public ValidatedInputParameters(string file, Encoding encoding)
+   {
+      //todo check values
+      File = file;
+      Encoding = encoding;
+   }
+
+   public Encoding Encoding { get; init; }
+
+   public string File { get; init; }
+
+   private static readonly ValidatedInputParameters _empty = new ValidatedInputParameters()
+      { File = "", Encoding = Encoding.Default };
+   public static ValidatedInputParameters Empty => _empty;
+}
+
+public class RuntimeConfig : IConfig
 {
    private RuntimeConfig()
    {

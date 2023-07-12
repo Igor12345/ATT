@@ -11,6 +11,6 @@ namespace SortingEngine.RuntimeConfiguration
       Encoding Encoding { get; }
       int RecordsBufferSize { get; }
 
-      static abstract IConfig Create(Action<IConfigBuilder> buildConfig);
+      // static abstract IConfig Create(Action<IConfigBuilder> buildConfig);
    }
 }

@@ -6,6 +6,7 @@ namespace SortingEngine.RuntimeEnvironment
    public interface IEnvironmentAnalyzer
    {
       IConfig SuggestConfig(string path, Encoding encoding);
+      IConfig SuggestConfig(ValidatedInputParameters inputParameters);
    }
 
    public class EnvironmentAnalyzer : IEnvironmentAnalyzer
@@ -24,6 +25,11 @@ namespace SortingEngine.RuntimeEnvironment
             //todo merge with the preset config
             .UseEncoding(encoding));
          return config;
+      }
+
+      public IConfig SuggestConfig(ValidatedInputParameters inputParameters)
+      {
+         return SuggestConfig(inputParameters.File, inputParameters.Encoding);
       }
    }
 }
