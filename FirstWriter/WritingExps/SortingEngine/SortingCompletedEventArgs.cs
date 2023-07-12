@@ -14,3 +14,12 @@ public class SortingCompletedEventArgs : EventArgs
    public LineMemory[] Sorted { get; init; }
    public ReadOnlyMemory<byte> Source { get; init; }
 }
+
+public class PointEventArgs : EventArgs
+{
+   public PointEventArgs(string name)
+   {
+      Name = name;
+   }
+   public string Name { get; set; }
+}

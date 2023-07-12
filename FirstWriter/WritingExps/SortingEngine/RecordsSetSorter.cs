@@ -20,6 +20,7 @@ namespace SortingEngine
       private int _remindedBytesLength;
 
       public event EventHandler<SortingCompletedEventArgs>? SortingCompleted;
+      public event EventHandler<PointEventArgs>? CheckPoint;
 
       public event EventHandler<SortingCompletedEventArgs>? OutputBufferFull;
 
@@ -31,7 +32,8 @@ namespace SortingEngine
 
       public async Task<Result> SortAsync(IBytesProducer producer, CancellationToken cancellationToken)
       {
-         MemoryProfiler.GetSnapshot("First");
+         OnCheckPoint("First");
+         // MemoryProfiler.GetSnapshot("First");
          Init();
 
          try
@@ -66,23 +68,27 @@ namespace SortingEngine
 
                var slice = inputStorage.AsMemory()[..result.Size];
 
-               MemoryProfiler.GetSnapshot("Second");
+               OnCheckPoint("Second");
+               // MemoryProfiler.GetSnapshot("Second");
 
                ProcessRecords(slice);
             }
 
-            MemoryProfiler.GetSnapshot("Third");
+            OnCheckPoint("Third");
+            // MemoryProfiler.GetSnapshot("Third");
             _inputBuffer = null;
             _poolsManager.DeleteArrays();
 
 
             GC.Collect(2, GCCollectionMode.Aggressive, true, true);
 
-            MemoryProfiler.GetSnapshot("Fourth");
+            OnCheckPoint("Fourth");
+            // MemoryProfiler.GetSnapshot("Fourth");
             //merge stage
             await MergeToOneFileAsync();
 
-            MemoryProfiler.GetSnapshot("Last");
+            OnCheckPoint("Last");
+            // MemoryProfiler.GetSnapshot("Last");
             return new Result(true, "");
          }
          catch (Exception e)
@@ -189,6 +195,11 @@ namespace SortingEngine
       protected virtual void OnOutputBufferFull(SortingCompletedEventArgs e)
       {
          OutputBufferFull?.Invoke(this, e);
+      }
+
+      protected virtual void OnCheckPoint(string name)
+      {
+         CheckPoint?.Invoke(this, new PointEventArgs(name));
       }
    }
 }

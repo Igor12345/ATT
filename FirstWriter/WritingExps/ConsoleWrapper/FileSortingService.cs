@@ -48,6 +48,13 @@ internal class FileSortingService : IHostedService
          Console.WriteLine("Writing result");
          resultWriter.WriteOutput(eventArgs);
       };
+
+      sorter.CheckPoint += (o, eventArgs) =>
+      {
+         Console.WriteLine($"--->  {eventArgs.Name} check point");
+         Console.ReadLine();
+         Console.WriteLine(" <---");
+      };
       IBytesProducer bytesReader = new LongFileReader(validInput.File, validInput.Encoding);
 
       Console.WriteLine("Before starting");
