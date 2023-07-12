@@ -15,10 +15,9 @@ public class BaseConfiguration
 
 public class InputParameters
 {
-   public string Encoding { get; set; } = "UTF16";
-   public Encoding EncodingValue { get; set; }
+   public string? Encoding { get; set; }
 
-   public string? FileName { get; set; }
+   public string? File { get; set; }
 }
 
 public class ValidatedInputParameters
