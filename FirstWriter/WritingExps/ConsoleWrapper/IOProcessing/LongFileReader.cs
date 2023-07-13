@@ -1,23 +1,32 @@
-﻿using System.Text;
+﻿using System.Reactive.Subjects;
+using System.Text;
 using Infrastructure.Parameters;
 using OneOf;
 using OneOf.Types;
 using SortingEngine;
+using SortingEngine.RowData;
 
 namespace ConsoleWrapper.IOProcessing;
 
 //todo rename
 internal class LongFileReader : IBytesProducer, IAsyncDisposable
 {
+   private readonly CancellationToken _cancellationToken;
    private readonly string _fullFileName;
    private readonly Encoding _encoding;
    private FileStream _stream;
    private long _lastPosition = 0;
 
-   public LongFileReader(string fullFileName, Encoding encoding)
+   private readonly SimpleAsyncSubject<InputBuffer> _nextChunkPreparedSubject =
+      new SequentialSimpleAsyncSubject<InputBuffer>();
+
+   public IAsyncObservable<InputBuffer> NextChunkPrepared => _nextChunkPreparedSubject;
+
+   public LongFileReader(string fullFileName, Encoding encoding, CancellationToken cancellationToken)
    {
       _fullFileName = Guard.FileExist(fullFileName);
       _encoding = Guard.NotNull(encoding);
+      _cancellationToken = Guard.NotNull(cancellationToken);
    }
 
    public Task<OneOf<Result<int>, Error<string>>> PopulateAsyncFunc(byte[] buffer)
@@ -56,8 +65,32 @@ internal class LongFileReader : IBytesProducer, IAsyncDisposable
       return readingResult;
    }
 
-   public  ValueTask DisposeAsync()
+   public ValueTask DisposeAsync()
    {
       return _stream?.DisposeAsync() ?? ValueTask.CompletedTask;
+   }
+
+   public async ValueTask OnNextAsync(InputBuffer inputBuffer)
+   {
+      ReadingResult result = await ReadBytesAsync(inputBuffer.Buffer, inputBuffer.UsedLength, _cancellationToken);
+      
+      //todo log
+      if (!result.Success)
+         await _nextChunkPreparedSubject.OnErrorAsync(new InvalidOperationException(result.Message));
+
+      if (result.Size == 0)
+         await _nextChunkPreparedSubject.OnCompletedAsync();
+
+      await _nextChunkPreparedSubject.OnNextAsync(inputBuffer);
+   }
+
+   public ValueTask OnErrorAsync(Exception error)
+   {
+      return _nextChunkPreparedSubject.OnCompletedAsync();
+   }
+
+   public ValueTask OnCompletedAsync()
+   {
+      return _nextChunkPreparedSubject.OnCompletedAsync();
    }
 }

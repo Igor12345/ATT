@@ -38,10 +38,10 @@ public class StreamsMergeExecutor
       for (int i = 0; i < _files.Length; i++)
       {
          //todo configure LineMemory creation
-         int from = i * _config.MergeBufferSize;
-         int to = (i + 1) * _config.MergeBufferSize;
+         int from = i * _config.MergeBufferLength;
+         int to = (i + 1) * _config.MergeBufferLength;
          managers[i] = new DataChunkManager(_files[i], _inputBuffer[from..to], _config.Encoding,
-            _config.RecordsBufferSize);
+            _config.RecordsBufferLength);
       }
 
       IComparer<LineMemory> comparer = new InSiteRecordsComparer(_inputBuffer);
@@ -85,8 +85,8 @@ public class StreamsMergeExecutor
 
    private void CreateBuffers()
    {
-      _inputBuffer = new byte[_config.MergeBufferSize * _files.Length].AsMemory();
-      _outputBuffer = new LineMemory[_config.OutputBufferSize];
+      _inputBuffer = new byte[_config.MergeBufferLength * _files.Length].AsMemory();
+      _outputBuffer = new LineMemory[_config.OutputBufferLength];
    }
 
    protected virtual void OnOutputBufferFull(SortingCompletedEventArgs e)

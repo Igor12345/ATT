@@ -36,7 +36,7 @@ namespace SortingEngine
          {
             //todo check filesize and write to final if small
 
-            byte[] inputStorage = new byte[_configuration.InputBufferSize];
+            byte[] inputStorage = new byte[_configuration.InputBufferLength];
             // ; RentInputStorage();
             int length = 1;
             
@@ -59,7 +59,7 @@ namespace SortingEngine
                   break;
 
                length = result.Size;
-               var slice = inputStorage.AsMemory()[..result.Size];
+               ReadOnlyMemory<byte> slice = inputStorage.AsMemory()[..result.Size];
 
                ProcessRecords(slice);
             }
@@ -80,7 +80,7 @@ namespace SortingEngine
 
       private void Init()
       {
-         _poolsManager = new PoolsManager(10, _configuration.RecordsBufferSize);
+         _poolsManager = new PoolsManager(10, _configuration.RecordsBufferLength);
       }
 
       // public async Task<OneOf<Success, Error<string>>> SortFuncAsync(IBytesProducer producer)
@@ -119,7 +119,7 @@ namespace SortingEngine
       private void ProcessRecords(ReadOnlyMemory<byte> inputBuffer)
       {
          using ExpandingStorage<LineMemory> recordsStorage =
-            new ExpandingStorage<LineMemory>(_configuration.RecordsBufferSize);
+            new ExpandingStorage<LineMemory>(_configuration.RecordsBufferLength);
          
          ExtractionResult result = ExtractRecords(inputBuffer, recordsStorage);
          if (result.Success)
@@ -132,14 +132,6 @@ namespace SortingEngine
          SortRecords(inputBuffer, recordsStorage, result.Size);
       }
 
-      private void SortRecords(ReadOnlyMemory<byte> inputBuffer, ExpandingStorage<LineMemory> recordsStorage, int linesNumber)
-      {
-         InSiteRecordsSorter sorter = new InSiteRecordsSorter(inputBuffer);
-         LineMemory[] sorted = sorter.Sort(recordsStorage, linesNumber);
-
-         OnSortingCompleted(new SortingCompletedEventArgs(sorted, inputBuffer));
-      }
-
       private ExtractionResult ExtractRecords(ReadOnlyMemory<byte> inputBuffer, ExpandingStorage<LineMemory> recordsStorage)
       {
          RecordsExtractor extractor =
@@ -147,7 +139,7 @@ namespace SortingEngine
                _configuration.Encoding.GetBytes(". "));
 
          //todo array vs slice
-         ExtractionResult result = extractor.SplitOnMemoryRecords(inputBuffer.Span, recordsStorage);
+         ExtractionResult result = extractor.ExtractRecords(inputBuffer.Span, recordsStorage);
 
          if (!result.Success) {
             return result;
@@ -162,10 +154,18 @@ namespace SortingEngine
          return result;
       }
 
+      private void SortRecords(ReadOnlyMemory<byte> inputBuffer, ExpandingStorage<LineMemory> recordsStorage, int linesNumber)
+      {
+         InSiteRecordsSorter sorter = new InSiteRecordsSorter(inputBuffer);
+         LineMemory[] sorted = sorter.Sort(recordsStorage, linesNumber);
+
+         OnSortingCompleted(new SortingCompletedEventArgs(sorted, inputBuffer));
+      }
+
       private byte[] RentInputStorage()
       {
          //todo introduce buffer manager
-         _inputBuffer ??= new byte[_configuration.InputBufferSize];
+         _inputBuffer ??= new byte[_configuration.InputBufferLength];
          return _inputBuffer;
       }
 

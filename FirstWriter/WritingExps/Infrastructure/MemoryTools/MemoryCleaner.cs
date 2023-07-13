@@ -4,7 +4,7 @@ namespace Infrastructure.MemoryTools;
 
 public class MemoryCleaner
 {
-    public static void ClearMemory()
+    public static void CleanMemory()
     {
         for (int i = 0; i < 10; i++)
         {

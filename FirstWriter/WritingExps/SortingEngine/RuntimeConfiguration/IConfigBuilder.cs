@@ -10,4 +10,5 @@ public interface IConfigBuilder
    IConfigBuilder UseOutputBuffer(int outputBuffer);
    IConfigBuilder UseRecordsBuffer(int recordsBuffer);
    IConfigBuilder UseEncoding(Encoding encoding);
+   IConfigBuilder UseOutputPath(string outputPath);
 }

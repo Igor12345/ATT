@@ -49,12 +49,13 @@ public class RuntimeConfig : IConfig
       TemporaryFolder = "";
    }
 
-   public int InputBufferSize { get; private set; }
+   public int InputBufferLength { get; private set; }
    public string TemporaryFolder { get; private set; }
-   public int MergeBufferSize { get; private set; }
-   public int OutputBufferSize { get; private set; }
+   public int MergeBufferLength { get; private set; }
+   public int OutputBufferLength { get; private set; }
    public Encoding Encoding { get; private set; } = Encoding.UTF8;
-   public int RecordsBufferSize { get; private set; }
+   public int RecordsBufferLength { get; private set; }
+   public string Output { get; private set; }
 
    public static IConfig Create(Action<IConfigBuilder> buildConfig)
    {
@@ -74,7 +75,7 @@ public class RuntimeConfig : IConfig
 
       public IConfigBuilder UseInputBuffer(int inputBufferSize)
       {
-         _config.InputBufferSize = inputBufferSize;
+         _config.InputBufferLength = inputBufferSize;
          return this;
       }
 
@@ -106,25 +107,31 @@ public class RuntimeConfig : IConfig
 
       public IConfigBuilder UseMergeBuffer(int mergeBuffer)
       {
-         _config.MergeBufferSize = mergeBuffer;
+         _config.MergeBufferLength = mergeBuffer;
          return this;
       }
 
       public IConfigBuilder UseOutputBuffer(int outputBuffer)
       {
-         _config.OutputBufferSize = outputBuffer;
+         _config.OutputBufferLength = outputBuffer;
          return this;
       }
 
       public IConfigBuilder UseRecordsBuffer(int recordsBuffer)
       {
-         _config.RecordsBufferSize = recordsBuffer;
+         _config.RecordsBufferLength = recordsBuffer;
          return this;
       }
 
       public IConfigBuilder UseEncoding(Encoding encoding)
       {
          _config.Encoding = encoding;
+         return this;
+      }
+
+      public IConfigBuilder UseOutputPath(string outputPath)
+      {
+         _config.Output = outputPath;
          return this;
       }
    }

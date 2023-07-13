@@ -4,12 +4,13 @@ namespace SortingEngine.RuntimeConfiguration
 {
    public interface IConfig
    {
-      int InputBufferSize { get; }
+      int InputBufferLength { get; }
+      int MergeBufferLength { get; }
+      int OutputBufferLength { get; }
+      int RecordsBufferLength { get; }
+      string Output { get; }
       string TemporaryFolder { get; }
-      int MergeBufferSize { get; }
-      int OutputBufferSize { get; }
       Encoding Encoding { get; }
-      int RecordsBufferSize { get; }
 
       // static abstract IConfig Create(Action<IConfigBuilder> buildConfig);
    }

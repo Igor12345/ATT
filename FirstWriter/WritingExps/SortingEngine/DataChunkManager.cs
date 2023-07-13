@@ -94,7 +94,7 @@ internal class DataChunkManager : IAsyncDisposable
       //todo repetition
       int recognizableBytes = (_remindedBytesLength + received);
       ExtractionResult result =
-         _extractor.SplitOnMemoryRecords(_rowStorage.Span[..recognizableBytes], _recordsStorage);
+         _extractor.ExtractRecords(_rowStorage.Span[..recognizableBytes], _recordsStorage);
 
       //todo railway
       if (!result.Success)

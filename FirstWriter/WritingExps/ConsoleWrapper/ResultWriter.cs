@@ -1,10 +1,11 @@
-﻿using ConsoleWrapper.IOProcessing;
+﻿using System.Reactive.Subjects;
+using ConsoleWrapper.IOProcessing;
 using Infrastructure.Parameters;
 using SortingEngine;
 
 namespace ConsoleWrapper;
 
-internal class ResultWriter : IAsyncDisposable
+internal class ResultWriter : IAsyncDisposable, IAsyncObserver<SortingCompletedEventArgs>
 {
    private readonly CancellationToken _token;
    private RecordsWriter _writer = null!;
@@ -14,16 +15,8 @@ internal class ResultWriter : IAsyncDisposable
       _token = token;
    }
 
-   public static ResultWriter Create(string path, CancellationToken token)
+   public static ResultWriter Create(string pathToResult, CancellationToken token)
    {
-      path = Guard.FileExist(path);
-      var fileName = Path.GetFileNameWithoutExtension(path);
-      var extension = Path.GetExtension(path);
-      string delimiter = extension.Length > 0 ? "." : "";
-      string resultFile = $"{fileName}_sorted{delimiter}{extension}";
-      //todo
-      string? directory = Path.GetDirectoryName(path);
-      string pathToResult = Path.Combine(directory, resultFile);
       ResultWriter instance = new ResultWriter(token)
       {
          _writer = RecordsWriter.Create(pathToResult)
@@ -46,5 +39,28 @@ internal class ResultWriter : IAsyncDisposable
    public ValueTask DisposeAsync()
    {
       return _writer.DisposeAsync();
+   }
+
+   private readonly SimpleAsyncSubject<SortingCompletedEventArgs> _sortedLinesSavedSubject =
+      new SequentialSimpleAsyncSubject<SortingCompletedEventArgs>();
+
+   public IAsyncObservable<SortingCompletedEventArgs> SortedLinesSaved => _sortedLinesSavedSubject;
+
+   public async ValueTask OnNextAsync(SortingCompletedEventArgs value)
+   {
+      var result = await WriteOutputAsync(value);
+      if (!result.Success)
+         await _sortedLinesSavedSubject.OnErrorAsync(new InvalidOperationException(result.Message));
+      await _sortedLinesSavedSubject.OnNextAsync(value);
+   }
+
+   public async ValueTask OnErrorAsync(Exception error)
+   {
+      await _sortedLinesSavedSubject.OnCompletedAsync();
+   }
+
+   public async ValueTask OnCompletedAsync()
+   {
+      await _sortedLinesSavedSubject.OnCompletedAsync();
    }
 }
