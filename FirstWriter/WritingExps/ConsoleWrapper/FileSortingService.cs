@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using ConsoleWrapper.IOProcessing;
+using Infrastructure.MemoryTools;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using SortingEngine;
@@ -27,7 +28,6 @@ internal class FileSortingService : IHostedService
          return;
          
       Console.WriteLine("--> Ready to start");
-
       var r = Console.ReadLine();
 
       IEnvironmentAnalyzer analyzer = new EnvironmentAnalyzer();
@@ -68,7 +68,7 @@ internal class FileSortingService : IHostedService
 
          long memory = GC.GetTotalMemory(false);
          Console.WriteLine($"Memory before GC {memory}");
-         sorter.ClearMemory();
+         MemoryCleaner.ClearMemory();
          memory = GC.GetTotalMemory(false);
          Console.WriteLine($"Memory after GC {memory}");
 
@@ -83,12 +83,8 @@ internal class FileSortingService : IHostedService
          ? $"---> Success - {sw.Elapsed.TotalMinutes} min, {sw.Elapsed.Seconds} sec; Total: {sw.Elapsed.TotalSeconds} sec, {sw.Elapsed.TotalMilliseconds} ms"
          : $"---> Error: {res.Message}");
 
-
-
       await Task.Delay(2);
    }
-
-      
 
    public async Task StopAsync(CancellationToken cancellationToken)
    {
@@ -96,4 +92,6 @@ internal class FileSortingService : IHostedService
       Console.WriteLine("Bye service");
       await Task.Delay(2);
    }
+   
+   private void ViaIObservable(){}
 }

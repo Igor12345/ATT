@@ -25,15 +25,11 @@ namespace SortingEngine
 
       public RecordsSetSorter(IConfig configuration)
       {
-         MemoryProfiler.CollectAllocations(true);
          _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
       }
 
       public async Task<Result> SortAsync(IBytesProducer producer, CancellationToken cancellationToken)
       {
-         // OnCheckPoint("First");
-         // GC.Collect(0);
-         // MemoryProfiler.GetSnapshot("First");
          Init();
 
          try
@@ -43,11 +39,7 @@ namespace SortingEngine
             byte[] inputStorage = new byte[_configuration.InputBufferSize];
             // ; RentInputStorage();
             int length = 1;
-
-            //split stage
-
-            long memory = GC.GetTotalMemory(false);
-            Console.WriteLine($"Memory after allocation GC {memory}");
+            
             //make something more fancy
             while (length > 0)
             {
@@ -59,26 +51,15 @@ namespace SortingEngine
                // ReadingResult result =
                //    await producer.ReadBytesAsync(inputStorage, _remindedBytesLength, cancellationToken);
                
-               ReadingResult result =
-                  producer.ReadBytes(inputStorage, _remindedBytesLength);
+               ReadingResult result = producer.ReadBytes(inputStorage, _remindedBytesLength);
 
                if (!result.Success)
-               {
                   return new Result(false, result.Message);
-               }
-
                if (result.Size == 0)
                   break;
 
                length = result.Size;
-
                var slice = inputStorage.AsMemory()[..result.Size];
-
-               // OnCheckPoint("Second");
-               // GC.Collect(1);
-               // OnCheckPoint("Second + half");
-               // GC.Collect(2);
-               // // MemoryProfiler.GetSnapshot("Second");
 
                ProcessRecords(slice);
             }
@@ -95,25 +76,6 @@ namespace SortingEngine
          {
             return new Result(false, e.Message);
          }
-      }
-
-      public void ClearMemory()
-      {
-
-         for (int i = 0; i < 10; i++)
-         {
-            // Garbage collect as much as GC-able objects as possible.
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-            GC.WaitForFullGCComplete();
-            GC.Collect();
-         }
-
-         GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
-         GC.Collect();
-         // GC.Collect(2, GCCollectionMode.Aggressive, true, true);
-
-         OnCheckPoint("Fourth");
       }
 
       private void Init()
@@ -156,34 +118,48 @@ namespace SortingEngine
 
       private void ProcessRecords(ReadOnlyMemory<byte> inputBuffer)
       {
+         using ExpandingStorage<LineMemory> recordsStorage =
+            new ExpandingStorage<LineMemory>(_configuration.RecordsBufferSize);
+         
+         ExtractionResult result = ExtractRecords(inputBuffer, recordsStorage);
+         if (result.Success)
+            _remindedBytesLength = inputBuffer.Length - result.StartRemainingBytes;
+         else
+         {
+            //todo
+         }
+         
+         SortRecords(inputBuffer, recordsStorage, result.Size);
+      }
+
+      private void SortRecords(ReadOnlyMemory<byte> inputBuffer, ExpandingStorage<LineMemory> recordsStorage, int linesNumber)
+      {
+         InSiteRecordsSorter sorter = new InSiteRecordsSorter(inputBuffer);
+         LineMemory[] sorted = sorter.Sort(recordsStorage, linesNumber);
+
+         OnSortingCompleted(new SortingCompletedEventArgs(sorted, inputBuffer));
+      }
+
+      private ExtractionResult ExtractRecords(ReadOnlyMemory<byte> inputBuffer, ExpandingStorage<LineMemory> recordsStorage)
+      {
          RecordsExtractor extractor =
             new RecordsExtractor(_configuration.Encoding.GetBytes(Environment.NewLine),
                _configuration.Encoding.GetBytes(". "));
-         LineMemory[] sorted;
-
-         using ExpandingStorage<LineMemory> recordsStorage =
-            new ExpandingStorage<LineMemory>(_configuration.RecordsBufferSize);
 
          //todo array vs slice
          ExtractionResult result = extractor.SplitOnMemoryRecords(inputBuffer.Span, recordsStorage);
 
-         if (!result.Success)
-         {
-            //todo railway
-            throw new InvalidOperationException(result.Message);
+         if (!result.Success) {
+            return result;
          }
 
-         _remindedBytesLength = inputBuffer.Length - result.StartRemainingBytes;
-         if (_remindedBytesLength > 0)
+         if (inputBuffer.Length - result.StartRemainingBytes > 0)
          {
             _remainedBytes ??= ArrayPool<byte>.Shared.Rent(Constants.MaxTextLength);
             inputBuffer.Span[result.StartRemainingBytes..].CopyTo(_remainedBytes);
          }
 
-         InSiteRecordsSorter sorter = new InSiteRecordsSorter(inputBuffer);
-         sorted = sorter.Sort(recordsStorage, result.Size);
-
-         OnSortingCompleted(new SortingCompletedEventArgs(sorted, inputBuffer));
+         return result;
       }
 
       private byte[] RentInputStorage()
