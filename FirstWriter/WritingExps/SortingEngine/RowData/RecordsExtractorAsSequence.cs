@@ -1,7 +1,10 @@
 ﻿using System.Buffers;
+using System.Diagnostics;
 using System.Reactive.Subjects;
 using System.Threading.Channels;
 using Infrastructure.ByteOperations;
+using Infrastructure.Parameters;
+using LogsHub;
 using SortingEngine.DataStructures;
 using SortingEngine.Entities;
 
@@ -21,17 +24,25 @@ public sealed class RecordsExtractorAsSequence : IAsyncObserver<ReadingPhasePack
       
     private readonly byte[] _eol;
     private readonly byte[] _lineDelimiter;
+    private readonly Logger _logger;
 
-    public RecordsExtractorAsSequence(byte[] eol, byte[] lineDelimiter, CancellationToken token)
+    public RecordsExtractorAsSequence(byte[] eol, byte[] lineDelimiter, Logger logger, CancellationToken token)
     {
         _eol = eol;
         _lineDelimiter = lineDelimiter;
+        _logger = Guard.NotNull(logger);
         _token = token;
     }
 
     public IAsyncObservable<PreReadPackage> ReadyForNextChunk => _readyForNextChunkSubject;
     public IAsyncObservable<SortingPhasePackage> ReadyForSorting => _readyForSortingSubject;
 
+    [Conditional("VERBOSE")]
+    private void Log(string message)
+    {
+        _logger.Log(message);
+    }
+    
     private async Task ExtractNext(ReadingPhasePackage package)
     {
         ReadOnlyMemory<byte> inputBytes = package.RowData.AsMemory()[..package.ReadBytesLength];

@@ -2,6 +2,7 @@
 using System.Reactive.Linq;
 using ConsoleWrapper.IOProcessing;
 using Infrastructure.MemoryTools;
+using LogsHub;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using SortingEngine;
@@ -109,11 +110,14 @@ internal class FileSortingService : IHostedService
       IEnvironmentAnalyzer analyzer = new EnvironmentAnalyzer();
       IConfig configuration = analyzer.SuggestConfig(validInput);
 
+      //only for demonstration, use NLog, Serilog, ... in real projects
+      Logger logger = Logger.Create(cancellationToken);
+
+      logger.Log($"Start at {DateTime.UtcNow:s}");
+      
       RecordsExtractorAsSequence extractor = new RecordsExtractorAsSequence(
          configuration.Encoding.GetBytes(Environment.NewLine),
-         configuration.Encoding.GetBytes(". "), cancellationToken);
-      
-      
+         configuration.Encoding.GetBytes(". "), logger, cancellationToken);
       
       StreamsMergeExecutor merger = new StreamsMergeExecutor(configuration);
       
@@ -127,13 +131,13 @@ internal class FileSortingService : IHostedService
       SortingPhasePoolManager sortingPhasePoolManager = new SortingPhasePoolManager(3, configuration.InputBufferLength,
          configuration.RecordsBufferLength, cancellationToken);
       
-      var s6 = await sortingPhasePoolManager.LoadNextChunk.SubscribeAsync(bytesReader);
-      var s3 = await bytesReader.NextChunkPrepared.SubscribeAsync(extractor);
+      var s1 = await sortingPhasePoolManager.LoadNextChunk.SubscribeAsync(bytesReader);
+      var s2 = await bytesReader.NextChunkPrepared.SubscribeAsync(extractor);
       
-      var s1 = await extractor.ReadyForSorting.SubscribeAsync(sorter);
-      var s2 = await extractor.ReadyForNextChunk.SubscribeAsync(sortingPhasePoolManager);
-      var s4 = await sorter.SortingCompleted.SubscribeAsync(resultWriter);
-      var s5 = await resultWriter.SortedLinesSaved.SubscribeAsync(sortingPhasePoolManager);
+      var s3 = await extractor.ReadyForSorting.SubscribeAsync(sorter);
+      var s4 = await extractor.ReadyForNextChunk.SubscribeAsync(sortingPhasePoolManager);
+      var s5 = await sorter.SortingCompleted.SubscribeAsync(resultWriter);
+      var s6 = await resultWriter.SortedLinesSaved.SubscribeAsync(sortingPhasePoolManager);
 
       await bytesReader.NextChunkPrepared.SubscribeAsync(
          b => { },
