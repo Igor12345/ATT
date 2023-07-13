@@ -41,58 +41,8 @@ internal class LongFileReader : IBytesProducer, IAsyncDisposable
       return readingResult;
    }
 
-   public async Task<ReadingResult> ReadBytesAsync(ArrayWrapper<byte> wrapper, int offset,
-      CancellationToken cancellationToken)
+   public  ValueTask DisposeAsync()
    {
-      await using FileStream stream = File.OpenRead(_fullFileName);
-      if (_lastPosition > 0)
-         stream.Seek(_lastPosition, SeekOrigin.Begin);
-
-      await using RecordsReader reader = new RecordsReader(stream);
-      var readingResult = await reader.ReadChunkAsync(wrapper, offset, cancellationToken);
-      if (!readingResult.Success)
-         return readingResult;
-
-      _lastPosition += readingResult.Size;
-      return readingResult;
-   }
-
-   public ReadingResult ReadBytes(ArrayWrapper<byte> wrapper, int offset,
-      CancellationToken cancellationToken)
-   {
-      using FileStream stream = File.OpenRead(_fullFileName);
-      if (_lastPosition > 0)
-         stream.Seek(_lastPosition, SeekOrigin.Begin);
-
-      using RecordsReader reader = new RecordsReader(stream);
-      var readingResult = reader.ReadChunk(wrapper, offset, cancellationToken);
-      if (!readingResult.Success)
-         return readingResult;
-
-      _lastPosition += readingResult.Size;
-      return readingResult;
-   }
-   
-   public ReadingResult ReadBytes(ArrayWrapper<byte> wrapper, int[] experimental, int offset,
-      CancellationToken cancellationToken)
-   {
-      using FileStream stream = File.OpenRead(_fullFileName);
-      if (_lastPosition > 0)
-         stream.Seek(_lastPosition, SeekOrigin.Begin);
-
-      using RecordsReader reader = new RecordsReader(stream);
-      var readingResult = reader.ReadChunk(wrapper, offset, cancellationToken);
-      if (!readingResult.Success)
-         return readingResult;
-
-      _lastPosition += readingResult.Size;
-      int size = experimental.Length;
-      _lastPosition += size;
-      return readingResult;
-   }
-
-   public async ValueTask DisposeAsync()
-   {
-      await _stream.DisposeAsync();
+      return _stream?.DisposeAsync() ?? ValueTask.CompletedTask;
    }
 }

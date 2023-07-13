@@ -33,9 +33,8 @@ namespace SortingEngine
 
       public async Task<Result> SortAsync(IBytesProducer producer, CancellationToken cancellationToken)
       {
-         int[] experimental = new int[432];
-         OnCheckPoint("First");
-         GC.Collect(0);
+         // OnCheckPoint("First");
+         // GC.Collect(0);
          // MemoryProfiler.GetSnapshot("First");
          Init();
 
@@ -45,9 +44,7 @@ namespace SortingEngine
 
             byte[] inputStorage = new byte[_configuration.InputBufferSize];
             // ; RentInputStorage();
-            var wrapper = new ArrayWrapper<byte>(inputStorage);
             int length = 1;
-
 
             //split stage
 
@@ -60,7 +57,7 @@ namespace SortingEngine
                }
 
                ReadingResult result =
-                  producer.ReadBytes(wrapper, experimental, _remindedBytesLength, cancellationToken);
+                  await producer.ReadBytesAsync(inputStorage, _remindedBytesLength, cancellationToken);
 
                if (!result.Success)
                {
@@ -70,24 +67,25 @@ namespace SortingEngine
                if (result.Size == 0)
                   break;
 
-               length = result.Size + experimental.Length;
+               length = result.Size;
 
                var slice = inputStorage.AsMemory()[..result.Size];
 
-               OnCheckPoint("Second");
-               GC.Collect(1);
-               OnCheckPoint("Second + half");
-               GC.Collect(2);
-               // MemoryProfiler.GetSnapshot("Second");
+               // OnCheckPoint("Second");
+               // GC.Collect(1);
+               // OnCheckPoint("Second + half");
+               // GC.Collect(2);
+               // // MemoryProfiler.GetSnapshot("Second");
 
                ProcessRecords(slice);
             }
 
             OnCheckPoint("Third");
-            wrapper.Clear();
             // MemoryProfiler.GetSnapshot("Third");
             
             // MemoryProfiler.GetSnapshot("Last");
+            _inputBuffer = null;
+            _poolsManager.DeleteArrays();
             return new Result(true, "");
          }
          catch (Exception e)
@@ -98,8 +96,6 @@ namespace SortingEngine
 
       public void ClearMemory()
       {
-         _inputBuffer = null;
-         _poolsManager.DeleteArrays();
 
          for (int i = 0; i < 10; i++)
          {
@@ -123,7 +119,7 @@ namespace SortingEngine
          merger.OutputBufferFull += (o, eventArgs) => MergerOnOutputBufferFull(o, eventArgs);
          var result = await merger.MergeWithOrder();
          
-         OnCheckPoint("Last");
+         // OnCheckPoint("Last");
          return result;
       }
 
@@ -223,22 +219,5 @@ namespace SortingEngine
       {
          CheckPoint?.Invoke(this, new PointEventArgs(name));
       }
-   }
-}
-
-public class ArrayWrapper<T>
-{
-   private T[] _array;
-
-   public ArrayWrapper(T[] array)
-   {
-      _array = array;
-   }
-
-   public T[] Array => _array;
-
-   public void Clear()
-   {
-      _array = null;
    }
 }

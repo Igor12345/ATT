@@ -55,21 +55,23 @@ internal class FileSortingService : IHostedService
          Console.ReadLine();
          Console.WriteLine(" <---");
       };
-      IBytesProducer bytesReader = new LongFileReader(validInput.File, validInput.Encoding);
-
-      Console.WriteLine("Before starting");
+      
       Stopwatch sw = Stopwatch.StartNew();
+      {
+         await using IBytesProducer bytesReader = new LongFileReader(validInput.File, validInput.Encoding);
+         Console.WriteLine("Before starting");
 
-      var result = await sorter.SortAsync(bytesReader, cancellationToken);
+         Result result = await sorter.SortAsync(bytesReader, cancellationToken);
+      }
 
       sorter.ClearMemory();
 
       var res = await sorter.MergeToOneFileAsync();
       
       sw.Stop();
-      Console.WriteLine(result.Success
+      Console.WriteLine(res.Success
          ? $"---> Success - {sw.Elapsed.TotalMinutes} min, {sw.Elapsed.Seconds} sec; Total: {sw.Elapsed.TotalSeconds} sec, {sw.Elapsed.TotalMilliseconds} ms"
-         : $"---> Error: {result.Message}");
+         : $"---> Error: {res.Message}");
 
 
 
