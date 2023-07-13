@@ -129,7 +129,7 @@ namespace SortingEngine
             //todo
          }
          
-         SortRecords(inputBuffer, recordsStorage, result.Size);
+         SortRecords(inputBuffer, recordsStorage, result.LinesNumber);
       }
 
       private ExtractionResult ExtractRecords(ReadOnlyMemory<byte> inputBuffer, ExpandingStorage<LineMemory> recordsStorage)
@@ -159,7 +159,7 @@ namespace SortingEngine
          InSiteRecordsSorter sorter = new InSiteRecordsSorter(inputBuffer);
          LineMemory[] sorted = sorter.Sort(recordsStorage, linesNumber);
 
-         OnSortingCompleted(new SortingCompletedEventArgs(sorted, inputBuffer));
+         OnSortingCompleted(new SortingCompletedEventArgs(sorted, linesNumber, inputBuffer));
       }
 
       private byte[] RentInputStorage()

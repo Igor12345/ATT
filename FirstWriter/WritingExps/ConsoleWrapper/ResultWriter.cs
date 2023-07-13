@@ -1,11 +1,12 @@
 ﻿using System.Reactive.Subjects;
 using ConsoleWrapper.IOProcessing;
-using Infrastructure.Parameters;
 using SortingEngine;
+using SortingEngine.Entities;
+using SortingEngine.RowData;
 
 namespace ConsoleWrapper;
 
-internal class ResultWriter : IAsyncDisposable, IAsyncObserver<SortingCompletedEventArgs>
+internal class ResultWriter : IAsyncDisposable, IAsyncObserver<AfterSortingPhasePackage>
 {
    private readonly CancellationToken _token;
    private RecordsWriter _writer = null!;
@@ -31,9 +32,9 @@ internal class ResultWriter : IAsyncDisposable, IAsyncObserver<SortingCompletedE
 
    public async Task<Result> WriteOutputAsync(SortingCompletedEventArgs eventArgs)
    {
-      var records = eventArgs.Sorted;
-      var sourceBytes = eventArgs.Source;
-      return await _writer.WriteRecords(records, sourceBytes, _token);
+      LineMemory[] records = eventArgs.Sorted;
+      ReadOnlyMemory<byte> sourceBytes = eventArgs.Source;
+      return await _writer.WriteRecords(records, eventArgs.LinesNumber, sourceBytes, _token);
    }
 
    public ValueTask DisposeAsync()
@@ -41,16 +42,18 @@ internal class ResultWriter : IAsyncDisposable, IAsyncObserver<SortingCompletedE
       return _writer.DisposeAsync();
    }
 
-   private readonly SimpleAsyncSubject<SortingCompletedEventArgs> _sortedLinesSavedSubject =
-      new SequentialSimpleAsyncSubject<SortingCompletedEventArgs>();
+   private readonly SimpleAsyncSubject<AfterSortingPhasePackage> _sortedLinesSavedSubject =
+      new SequentialSimpleAsyncSubject<AfterSortingPhasePackage>();
 
-   public IAsyncObservable<SortingCompletedEventArgs> SortedLinesSaved => _sortedLinesSavedSubject;
+   public IAsyncObservable<AfterSortingPhasePackage> SortedLinesSaved => _sortedLinesSavedSubject;
 
-   public async ValueTask OnNextAsync(SortingCompletedEventArgs value)
+   public async ValueTask OnNextAsync(AfterSortingPhasePackage value)
    {
-      var result = await WriteOutputAsync(value);
+      var result =  await _writer.WriteRecords(value.SortedLines, value.LinesNumber, value.RowData, _token);
+      
       if (!result.Success)
          await _sortedLinesSavedSubject.OnErrorAsync(new InvalidOperationException(result.Message));
+      
       await _sortedLinesSavedSubject.OnNextAsync(value);
    }
 

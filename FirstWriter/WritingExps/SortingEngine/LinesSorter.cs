@@ -6,14 +6,14 @@ using SortingEngine.Sorters;
 
 namespace SortingEngine;
 
-public class LinesSorter:IAsyncObserver<PreSortBuffer>
+public class LinesSorter:IAsyncObserver<SortingPhasePackage>
 {
-    private readonly SimpleAsyncSubject<SortingCompletedEventArgs> _sortingCompletedSubject =
-        new SequentialSimpleAsyncSubject<SortingCompletedEventArgs>();
+    private readonly SimpleAsyncSubject<AfterSortingPhasePackage> _sortingCompletedSubject =
+        new SequentialSimpleAsyncSubject<AfterSortingPhasePackage>();
 
     private ExpandingStorage<LineMemory> _recordsStorage;
 
-    public IAsyncObservable<SortingCompletedEventArgs> SortingCompleted => _sortingCompletedSubject;
+    public IAsyncObservable<AfterSortingPhasePackage> SortingCompleted => _sortingCompletedSubject;
     // public event EventHandler<SortingCompletedEventArgs>? SortingCompleted;
     
     public LineMemory[] SortRecords(ReadOnlyMemory<byte> inputBuffer, int linesNumber,
@@ -23,10 +23,12 @@ public class LinesSorter:IAsyncObserver<PreSortBuffer>
         return sorter.Sort(recordsStorage, linesNumber);
     }
 
-    public async ValueTask OnNextAsync(PreSortBuffer inputBuffer)
+    public async ValueTask OnNextAsync(SortingPhasePackage package)
     {
-        LineMemory[] sorted = SortRecords(inputBuffer.Write, inputBuffer.LinesNumber, inputBuffer.RecordsStorage);
-        await _sortingCompletedSubject.OnNextAsync(new SortingCompletedEventArgs(sorted, inputBuffer.Write));
+        ReadOnlyMemory<byte> inputBytes = package.RowData.AsMemory()[..package.OccupiedLength];
+        LineMemory[] sorted = SortRecords(inputBytes, package.LinesNumber, package.ParsedRecords);
+        await _sortingCompletedSubject.OnNextAsync(new AfterSortingPhasePackage(sorted, package.RowData,
+            package.ParsedRecords, package.LinesNumber));
     }
 
     public async ValueTask OnErrorAsync(Exception error)

@@ -49,7 +49,7 @@ internal class FileSortingService : IHostedService
       
       Stopwatch sw = Stopwatch.StartNew();
 
-      await using (IBytesProducer bytesReader = new LongFileReader(validInput.File, validInput.Encoding))
+      await using (IBytesProducer bytesReader = new LongFileReader(validInput.File, validInput.Encoding, cancellationToken))
       {
          RecordsSetSorter sorter = new RecordsSetSorter(configuration);
          sorter.SortingCompleted += (o, eventArgs) =>
@@ -124,16 +124,16 @@ internal class FileSortingService : IHostedService
       await using IBytesProducer bytesReader = new LongFileReader(validInput.File, validInput.Encoding, cancellationToken);
       LinesSorter sorter = new LinesSorter();
 
-      InputBuffersManager buffersManager = new InputBuffersManager(3, configuration.InputBufferLength,
+      SortingPhasePoolManager sortingPhasePoolManager = new SortingPhasePoolManager(3, configuration.InputBufferLength,
          configuration.RecordsBufferLength, cancellationToken);
       
-      var s6 = await buffersManager.LoadNextChunk.SubscribeAsync(bytesReader);
+      var s6 = await sortingPhasePoolManager.LoadNextChunk.SubscribeAsync(bytesReader);
       var s3 = await bytesReader.NextChunkPrepared.SubscribeAsync(extractor);
       
       var s1 = await extractor.ReadyForSorting.SubscribeAsync(sorter);
-      var s2 = await extractor.ReadyForNextChunk.SubscribeAsync(buffersManager);
+      var s2 = await extractor.ReadyForNextChunk.SubscribeAsync(sortingPhasePoolManager);
       var s4 = await sorter.SortingCompleted.SubscribeAsync(resultWriter);
-      var s5 = await resultWriter.SortedLinesSaved.SubscribeAsync(buffersManager);
+      var s5 = await resultWriter.SortedLinesSaved.SubscribeAsync(sortingPhasePoolManager);
 
       await bytesReader.NextChunkPrepared.SubscribeAsync(
          b => { },
@@ -144,7 +144,7 @@ internal class FileSortingService : IHostedService
          }
       );
 
-      await buffersManager.LetsStart();
+      await sortingPhasePoolManager.LetsStart();
 
    }
 

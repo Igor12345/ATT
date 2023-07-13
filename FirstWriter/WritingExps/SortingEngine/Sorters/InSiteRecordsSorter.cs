@@ -1,4 +1,5 @@
-﻿using SortingEngine.Comparators;
+﻿using System.Buffers;
+using SortingEngine.Comparators;
 using SortingEngine.DataStructures;
 using SortingEngine.Entities;
 
@@ -20,11 +21,11 @@ public class InSiteRecordsSorter
       return input.Order(new InSiteRecordsComparer(_source)).ToArray();
    }
 
-   public LineMemory[] Sort(ExpandingStorage<LineMemory> recordsPool, int resultSize)
+   public LineMemory[] Sort(ExpandingStorage<LineMemory> recordsPool, int linesNumber)
    {
-      LineMemory[] result = new LineMemory[resultSize];
-      recordsPool.CopyTo(result, resultSize);
-      Array.Sort(result, new InSiteRecordsComparer(_source));
+      LineMemory[] result = ArrayPool<LineMemory>.Shared.Rent(linesNumber);
+      recordsPool.CopyTo(result, linesNumber);
+      Array.Sort(result, 0, linesNumber, new InSiteRecordsComparer(_source));
       return result;
    }
 }

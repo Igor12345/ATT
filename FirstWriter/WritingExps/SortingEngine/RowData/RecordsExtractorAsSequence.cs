@@ -7,20 +7,20 @@ using SortingEngine.Entities;
 
 namespace SortingEngine.RowData;
 
-public class RecordsExtractorAsSequence : IAsyncObserver<InputBuffer>
+public sealed class RecordsExtractorAsSequence : IAsyncObserver<ReadingPhasePackage>
 {
     private readonly CancellationToken _token;
-    private Channel<int> _output = Channel.CreateBounded<int>(1);
-    private Channel<ReadOnlyMemory<byte>> _input = Channel.CreateBounded<ReadOnlyMemory<byte>>(1);
-    private Channel<string> _error = Channel.CreateUnbounded<string>();
+    private readonly Channel<int> _output = Channel.CreateBounded<int>(1);
+    private readonly Channel<ReadOnlyMemory<byte>> _input = Channel.CreateBounded<ReadOnlyMemory<byte>>(1);
+    private readonly Channel<string> _error = Channel.CreateUnbounded<string>();
 
-    readonly SimpleAsyncSubject<byte[]> _readyForNextChunkSubject = new SequentialSimpleAsyncSubject<byte[]>();
-    readonly SimpleAsyncSubject<PreSortBuffer> _readyForSortingSubject = new SequentialSimpleAsyncSubject<PreSortBuffer>();
+    private readonly SimpleAsyncSubject<PreReadPackage> _readyForNextChunkSubject =
+        new SequentialSimpleAsyncSubject<PreReadPackage>();
+    private readonly SimpleAsyncSubject<SortingPhasePackage> _readyForSortingSubject = 
+        new SequentialSimpleAsyncSubject<SortingPhasePackage>();
       
     private readonly byte[] _eol;
     private readonly byte[] _lineDelimiter;
-    private ReadOnlyMemory<byte> _inputButes;
-    private ExpandingStorage<LineMemory> _readyRecords;
 
     public RecordsExtractorAsSequence(byte[] eol, byte[] lineDelimiter, CancellationToken token)
     {
@@ -29,31 +29,32 @@ public class RecordsExtractorAsSequence : IAsyncObserver<InputBuffer>
         _token = token;
     }
 
-    public IAsyncObservable<byte[]> ReadyForNextChunk => _readyForNextChunkSubject;
-    public IAsyncObservable<PreSortBuffer> ReadyForSorting => _readyForSortingSubject;
+    public IAsyncObservable<PreReadPackage> ReadyForNextChunk => _readyForNextChunkSubject;
+    public IAsyncObservable<SortingPhasePackage> ReadyForSorting => _readyForSortingSubject;
 
-    private async Task ExtractNext(InputBuffer inputBuffer)
+    private async Task ExtractNext(ReadingPhasePackage package)
     {
-        ReadOnlyMemory<byte> inputBytes = inputBuffer.Buffer.AsMemory()[..inputBuffer.ReadBytes];
-        var result = ExtractRecords(inputBytes.Span, _readyRecords);
+        ReadOnlyMemory<byte> inputBytes = package.RowData.AsMemory()[..package.ReadBytesLength];
+        ExtractionResult result = ExtractRecords(inputBytes.Span, package.ParsedRecords);
         if (!result.Success)
         {
             await _readyForNextChunkSubject.OnErrorAsync(new InvalidOperationException(result.Message));
         }
-        if (_inputButes.Length - result.StartRemainingBytes > 0)
+        if (package.RowData.Length - result.StartRemainingBytes > 0)
         {
             var remainedBytes = ArrayPool<byte>.Shared.Rent(Constants.MaxTextLength);
-            _inputButes.Span[result.StartRemainingBytes..].CopyTo(remainedBytes);
+            package.RowData.AsSpan()[result.StartRemainingBytes..].CopyTo(remainedBytes);
 
             //todo
-            PreSortBuffer preSortBuffer = new PreSortBuffer()
-                { Write = inputBytes, LinesNumber = result.Size, RecordsStorage = _readyRecords };
+            SortingPhasePackage sortingPhasePackage = new SortingPhasePackage(package.RowData, package.ReadBytesLength,
+                package.ParsedRecords, result.LinesNumber);
             
             //todo!!!
-            await _readyForSortingSubject.OnNextAsync(preSortBuffer);
-            await _readyForNextChunkSubject.OnNextAsync(remainedBytes);
+            await _readyForSortingSubject.OnNextAsync(sortingPhasePackage);
+            await _readyForNextChunkSubject.OnNextAsync(new PreReadPackage(remainedBytes,
+                package.RowData.Length - result.StartRemainingBytes));
         }
-        await _readyForNextChunkSubject.OnNextAsync(Array.Empty<byte>());
+        await _readyForNextChunkSubject.OnNextAsync(new PreReadPackage(Array.Empty<byte>(), 0));
     }
 
     public async Task WaitingForNextPartAsync()
@@ -123,9 +124,9 @@ public class RecordsExtractorAsSequence : IAsyncObserver<InputBuffer>
 
     }
       
-    public async ValueTask OnNextAsync(InputBuffer inputBuffer)
+    public async ValueTask OnNextAsync(ReadingPhasePackage readingPhasePackage)
     {
-        await ExtractNext(inputBuffer);
+        await ExtractNext(readingPhasePackage);
     }
 
     public ValueTask OnErrorAsync(Exception error)

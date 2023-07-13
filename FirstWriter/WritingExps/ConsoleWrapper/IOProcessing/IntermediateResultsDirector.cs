@@ -36,7 +36,7 @@ internal class IntermediateResultsDirector
       var fullFileName = Path.Combine(_path, fileName);
 
       await using RecordsWriter writer = RecordsWriter.Create(fullFileName);
-      return await writer.WriteRecords(records, sourceBytes, _cancellationToken);
+      return await writer.WriteRecords(records, eventArgs.LinesNumber, sourceBytes, _cancellationToken);
    }
 
    public Result WriteRecords(SortingCompletedEventArgs eventArgs)

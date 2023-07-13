@@ -60,12 +60,12 @@ internal class DataChunkManager : IAsyncDisposable
       if (NeedLoadLines())
       {
          ExtractionResult result = await LoadLinesAsync();
-         if (result is { Success: true, Size: 0 })
+         if (result is { Success: true, LinesNumber: 0 })
          {
             return (false, default);
          }
 
-         _loadedLines = result.Size;
+         _loadedLines = result.LinesNumber;
          return (true, _recordsStorage[_currentPosition++]);
       }
 
@@ -100,7 +100,7 @@ internal class DataChunkManager : IAsyncDisposable
       if (!result.Success)
          throw new InvalidOperationException(result.Message);
 
-      if (result.Size == 0)
+      if (result.LinesNumber == 0)
          return result;
 
       _remindedBytesLength = recognizableBytes - result.StartRemainingBytes;

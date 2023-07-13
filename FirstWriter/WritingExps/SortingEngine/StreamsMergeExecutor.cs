@@ -73,12 +73,12 @@ public class StreamsMergeExecutor
          _outputBuffer[_lastLine++] = line;
          if (_lastLine >= _outputBuffer.Length)
          {
-            OnOutputBufferFull(new SortingCompletedEventArgs(_outputBuffer, _inputBuffer));
+            OnOutputBufferFull(new SortingCompletedEventArgs(_outputBuffer, _outputBuffer.Length, _inputBuffer));
             _lastLine = 0;
          }
       }
 
-      OnOutputBufferFull(new SortingCompletedEventArgs(_outputBuffer[.._lastLine], _inputBuffer));
+      OnOutputBufferFull(new SortingCompletedEventArgs(_outputBuffer, _lastLine, _inputBuffer));
       //todo flush output
       return Result.Ok;
    }

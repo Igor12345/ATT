@@ -17,10 +17,10 @@ internal class LongFileReader : IBytesProducer, IAsyncDisposable
    private FileStream _stream;
    private long _lastPosition = 0;
 
-   private readonly SimpleAsyncSubject<InputBuffer> _nextChunkPreparedSubject =
-      new SequentialSimpleAsyncSubject<InputBuffer>();
+   private readonly SimpleAsyncSubject<ReadingPhasePackage> _nextChunkPreparedSubject =
+      new SequentialSimpleAsyncSubject<ReadingPhasePackage>();
 
-   public IAsyncObservable<InputBuffer> NextChunkPrepared => _nextChunkPreparedSubject;
+   public IAsyncObservable<ReadingPhasePackage> NextChunkPrepared => _nextChunkPreparedSubject;
 
    public LongFileReader(string fullFileName, Encoding encoding, CancellationToken cancellationToken)
    {
@@ -70,9 +70,9 @@ internal class LongFileReader : IBytesProducer, IAsyncDisposable
       return _stream?.DisposeAsync() ?? ValueTask.CompletedTask;
    }
 
-   public async ValueTask OnNextAsync(InputBuffer inputBuffer)
+   public async ValueTask OnNextAsync(ReadingPhasePackage readingPhasePackage)
    {
-      ReadingResult result = await ReadBytesAsync(inputBuffer.Buffer, inputBuffer.UsedLength, _cancellationToken);
+      ReadingResult result = await ReadBytesAsync(readingPhasePackage.RowData, readingPhasePackage.PrePopulatedBytesLength, _cancellationToken);
       
       //todo log
       if (!result.Success)
@@ -81,7 +81,7 @@ internal class LongFileReader : IBytesProducer, IAsyncDisposable
       if (result.Size == 0)
          await _nextChunkPreparedSubject.OnCompletedAsync();
 
-      await _nextChunkPreparedSubject.OnNextAsync(inputBuffer);
+      await _nextChunkPreparedSubject.OnNextAsync(readingPhasePackage);
    }
 
    public ValueTask OnErrorAsync(Exception error)
