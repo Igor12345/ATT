@@ -41,6 +41,21 @@ internal class LongFileReader : IBytesProducer, IAsyncDisposable
       return readingResult;
    }
 
+   public ReadingResult ReadBytes(byte[] buffer, int offset)
+   {
+      using FileStream stream = File.OpenRead(_fullFileName);
+      if (_lastPosition > 0)
+         stream.Seek(_lastPosition, SeekOrigin.Begin);
+
+      using RecordsReader reader = new RecordsReader(stream);
+      var readingResult = reader.ReadChunk(buffer, offset);
+      if (!readingResult.Success)
+         return readingResult;
+
+      _lastPosition += readingResult.Size;
+      return readingResult;
+   }
+
    public  ValueTask DisposeAsync()
    {
       return _stream?.DisposeAsync() ?? ValueTask.CompletedTask;

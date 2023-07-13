@@ -7,7 +7,7 @@ using Infrastructure.ByteOperations;
 
 namespace SortingEngine;
 
-internal class StreamsMergeExecutor
+public class StreamsMergeExecutor
 {
    private readonly IConfig _config;
    private string[] _files = null!;

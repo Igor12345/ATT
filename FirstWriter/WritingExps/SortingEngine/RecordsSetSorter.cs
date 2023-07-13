@@ -23,8 +23,6 @@ namespace SortingEngine
       public event EventHandler<SortingCompletedEventArgs>? SortingCompleted;
       public event EventHandler<PointEventArgs>? CheckPoint;
 
-      public event EventHandler<SortingCompletedEventArgs>? OutputBufferFull;
-
       public RecordsSetSorter(IConfig configuration)
       {
          MemoryProfiler.CollectAllocations(true);
@@ -48,6 +46,8 @@ namespace SortingEngine
 
             //split stage
 
+            long memory = GC.GetTotalMemory(false);
+            Console.WriteLine($"Memory after allocation GC {memory}");
             //make something more fancy
             while (length > 0)
             {
@@ -56,8 +56,11 @@ namespace SortingEngine
                   _remainedBytes!.CopyTo(inputStorage, 0);
                }
 
+               // ReadingResult result =
+               //    await producer.ReadBytesAsync(inputStorage, _remindedBytesLength, cancellationToken);
+               
                ReadingResult result =
-                  await producer.ReadBytesAsync(inputStorage, _remindedBytesLength, cancellationToken);
+                  producer.ReadBytes(inputStorage, _remindedBytesLength);
 
                if (!result.Success)
                {
@@ -111,21 +114,6 @@ namespace SortingEngine
          // GC.Collect(2, GCCollectionMode.Aggressive, true, true);
 
          OnCheckPoint("Fourth");
-      }
-
-      public async Task<Result> MergeToOneFileAsync()
-      {
-         StreamsMergeExecutor merger = new StreamsMergeExecutor(_configuration);
-         merger.OutputBufferFull += (o, eventArgs) => MergerOnOutputBufferFull(o, eventArgs);
-         var result = await merger.MergeWithOrder();
-         
-         // OnCheckPoint("Last");
-         return result;
-      }
-
-      private void MergerOnOutputBufferFull(object? sender, SortingCompletedEventArgs e)
-      {
-         OnOutputBufferFull(e);
       }
 
       private void Init()
@@ -208,11 +196,6 @@ namespace SortingEngine
       private void OnSortingCompleted(SortingCompletedEventArgs e)
       {
          SortingCompleted?.Invoke(this, e);
-      }
-
-      protected virtual void OnOutputBufferFull(SortingCompletedEventArgs e)
-      {
-         OutputBufferFull?.Invoke(this, e);
       }
 
       protected virtual void OnCheckPoint(string name)

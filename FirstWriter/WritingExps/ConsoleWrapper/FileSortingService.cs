@@ -33,40 +33,50 @@ internal class FileSortingService : IHostedService
       IEnvironmentAnalyzer analyzer = new EnvironmentAnalyzer();
       IConfig configuration = analyzer.SuggestConfig(validInput);
 
-      RecordsSetSorter sorter = new RecordsSetSorter(configuration);
-
+      StreamsMergeExecutor merger = new StreamsMergeExecutor(configuration);
+      
       IntermediateResultsDirector chunksDirector =
          IntermediateResultsDirector.Create(configuration.TemporaryFolder, cancellationToken);
       await using ResultWriter resultWriter = ResultWriter.Create(validInput.File, cancellationToken);
-      sorter.SortingCompleted += (o, eventArgs) =>
+      
+      merger.OutputBufferFull += (o, eventArgs) =>
       {
-         Console.WriteLine("Writing chunk");
-         chunksDirector.WriteRecords(eventArgs);
-      };
-      sorter.OutputBufferFull += (o, eventArgs) =>
-      {
-         Console.WriteLine("Writing result");
+         Console.WriteLine("Writing merge result");
          resultWriter.WriteOutput(eventArgs);
-      };
-
-      sorter.CheckPoint += (o, eventArgs) =>
-      {
-         Console.WriteLine($"--->  {eventArgs.Name} check point");
-         Console.ReadLine();
-         Console.WriteLine(" <---");
       };
       
       Stopwatch sw = Stopwatch.StartNew();
+
+      await using (IBytesProducer bytesReader = new LongFileReader(validInput.File, validInput.Encoding))
       {
-         await using IBytesProducer bytesReader = new LongFileReader(validInput.File, validInput.Encoding);
+         RecordsSetSorter sorter = new RecordsSetSorter(configuration);
+         sorter.SortingCompleted += (o, eventArgs) =>
+         {
+            Console.WriteLine("Writing chunk");
+            chunksDirector.WriteRecords(eventArgs);
+         };
+         sorter.CheckPoint += (o, eventArgs) =>
+         {
+            Console.WriteLine($"--->  {eventArgs.Name} check point");
+            Console.ReadLine();
+            Console.WriteLine(" <---");
+         };
+         
          Console.WriteLine("Before starting");
 
          Result result = await sorter.SortAsync(bytesReader, cancellationToken);
+
+         long memory = GC.GetTotalMemory(false);
+         Console.WriteLine($"Memory before GC {memory}");
+         sorter.ClearMemory();
+         memory = GC.GetTotalMemory(false);
+         Console.WriteLine($"Memory after GC {memory}");
+
       }
 
-      sorter.ClearMemory();
-
-      var res = await sorter.MergeToOneFileAsync();
+      var memory2 = GC.GetTotalMemory(false);
+      Console.WriteLine($"Memory before merge GC {memory2}");
+      var res = await merger.MergeWithOrder();
       
       sw.Stop();
       Console.WriteLine(res.Success

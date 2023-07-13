@@ -4,7 +4,7 @@ using SortingEngine;
 
 namespace ConsoleWrapper.IOProcessing
 {
-   public class RecordsReader : IAsyncDisposable
+   public class RecordsReader : IAsyncDisposable, IDisposable
    {
       private readonly Func<Stream> _streamFactory;
       private readonly Stream _inputStream;
@@ -38,13 +38,24 @@ namespace ConsoleWrapper.IOProcessing
       public async Task<ReadingResult> ReadChunkAsync(byte[] buffer, int offset, CancellationToken cancellationToken)
       {
          int length = await _inputStream.ReadAsync(buffer, offset, buffer.Length - offset, cancellationToken);
-         buffer = null;
+         return new ReadingResult() { Success = true, Size = length + offset };
+      }
+
+      //todo memory
+      public  ReadingResult ReadChunk(byte[] buffer, int offset)
+      {
+         int length = _inputStream.Read(buffer, offset, buffer.Length - offset);
          return new ReadingResult() { Success = true, Size = length + offset };
       }
 
       public async ValueTask DisposeAsync()
       {
          await _inputStream.DisposeAsync();
+      }
+
+      public void Dispose()
+      {
+         _inputStream.Dispose();
       }
    }
 }
