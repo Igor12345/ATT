@@ -33,9 +33,9 @@ namespace SortingEngine
 
       public async Task<Result> SortAsync(IBytesProducer producer, CancellationToken cancellationToken)
       {
-            int[] experimental = new int[432];
+         int[] experimental = new int[432];
          OnCheckPoint("First");
-            GC.Collect(0);
+         GC.Collect(0);
          // MemoryProfiler.GetSnapshot("First");
          Init();
 
@@ -48,7 +48,7 @@ namespace SortingEngine
             var wrapper = new ArrayWrapper<byte>(inputStorage);
             int length = 1;
 
-            
+
             //split stage
 
             //make something more fancy
@@ -60,7 +60,7 @@ namespace SortingEngine
                }
 
                ReadingResult result =
-                   producer.ReadBytes(wrapper, experimental, _remindedBytesLength, cancellationToken);
+                  producer.ReadBytes(wrapper, experimental, _remindedBytesLength, cancellationToken);
 
                if (!result.Success)
                {
@@ -84,21 +84,9 @@ namespace SortingEngine
             }
 
             OnCheckPoint("Third");
-            // MemoryProfiler.GetSnapshot("Third");
-            _inputBuffer = null;
             wrapper.Clear();
-            _poolsManager.DeleteArrays();
-
-            GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
-            GC.Collect();
-            // GC.Collect(2, GCCollectionMode.Aggressive, true, true);
+            // MemoryProfiler.GetSnapshot("Third");
             
-            OnCheckPoint("Fourth");
-            // MemoryProfiler.GetSnapshot("Fourth");
-            //merge stage
-            await MergeToOneFileAsync();
-
-            OnCheckPoint("Last");
             // MemoryProfiler.GetSnapshot("Last");
             return new Result(true, "");
          }
@@ -108,11 +96,34 @@ namespace SortingEngine
          }
       }
 
-      private async Task<Result> MergeToOneFileAsync()
+      public void ClearMemory()
+      {
+         _inputBuffer = null;
+         _poolsManager.DeleteArrays();
+
+         for (int i = 0; i < 10; i++)
+         {
+            // Garbage collect as much as GC-able objects as possible.
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.WaitForFullGCComplete();
+            GC.Collect();
+         }
+
+         GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+         GC.Collect();
+         // GC.Collect(2, GCCollectionMode.Aggressive, true, true);
+
+         OnCheckPoint("Fourth");
+      }
+
+      public async Task<Result> MergeToOneFileAsync()
       {
          StreamsMergeExecutor merger = new StreamsMergeExecutor(_configuration);
          merger.OutputBufferFull += (o, eventArgs) => MergerOnOutputBufferFull(o, eventArgs);
          var result = await merger.MergeWithOrder();
+         
+         OnCheckPoint("Last");
          return result;
       }
 

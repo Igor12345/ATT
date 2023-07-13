@@ -62,6 +62,10 @@ internal class FileSortingService : IHostedService
 
       var result = await sorter.SortAsync(bytesReader, cancellationToken);
 
+      sorter.ClearMemory();
+
+      var res = await sorter.MergeToOneFileAsync();
+      
       sw.Stop();
       Console.WriteLine(result.Success
          ? $"---> Success - {sw.Elapsed.TotalMinutes} min, {sw.Elapsed.Seconds} sec; Total: {sw.Elapsed.TotalSeconds} sec, {sw.Elapsed.TotalMilliseconds} ms"
