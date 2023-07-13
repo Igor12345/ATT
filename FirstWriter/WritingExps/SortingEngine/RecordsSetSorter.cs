@@ -1,4 +1,5 @@
 ﻿using System.Buffers;
+using System.Runtime;
 using JetBrains.Profiler.Api;
 using OneOf;
 using OneOf.Types;
@@ -32,7 +33,9 @@ namespace SortingEngine
 
       public async Task<Result> SortAsync(IBytesProducer producer, CancellationToken cancellationToken)
       {
+            int[] experimental = new int[432];
          OnCheckPoint("First");
+            GC.Collect(0);
          // MemoryProfiler.GetSnapshot("First");
          Init();
 
@@ -40,9 +43,12 @@ namespace SortingEngine
          {
             //todo check filesize and write to final if small
 
-            byte[] inputStorage = RentInputStorage();
+            byte[] inputStorage = new byte[_configuration.InputBufferSize];
+            // ; RentInputStorage();
+            var wrapper = new ArrayWrapper<byte>(inputStorage);
             int length = 1;
 
+            
             //split stage
 
             //make something more fancy
@@ -54,7 +60,7 @@ namespace SortingEngine
                }
 
                ReadingResult result =
-                  await producer.ReadBytesAsync(inputStorage, _remindedBytesLength, cancellationToken);
+                   producer.ReadBytes(wrapper, experimental, _remindedBytesLength, cancellationToken);
 
                if (!result.Success)
                {
@@ -64,11 +70,14 @@ namespace SortingEngine
                if (result.Size == 0)
                   break;
 
-               length = result.Size;
+               length = result.Size + experimental.Length;
 
                var slice = inputStorage.AsMemory()[..result.Size];
 
                OnCheckPoint("Second");
+               GC.Collect(1);
+               OnCheckPoint("Second + half");
+               GC.Collect(2);
                // MemoryProfiler.GetSnapshot("Second");
 
                ProcessRecords(slice);
@@ -77,11 +86,13 @@ namespace SortingEngine
             OnCheckPoint("Third");
             // MemoryProfiler.GetSnapshot("Third");
             _inputBuffer = null;
+            wrapper.Clear();
             _poolsManager.DeleteArrays();
 
-
-            GC.Collect(2, GCCollectionMode.Aggressive, true, true);
-
+            GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+            GC.Collect();
+            // GC.Collect(2, GCCollectionMode.Aggressive, true, true);
+            
             OnCheckPoint("Fourth");
             // MemoryProfiler.GetSnapshot("Fourth");
             //merge stage
@@ -201,5 +212,22 @@ namespace SortingEngine
       {
          CheckPoint?.Invoke(this, new PointEventArgs(name));
       }
+   }
+}
+
+public class ArrayWrapper<T>
+{
+   private T[] _array;
+
+   public ArrayWrapper(T[] array)
+   {
+      _array = array;
+   }
+
+   public T[] Array => _array;
+
+   public void Clear()
+   {
+      _array = null;
    }
 }

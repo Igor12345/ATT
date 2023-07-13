@@ -3,7 +3,7 @@
     "ConsoleWrapper": {
       "commandName": "Project",
       "environmentVariables": {
-        "EnvironmentSettings__AvailableMemory": "7"
+        "TechSettings__AvailableMemory": "7"
       }
     }
   }

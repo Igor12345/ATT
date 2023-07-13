@@ -39,8 +39,8 @@ namespace ConsoleWrapper
          {
             
             // services.AddSingleton<BaseConfiguration>();
-            var section = context.Configuration.GetSection("EnvironmentSettings");
-            services.Configure<BaseConfiguration>(context.Configuration.GetSection("EnvironmentSettings"));
+            var section = context.Configuration.GetSection("TechSettings");
+            services.Configure<BaseConfiguration>(context.Configuration.GetSection("TechSettings"));
             services.Configure<InputParameters>(context.Configuration.GetSection("Input"));
             var conf = context.Configuration;
             // services.AddOptions<BaseConfiguration>("base")
