@@ -40,7 +40,7 @@ public sealed class RecordsExtractorAsSequence : IAsyncObserver<ReadingPhasePack
     [Conditional("VERBOSE")]
     private void Log(string message)
     {
-        _logger.Log(message);
+        _logger.LogAsync(message);
     }
     
     private async Task ExtractNext(ReadingPhasePackage package)

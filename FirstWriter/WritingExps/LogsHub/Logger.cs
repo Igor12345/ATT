@@ -20,8 +20,13 @@ public class Logger
         return instance;
     }
 
-    public ValueTask Log(LogEntry record)
+    public ValueTask LogAsync(LogEntry record)
     {
         return _input.Log(record);
+    }
+
+    public void Stop()
+    {
+        _consoleLogger.Stop();
     }
 }
