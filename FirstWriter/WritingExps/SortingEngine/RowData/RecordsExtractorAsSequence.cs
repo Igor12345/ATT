@@ -46,15 +46,16 @@ public sealed class RecordsExtractorAsSequence : IAsyncObserver<ReadingPhasePack
     private async Task ExtractNext(ReadingPhasePackage package)
     {
         await Log(
-            $"Processing package: {package.PackageNumber}, is last: {package.IsLastPackage}, bytes: {package.RowData.Length}, prepopulated: {package.PrePopulatedBytesLength}");
-        if (package.IsLastPackage)
-        {
-            SortingPhasePackage lastPackage = new SortingPhasePackage(package.RowData, package.ReadBytesLength,
-                package.ParsedRecords, 0, package.PackageNumber, true);
-            await Log($"Sending the last package without processing: {package.PackageNumber}");
-            await _readyForSortingSubject.OnNextAsync(lastPackage);
-            return;
-        }
+            $"Processing package: {package.PackageNumber}, is last: {package.IsLastPackage}, " +
+            $"bytes: {package.RowData.Length}, pre populated: {package.PrePopulatedBytesLength}");
+        // if (package.IsLastPackage)
+        // {
+        //     SortingPhasePackage lastPackage = new SortingPhasePackage(package.RowData, package.ReadBytesLength,
+        //         package.ParsedRecords, 0, package.PackageNumber, true);
+        //     await Log($"Sending the last package without processing: {package.PackageNumber}");
+        //     await _readyForSortingSubject.OnNextAsync(lastPackage);
+        //     return;
+        // }
         
         ReadOnlyMemory<byte> inputBytes = package.RowData.AsMemory()[..package.ReadBytesLength];
         ExtractionResult result = ExtractRecords(inputBytes.Span, package.ParsedRecords);
@@ -72,22 +73,23 @@ public sealed class RecordsExtractorAsSequence : IAsyncObserver<ReadingPhasePack
 
         //todo
         SortingPhasePackage nextPackage = new SortingPhasePackage(package.RowData, package.ReadBytesLength,
-            package.ParsedRecords, result.LinesNumber, package.PackageNumber);
+            package.ParsedRecords, result.LinesNumber, package.PackageNumber, package.IsLastPackage);
 
         await Log(
-            $"Sending the package {nextPackage.PackageNumber}, extracted {nextPackage.LinesNumber}, bytes: {nextPackage.RowData.Length}, linesBuffer: {nextPackage.ParsedRecords.CurrentCapacity}, used bytes: {nextPackage.OccupiedLength}");
+            $"Sending the package {nextPackage.PackageNumber}, extracted {nextPackage.LinesNumber}, " +
+            $"bytes: {nextPackage.RowData.Length}, linesBuffer: {nextPackage.ParsedRecords.CurrentCapacity}, " +
+            $"used bytes: {nextPackage.OccupiedLength}");
         //todo!!!
-        var t1 = _readyForSortingSubject.OnNextAsync(nextPackage);
-        await Log(
-            $"Sending the package {nextPackage.PackageNumber}, after 1 - ReadyForSorting");
-        
-        var t2 = _readyForNextChunkSubject.OnNextAsync(new PreReadPackage(remainedBytes,
-            remainingBytesLength));
-        await Log(
-            $"Sending the package {nextPackage.PackageNumber}, after 2 - ReadyForNextChunk");
-        await Task.WhenAll(t1.AsTask(), t2.AsTask());
-        await Log(
-            $"Sending the package {nextPackage.PackageNumber}, after all");
+        await _readyForSortingSubject.OnNextAsync(nextPackage);
+        if (package.IsLastPackage)
+        {
+            await _readyForNextChunkSubject.OnCompletedAsync();
+        }
+        else
+        {
+            await _readyForNextChunkSubject.OnNextAsync(new PreReadPackage(remainedBytes,
+                        remainingBytesLength));
+        }
     }
 
     public async Task WaitingForNextPartAsync()

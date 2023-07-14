@@ -120,45 +120,65 @@ internal class FileSortingService : IHostedService
 
       await logger.LogAsync($"Started at {DateTime.UtcNow:s}");
 
+      SortingPhase(cancellationToken, configuration, logger, validInput).GetAwaiter().GetResult();
+
+      Console.WriteLine("After sorting phase");
+      Console.ReadLine();
+      await MergingPhase(cancellationToken, configuration, logger);
+      
+      Console.WriteLine("******* Final ********");
+      Console.ReadLine();
+   }
+
+   private static async Task MergingPhase(CancellationToken cancellationToken, IConfig configuration, Logger logger)
+   {
+      Console.WriteLine("_____ Before merging");
+      await using ResultWriter resultWriter = ResultWriter.Create(configuration.Output, logger, cancellationToken);
+      StreamsMergeExecutor merger = new StreamsMergeExecutor(configuration);
+      Console.WriteLine("--- Last line");
+   }
+
+   private async Task SortingPhase(CancellationToken cancellationToken, IConfig configuration, Logger logger,
+      ValidatedInputParameters validInput)
+   {
       RecordsExtractorAsSequence extractor = new RecordsExtractorAsSequence(
          configuration.Encoding.GetBytes(Environment.NewLine),
          configuration.Encoding.GetBytes(". "), logger, cancellationToken);
 
-      StreamsMergeExecutor merger = new StreamsMergeExecutor(configuration);
-
       IntermediateResultsDirector chunksDirector =
          IntermediateResultsDirector.Create(configuration.TemporaryFolder, logger, cancellationToken);
-      await using ResultWriter resultWriter = ResultWriter.Create(configuration.Output, logger, cancellationToken);
 
       await using IBytesProducer bytesReader =
          new LongFileReader(validInput.File, validInput.Encoding, logger, cancellationToken);
       LinesSorter sorter = new LinesSorter(logger);
 
-      SortingPhasePoolManager sortingPhasePoolManager = new SortingPhasePoolManager(3, configuration.InputBufferLength,
+      using SortingPhasePoolManager sortingPhasePoolManager = new SortingPhasePoolManager(3,
+         configuration.InputBufferLength,
          configuration.RecordsBufferLength, logger, cancellationToken);
 
-      var s1 = await sortingPhasePoolManager.LoadNextChunk.SubscribeAsync(bytesReader);
-      var s2 = await bytesReader.NextChunkPrepared.SubscribeAsync(extractor);
+      await using var s1 = await sortingPhasePoolManager.LoadNextChunk.SubscribeAsync(bytesReader);
+      await using var s2 = await bytesReader.NextChunkPrepared.SubscribeAsync(extractor);
 
-      var s3 = await extractor.ReadyForSorting.SubscribeAsync(sorter);
-      var s4 = await extractor.ReadyForNextChunk.SubscribeAsync(sortingPhasePoolManager);
-      var s5 = await sorter.SortingCompleted.SubscribeAsync(chunksDirector);
-      var s6 = await chunksDirector.SortedLinesSaved.SubscribeSafeAsync(sortingPhasePoolManager);
+      await using var s3 = await extractor.ReadyForSorting.SubscribeAsync(sorter);
+      await using var s4 = await extractor.ReadyForNextChunk.SubscribeAsync(sortingPhasePoolManager);
+      await using var s5 = await sorter.SortingCompleted.SubscribeAsync(chunksDirector);
+      await using var s6 = await chunksDirector.SortedLinesSaved.SubscribeSafeAsync(sortingPhasePoolManager);
 
-      await chunksDirector.SortedLinesSaved.SubscribeAsync(
+      await using var s7 = await chunksDirector.SortedLinesSaved.SubscribeAsync(
          b => { },
          e => HandleError(e),
          () =>
          {
+            Console.WriteLine("--->  Before GC");
+            Console.ReadLine();
             MemoryCleaner.CleanMemory();
+            Console.WriteLine("<---  After GC");
+            Console.ReadLine();
             StartMerge();
          }
       );
 
       await sortingPhasePoolManager.LetsStart();
-
-      Console.WriteLine("--- Last line");
-      Console.ReadLine();
    }
 
    private void HandleError(Exception exception)

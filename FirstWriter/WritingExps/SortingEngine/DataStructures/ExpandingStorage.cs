@@ -70,7 +70,8 @@ namespace SortingEngine.DataStructures
       {
          foreach (var buffer in _buffers)
          {
-            ArrayPool<T>.Shared.Return(buffer);
+            if (buffer != null)
+               ArrayPool<T>.Shared.Return(buffer);
          }
 
          _lastBuffer = -1;

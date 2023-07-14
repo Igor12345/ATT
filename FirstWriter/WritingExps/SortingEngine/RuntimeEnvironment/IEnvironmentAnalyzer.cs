@@ -57,6 +57,8 @@ namespace SortingEngine.RuntimeEnvironment
          var fileName = Path.GetFileNameWithoutExtension(path);
          var extension = Path.GetExtension(path);
          string delimiter = extension.Length > 0 ? "." : "";
+         
+         //todo custom?
          string resultFile = $"{fileName}_sorted{delimiter}{extension}";
          //todo
          string? directory = Path.GetDirectoryName(path);

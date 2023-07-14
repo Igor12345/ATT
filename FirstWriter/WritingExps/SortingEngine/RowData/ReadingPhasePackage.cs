@@ -24,7 +24,7 @@ public record SortingPhasePackage(
     ExpandingStorage<LineMemory> ParsedRecords,
     int LinesNumber, 
     int PackageNumber,
-    bool IsLastPackage = false);
+    bool IsLastPackage);
 
 public record AfterSortingPhasePackage(
     LineMemory[] SortedLines,

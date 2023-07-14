@@ -14,6 +14,7 @@ public class RecordsWriter : IAsyncDisposable
 
    public static RecordsWriter Create(string fullFileName)
    {
+      //todo in not necessary for the last file
       RecordsWriter instance = new RecordsWriter
       {
          _fileStream = File.Open(fullFileName, FileMode.Create, FileAccess.Write)
@@ -21,7 +22,7 @@ public class RecordsWriter : IAsyncDisposable
       return instance;
    }
 
-   public async Task<Result> WriteRecords(LineMemory[] lines, int linesNumber, ReadOnlyMemory<byte> source,
+   public async Task<Result> WriteRecordsAsync(LineMemory[] lines, int linesNumber, ReadOnlyMemory<byte> source,
       CancellationToken token)
    {
       try

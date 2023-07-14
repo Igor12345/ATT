@@ -31,6 +31,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InfrastructureTests", "Infr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LogsHub", "LogsHub\LogsHub.csproj", "{7910B92D-8B99-4F9C-A48A-958711B70EBA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SortingEngineTests", "Tests\SortingEngineTests\SortingEngineTests.csproj", "{0785ACB5-4E8E-4A72-911A-4A75DABC5ABB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -85,6 +87,10 @@ Global
 		{7910B92D-8B99-4F9C-A48A-958711B70EBA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7910B92D-8B99-4F9C-A48A-958711B70EBA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7910B92D-8B99-4F9C-A48A-958711B70EBA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0785ACB5-4E8E-4A72-911A-4A75DABC5ABB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0785ACB5-4E8E-4A72-911A-4A75DABC5ABB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0785ACB5-4E8E-4A72-911A-4A75DABC5ABB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0785ACB5-4E8E-4A72-911A-4A75DABC5ABB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -94,6 +100,7 @@ Global
 		{13B02069-C60F-4A18-A210-3C06CCF78D17} = {278824FB-3745-452C-A817-93034672ED1F}
 		{B3FD79D3-60A0-456C-BCFB-A4F16B1933F7} = {278824FB-3745-452C-A817-93034672ED1F}
 		{5A8515EF-18F5-41DB-A847-A44EAF9C0E59} = {278824FB-3745-452C-A817-93034672ED1F}
+		{0785ACB5-4E8E-4A72-911A-4A75DABC5ABB} = {278824FB-3745-452C-A817-93034672ED1F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {7BFD0D6D-A7B1-4501-A480-D2229C85B62D}

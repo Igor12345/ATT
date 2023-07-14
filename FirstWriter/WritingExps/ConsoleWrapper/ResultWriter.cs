@@ -52,7 +52,7 @@ internal class ResultWriter : IAsyncDisposable
    {
       LineMemory[] records = eventArgs.Sorted;
       ReadOnlyMemory<byte> sourceBytes = eventArgs.Source;
-      return await _writer.WriteRecords(records, eventArgs.LinesNumber, sourceBytes, _token);
+      return await _writer.WriteRecordsAsync(records, eventArgs.LinesNumber, sourceBytes, _token);
    }
 
    public ValueTask DisposeAsync()

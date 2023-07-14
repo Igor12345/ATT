@@ -34,11 +34,8 @@ public class LinesSorter : IAsyncObserver<SortingPhasePackage>
     public async ValueTask OnNextAsync(SortingPhasePackage inputPackage)
     {
         await Log(
-            $"""
-             Processing package: {inputPackage.PackageNumber}, 
-             lines: {inputPackage.LinesNumber}, bytes: {inputPackage.RowData.Length}, 
-             linesBuffer: {inputPackage.ParsedRecords.CurrentCapacity}
-             """);
+            $"Processing package: {inputPackage.PackageNumber}, lines: {inputPackage.LinesNumber}, " +
+            $"bytes: {inputPackage.RowData.Length},linesBuffer: {inputPackage.ParsedRecords.CurrentCapacity} ");
         await Task.Factory.StartNew<Task<bool>>(async (state) =>
             {
                 if (state == null) throw new ArgumentNullException(nameof(state));

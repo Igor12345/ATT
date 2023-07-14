@@ -166,7 +166,8 @@ public class SortingPhasePoolManager : IAsyncObserver<PreReadPackage>, IAsyncObs
     {
         foreach (byte[] buffer in _buffers)
         {
-            ArrayPool<byte>.Shared.Return(buffer);
+            if (buffer != null)
+                ArrayPool<byte>.Shared.Return(buffer);
         }
 
         Array.Clear(_buffers);

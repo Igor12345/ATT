@@ -45,7 +45,7 @@ internal class IntermediateResultsDirector: IAsyncObserver<AfterSortingPhasePack
       var fullFileName = Path.Combine(_path, fileName);
 
       await using RecordsWriter writer = RecordsWriter.Create(fullFileName);
-      return await writer.WriteRecords(records, eventArgs.LinesNumber, sourceBytes, _token);
+      return await writer.WriteRecordsAsync(records, eventArgs.LinesNumber, sourceBytes, _token);
    }
    
    private async Task<Result> WriteRecordsAsync(AfterSortingPhasePackage package)
@@ -54,7 +54,7 @@ internal class IntermediateResultsDirector: IAsyncObserver<AfterSortingPhasePack
       string fullFileName = Path.Combine(_path, fileName);
 
       await using RecordsWriter writer = RecordsWriter.Create(fullFileName);
-      return await writer.WriteRecords(package.SortedLines, package.LinesNumber, package.RowData, _token);
+      return await writer.WriteRecordsAsync(package.SortedLines, package.LinesNumber, package.RowData, _token);
    }
 
    public Result WriteRecords(SortingCompletedEventArgs eventArgs)
@@ -76,11 +76,8 @@ internal class IntermediateResultsDirector: IAsyncObserver<AfterSortingPhasePack
    public async ValueTask OnNextAsync(AfterSortingPhasePackage inputPackage)
    {
       await Log(
-         $"""
-          Processing package: {inputPackage.PackageNumber}(last - {inputPackage.IsLastPackage}), 
-          Lines: {inputPackage.LinesNumber}, bytes: {inputPackage.RowData.Length}, 
-          AllLines: {inputPackage.SortedLines}
-          """);
+         $"Processing package: {inputPackage.PackageNumber}(last - {inputPackage.IsLastPackage}), " +
+         $"Lines: {inputPackage.LinesNumber}, bytes: {inputPackage.RowData.Length},AllLines: {inputPackage.SortedLines} ");
       
       await Task.Factory.StartNew<Task<bool>>(async (state) =>
          {
