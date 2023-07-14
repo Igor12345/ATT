@@ -21,4 +21,9 @@
         </PackageReference>
     </ItemGroup>
 
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\SortingEngine\SortingEngine.csproj" />
+    </ItemGroup>
+
 </Project>

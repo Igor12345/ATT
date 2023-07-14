@@ -1,8 +1,5 @@
-﻿using System.Collections.ObjectModel;
-using System.Reactive;
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
-using Infrastructure.ByteOperations;
+﻿using Infrastructure.ByteOperations;
+using Infrastructure.Parameters;
 using SortingEngine.DataStructures;
 using SortingEngine.Entities;
 
@@ -15,8 +12,8 @@ namespace SortingEngine.RowData
       
       public RecordsExtractor(byte[] eol, byte[] lineDelimiter)
       {
-         _eol = eol;
-         _lineDelimiter = lineDelimiter;
+         _eol = Guard.NotNull(eol);
+         _lineDelimiter = Guard.NotNull(lineDelimiter);
       }
 
       public ExtractionResult ExtractRecords(ReadOnlySpan<byte> input, ExpandingStorage<LineMemory> records)
@@ -69,7 +66,7 @@ namespace SortingEngine.RowData
 
       }
 
-      
+      //todo remove
       #region Chars records
 
       public void SplitOnLines(Span<byte> buffer, Span<int> linesPositions)

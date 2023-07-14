@@ -141,7 +141,7 @@ internal class FileSortingService : IHostedService
    private async Task SortingPhase(CancellationToken cancellationToken, IConfig configuration, Logger logger,
       ValidatedInputParameters validInput)
    {
-      RecordsExtractorAsSequence extractor = new RecordsExtractorAsSequence(
+      ObservableRecordsExtractor extractor = new ObservableRecordsExtractor(
          configuration.Encoding.GetBytes(Environment.NewLine),
          configuration.Encoding.GetBytes(". "), logger, cancellationToken);
 
