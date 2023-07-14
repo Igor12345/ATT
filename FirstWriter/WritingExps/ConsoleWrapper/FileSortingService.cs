@@ -107,7 +107,7 @@ internal class FileSortingService : IHostedService
       if (!canContinue)
          return;
          
-      Console.WriteLine($"--> Ready to start in the thread - {Thread.CurrentThread.ManagedThreadId}");
+      Console.WriteLine("--> Ready to start");
       var r = Console.ReadLine();
 
       IEnvironmentAnalyzer analyzer = new EnvironmentAnalyzer();
@@ -116,19 +116,12 @@ internal class FileSortingService : IHostedService
       //only for demonstration, use NLog, Serilog, ... in real projects
       Logger logger = Logger.Create(cancellationToken);
 
-      await logger.LogAsync($"Start at {DateTime.UtcNow:s}, in the thread - {Thread.CurrentThread.ManagedThreadId}");
-      await logger.LogAsync($"Next {DateTime.UtcNow:s}");
-
-      logger.Stop();
-      await logger.LogAsync($"After stop {DateTime.UtcNow:s}, in the thread - {Thread.CurrentThread.ManagedThreadId}");
-      await logger.LogAsync($"After stop 2 {DateTime.UtcNow:s}");
+      await logger.LogAsync($"Started at {DateTime.UtcNow:s}");
       
       RecordsExtractorAsSequence extractor = new RecordsExtractorAsSequence(
          configuration.Encoding.GetBytes(Environment.NewLine),
          configuration.Encoding.GetBytes(". "), logger, cancellationToken);
       
-      Console.WriteLine("---->");
-      Console.ReadLine();
       StreamsMergeExecutor merger = new StreamsMergeExecutor(configuration);
       
       IntermediateResultsDirector chunksDirector =

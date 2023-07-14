@@ -25,8 +25,9 @@ public class Logger
         return _input.Log(record);
     }
 
-    public void Stop()
+    public async ValueTask StopAsync()
     {
+        await Task.Delay(1);
         _consoleLogger.Stop();
     }
 }
