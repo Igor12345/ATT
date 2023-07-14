@@ -32,22 +32,25 @@ internal class ConsoleLog
         ChannelReader<LogEntry> reader = _channel.Reader;
         CancellationToken token = _cts.Token;
 
-        Task.Factory.StartNew(static async (state) =>
-        {
-            if (state == null)
-                throw new NullReferenceException(nameof(state));
-
-            Tuple<ChannelReader<LogEntry>, CancellationToken> tuple =
-                (Tuple<ChannelReader<LogEntry>, CancellationToken>)state;
-            ChannelReader<LogEntry> reader = tuple.Item1;
-            CancellationToken token = tuple.Item2;
-
-            while (await reader.WaitToReadAsync(token))
+        Task.Factory.StartNew<Task<bool>>(static async (state) =>
             {
-                var entry = await reader.ReadAsync(token);
-                Console.WriteLine(entry.Message);
-            }
-        }, new Tuple<ChannelReader<LogEntry>, CancellationToken>(reader, token), _cancellationToken);
+                if (state == null)
+                    throw new NullReferenceException(nameof(state));
+
+                Tuple<ChannelReader<LogEntry>, CancellationToken> tuple =
+                    (Tuple<ChannelReader<LogEntry>, CancellationToken>)state;
+                ChannelReader<LogEntry> reader = tuple.Item1;
+                CancellationToken token = tuple.Item2;
+
+                while (await reader.WaitToReadAsync(token))
+                {
+                    var entry = await reader.ReadAsync(token);
+                    Console.WriteLine(entry.Message);
+                }
+
+                return true;
+            }, new Tuple<ChannelReader<LogEntry>, CancellationToken>(reader, token), _cancellationToken,
+            TaskCreationOptions.LongRunning | TaskCreationOptions.PreferFairness, TaskScheduler.Default);
 
     }
 }

@@ -31,16 +31,28 @@ public class LinesSorter : IAsyncObserver<SortingPhasePackage>
         return sorter.Sort(recordsStorage, linesNumber);
     }
 
-    public async ValueTask OnNextAsync(SortingPhasePackage package)
+    public async ValueTask OnNextAsync(SortingPhasePackage inputPackage)
     {
         await Log(
-            $"Processing package: {package.PackageNumber}, lines: {package.LinesNumber}, bytes: {package.RowData.Length}, linesBuffer: {package.ParsedRecords.CurrentCapacity}");
-        ReadOnlyMemory<byte> inputBytes = package.RowData.AsMemory()[..package.OccupiedLength];
-        LineMemory[] sorted = SortRecords(inputBytes, package.LinesNumber, package.ParsedRecords);
+            $"""
+             Processing package: {inputPackage.PackageNumber}, 
+             lines: {inputPackage.LinesNumber}, bytes: {inputPackage.RowData.Length}, 
+             linesBuffer: {inputPackage.ParsedRecords.CurrentCapacity}
+             """);
+        await Task.Factory.StartNew<Task<bool>>(async (state) =>
+            {
+                if (state == null) throw new ArgumentNullException(nameof(state));
 
-        await Log($"Sorted {sorted.Length} lines for the package: {package.PackageNumber}");
-        await _sortingCompletedSubject.OnNextAsync(new AfterSortingPhasePackage(sorted, package.RowData,
-            package.ParsedRecords, package.LinesNumber, package.PackageNumber));
+                SortingPhasePackage package = (SortingPhasePackage)state;
+                ReadOnlyMemory<byte> inputBytes = package.RowData.AsMemory()[..package.OccupiedLength];
+                LineMemory[] sorted = SortRecords(inputBytes, package.LinesNumber, package.ParsedRecords);
+
+                await Log($"Sorted {sorted.Length} lines for the package: {package.PackageNumber}");
+                await _sortingCompletedSubject.OnNextAsync(new AfterSortingPhasePackage(sorted, package.RowData,
+                    package.ParsedRecords, package.LinesNumber, package.PackageNumber));
+                return true;
+            }, inputPackage, CancellationToken.None,
+            TaskCreationOptions.LongRunning | TaskCreationOptions.PreferFairness, TaskScheduler.Default);
     }
 
     public async ValueTask OnErrorAsync(Exception error)

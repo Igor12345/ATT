@@ -43,7 +43,7 @@ internal class FileSortingService : IHostedService
       StreamsMergeExecutor merger = new StreamsMergeExecutor(configuration);
       Logger logger = Logger.Create(cancellationToken);
       IntermediateResultsDirector chunksDirector =
-         IntermediateResultsDirector.Create(configuration.TemporaryFolder, cancellationToken);
+         IntermediateResultsDirector.Create(configuration.TemporaryFolder, logger, cancellationToken);
       await using ResultWriter resultWriter = ResultWriter.Create(configuration.Output, logger, cancellationToken);
 
       merger.OutputBufferFull += (o, eventArgs) =>
@@ -127,7 +127,7 @@ internal class FileSortingService : IHostedService
       StreamsMergeExecutor merger = new StreamsMergeExecutor(configuration);
 
       IntermediateResultsDirector chunksDirector =
-         IntermediateResultsDirector.Create(configuration.TemporaryFolder, cancellationToken);
+         IntermediateResultsDirector.Create(configuration.TemporaryFolder, logger, cancellationToken);
       await using ResultWriter resultWriter = ResultWriter.Create(configuration.Output, logger, cancellationToken);
 
       await using IBytesProducer bytesReader =
@@ -142,10 +142,10 @@ internal class FileSortingService : IHostedService
 
       var s3 = await extractor.ReadyForSorting.SubscribeAsync(sorter);
       var s4 = await extractor.ReadyForNextChunk.SubscribeAsync(sortingPhasePoolManager);
-      var s5 = await sorter.SortingCompleted.SubscribeAsync(resultWriter);
-      var s6 = await resultWriter.SortedLinesSaved.SubscribeAsync(sortingPhasePoolManager);
+      var s5 = await sorter.SortingCompleted.SubscribeAsync(chunksDirector);
+      var s6 = await chunksDirector.SortedLinesSaved.SubscribeSafeAsync(sortingPhasePoolManager);
 
-      await resultWriter.SortedLinesSaved.SubscribeAsync(
+      await chunksDirector.SortedLinesSaved.SubscribeAsync(
          b => { },
          e => HandleError(e),
          () =>

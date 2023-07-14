@@ -10,7 +10,7 @@ using SortingEngine.RowData;
 
 namespace ConsoleWrapper;
 
-internal class ResultWriter : IAsyncDisposable, IAsyncObserver<AfterSortingPhasePackage>
+internal class ResultWriter : IAsyncDisposable
 {
    private readonly Logger _logger;
    private readonly CancellationToken _token;
@@ -60,52 +60,5 @@ internal class ResultWriter : IAsyncDisposable, IAsyncObserver<AfterSortingPhase
       return _writer.DisposeAsync();
    }
 
-   private readonly SimpleAsyncSubject<AfterSortingPhasePackage> _sortedLinesSavedSubject =
-      new SequentialSimpleAsyncSubject<AfterSortingPhasePackage>();
-
-   public IAsyncObservable<AfterSortingPhasePackage> SortedLinesSaved => _sortedLinesSavedSubject;
-
-   public async ValueTask OnNextAsync(AfterSortingPhasePackage package)
-   {
-      await Log(
-         $"Processing package: {package.PackageNumber}(last - {package.IsLastPackage}), Lines: {package.LinesNumber}, bytes: {package.RowData.Length}, AllLines: {package.SortedLines}");
-      
-      var result = await _writer.WriteRecords(package.SortedLines, package.LinesNumber, package.RowData, _token);
-
-      if (!result.Success)
-         await _sortedLinesSavedSubject.OnErrorAsync(new InvalidOperationException(result.Message));
-
-      await Log($"Processed package: {package.PackageNumber}, all lines saved: {result.Success}");
-      
-      await _sortedLinesSavedSubject.OnNextAsync(package);
-
-      bool allProcessed = true;
-      lock (_lock)
-      {
-         _processedPackages.Add(package.PackageNumber);
-         if (package.IsLastPackage)
-            _lastPackageNumber = package.PackageNumber;
-         if (package.PackageNumber <= _lastPackageNumber)
-         {
-            for (int i = 0; i < _lastPackageNumber; i++)
-            {
-               allProcessed &= _processedPackages.Contains(i);
-            }
-         }
-      }
-      await Log($"Processed package: {package.PackageNumber}, ready to complete: {allProcessed}");
-      
-      if (allProcessed)
-         await _sortedLinesSavedSubject.OnCompletedAsync();
-   }
-
-   public async ValueTask OnErrorAsync(Exception error)
-   {
-      await _sortedLinesSavedSubject.OnCompletedAsync();
-   }
-
-   public ValueTask OnCompletedAsync()
-   {
-      return ValueTask.CompletedTask;
-   }
+   
 }
