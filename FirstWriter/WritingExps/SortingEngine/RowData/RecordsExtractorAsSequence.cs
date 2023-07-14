@@ -42,30 +42,38 @@ public sealed class RecordsExtractorAsSequence : IAsyncObserver<ReadingPhasePack
     {
         _logger.LogAsync(message);
     }
-    
+
     private async Task ExtractNext(ReadingPhasePackage package)
     {
+        if (package.IsLastPackage)
+        {
+            SortingPhasePackage lastPackage = new SortingPhasePackage(package.RowData, package.ReadBytesLength,
+                package.ParsedRecords, 0, package.PackageNumber, true);
+            await _readyForSortingSubject.OnNextAsync(lastPackage);
+            return;
+        }
+        
         ReadOnlyMemory<byte> inputBytes = package.RowData.AsMemory()[..package.ReadBytesLength];
         ExtractionResult result = ExtractRecords(inputBytes.Span, package.ParsedRecords);
         if (!result.Success)
         {
             await _readyForNextChunkSubject.OnErrorAsync(new InvalidOperationException(result.Message));
         }
-        if (package.RowData.Length - result.StartRemainingBytes > 0)
-        {
-            var remainedBytes = ArrayPool<byte>.Shared.Rent(Constants.MaxTextLength);
-            package.RowData.AsSpan()[result.StartRemainingBytes..].CopyTo(remainedBytes);
 
-            //todo
-            SortingPhasePackage sortingPhasePackage = new SortingPhasePackage(package.RowData, package.ReadBytesLength,
-                package.ParsedRecords, result.LinesNumber);
-            
-            //todo!!!
-            await _readyForSortingSubject.OnNextAsync(sortingPhasePackage);
-            await _readyForNextChunkSubject.OnNextAsync(new PreReadPackage(remainedBytes,
-                package.RowData.Length - result.StartRemainingBytes));
-        }
-        await _readyForNextChunkSubject.OnNextAsync(new PreReadPackage(Array.Empty<byte>(), 0));
+        int remainingBytesLength = package.ReadBytesLength - result.StartRemainingBytes;
+
+        byte[] remainedBytes = ArrayPool<byte>.Shared.Rent(remainingBytesLength);
+        package.RowData.AsSpan()[result.StartRemainingBytes..package.ReadBytesLength].CopyTo(remainedBytes);
+
+        //todo
+        SortingPhasePackage sortingPhasePackage = new SortingPhasePackage(package.RowData, package.ReadBytesLength,
+            package.ParsedRecords, result.LinesNumber, package.PackageNumber);
+
+        //todo!!!
+        var t1 = _readyForSortingSubject.OnNextAsync(sortingPhasePackage);
+        var t2 = _readyForNextChunkSubject.OnNextAsync(new PreReadPackage(remainedBytes,
+            remainingBytesLength));
+        await Task.WhenAll(t1.AsTask(), t2.AsTask());
     }
 
     public async Task WaitingForNextPartAsync()
@@ -147,6 +155,7 @@ public sealed class RecordsExtractorAsSequence : IAsyncObserver<ReadingPhasePack
 
     public ValueTask OnCompletedAsync()
     {
+        //we will complete this sequence as well, in such case there is nothing to do. Something went wrong
         return _readyForNextChunkSubject.OnCompletedAsync();
     }
 }

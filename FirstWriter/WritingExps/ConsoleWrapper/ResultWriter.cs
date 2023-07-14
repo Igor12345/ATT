@@ -10,7 +10,10 @@ internal class ResultWriter : IAsyncDisposable, IAsyncObserver<AfterSortingPhase
 {
    private readonly CancellationToken _token;
    private RecordsWriter _writer = null!;
+   private object _lock = new();
 
+   private readonly HashSet<int> _processedPackages = new();
+   private volatile int _lastPackageNumber = -1;
    private ResultWriter(CancellationToken token)
    {
       _token = token;
@@ -47,14 +50,32 @@ internal class ResultWriter : IAsyncDisposable, IAsyncObserver<AfterSortingPhase
 
    public IAsyncObservable<AfterSortingPhasePackage> SortedLinesSaved => _sortedLinesSavedSubject;
 
-   public async ValueTask OnNextAsync(AfterSortingPhasePackage value)
+   public async ValueTask OnNextAsync(AfterSortingPhasePackage package)
    {
-      var result =  await _writer.WriteRecords(value.SortedLines, value.LinesNumber, value.RowData, _token);
-      
+      var result = await _writer.WriteRecords(package.SortedLines, package.LinesNumber, package.RowData, _token);
+
       if (!result.Success)
          await _sortedLinesSavedSubject.OnErrorAsync(new InvalidOperationException(result.Message));
-      
-      await _sortedLinesSavedSubject.OnNextAsync(value);
+
+      await _sortedLinesSavedSubject.OnNextAsync(package);
+
+      bool allProcessed = true;
+      lock (_lock)
+      {
+         _processedPackages.Add(package.PackageNumber);
+         if (package.IsLastPackage)
+            _lastPackageNumber = package.PackageNumber;
+         if (package.PackageNumber <= _lastPackageNumber)
+         {
+            for (int i = 0; i < _lastPackageNumber; i++)
+            {
+               allProcessed &= _processedPackages.Contains(i);
+            }
+         }
+      }
+
+      if (allProcessed)
+         await _sortedLinesSavedSubject.OnCompletedAsync();
    }
 
    public async ValueTask OnErrorAsync(Exception error)
@@ -62,8 +83,8 @@ internal class ResultWriter : IAsyncDisposable, IAsyncObserver<AfterSortingPhase
       await _sortedLinesSavedSubject.OnCompletedAsync();
    }
 
-   public async ValueTask OnCompletedAsync()
+   public ValueTask OnCompletedAsync()
    {
-      await _sortedLinesSavedSubject.OnCompletedAsync();
+      return ValueTask.CompletedTask;
    }
 }

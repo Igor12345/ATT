@@ -5,11 +5,11 @@ namespace SortingEngine.RuntimeConfiguration;
 
 public class BaseConfiguration
 {
-   public int InputBufferSize { get; set; }
+   public int InputBufferLength { get; set; }
    public string TemporaryFolder { get; set; }
-   public int MergeBufferSize { get; set; }
-   public int OutputBufferSize { get; set; }
-   public int RecordsBufferSize { get; set; }
+   public int MergeBufferLength { get; set; }
+   public int OutputBufferLength { get; set; }
+   public int RecordsBufferLength { get; set; }
    public int AvailableMemory { get; set; }
 }
 

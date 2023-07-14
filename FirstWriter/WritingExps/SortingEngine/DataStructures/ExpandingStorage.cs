@@ -6,7 +6,8 @@ namespace SortingEngine.DataStructures
    //todo test
    public class ExpandingStorage<T> : IDisposable
    {
-      private readonly int _chunkSize;
+      private int _chunkSize;
+      private readonly int _minChunkSize;
       //todo either use lock or remove volatile
       private volatile int _lastBuffer = -1;
       private long _currentIndex;
@@ -14,14 +15,14 @@ namespace SortingEngine.DataStructures
 
       public ExpandingStorage(int chunkSize)
       {
-         _chunkSize = Guard.Positive(chunkSize);
+         _minChunkSize = Guard.Positive(chunkSize);
          _buffers = new List<T[]>();
       }
 
       private void RentSpace()
       {
-         T[] array = ArrayPool<T>.Shared.Rent(_chunkSize);
-         
+         T[] array = ArrayPool<T>.Shared.Rent(_minChunkSize);
+         _chunkSize = array.Length;
          Interlocked.Increment(ref _lastBuffer);
          _buffers.Add(array);
          _currentIndex = 0;
@@ -47,7 +48,7 @@ namespace SortingEngine.DataStructures
             int from = i * _chunkSize;
             int right = (i + 1) * _chunkSize;
             int to = Math.Min(right, length);
-            _buffers[i].AsSpan(..to).CopyTo(destination.AsSpan(from..to));
+            _buffers[i].AsSpan(..(to - from)).CopyTo(destination.AsSpan(from..to));
             if (right >= length)
                break;
          }

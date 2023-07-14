@@ -7,18 +7,21 @@ using SortingEngine.Entities;
 
 namespace SortingEngine.RowData;
 
-public class SortingPhasePoolManager : IAsyncObserver<PreReadPackage>, IAsyncObserver<AfterSortingPhasePackage>, IDisposable
+public class SortingPhasePoolManager : IAsyncObserver<PreReadPackage>, IAsyncObserver<AfterSortingPhasePackage>,
+    IDisposable
 {
     private readonly SemaphoreSlim _semaphore;
     private readonly int _inputBuffersLength;
+    private volatile int _packageNumber = -1;
     private readonly int _recordChunksLength;
     private readonly CancellationToken _cancellationToken;
     private readonly byte[][] _buffers;
     private readonly ConcurrentStack<ExpandingStorage<LineMemory>> _lineStorages;
     private int _currentBuffer;
     private SpinLock _lock;
-    
-    public SortingPhasePoolManager(int numberOfBuffers, int inputBuffersLength, int recordChunksLength, CancellationToken cancellationToken)
+
+    public SortingPhasePoolManager(int numberOfBuffers, int inputBuffersLength, int recordChunksLength,
+        CancellationToken cancellationToken)
     {
         _lock = new SpinLock();
         _ = Guard.Positive(numberOfBuffers);
@@ -26,14 +29,14 @@ public class SortingPhasePoolManager : IAsyncObserver<PreReadPackage>, IAsyncObs
         _recordChunksLength = Guard.Positive(recordChunksLength);
         _cancellationToken = Guard.NotNull(cancellationToken);
         _buffers = new byte[numberOfBuffers][];
-        _semaphore = new SemaphoreSlim(0, numberOfBuffers);
+        _semaphore = new SemaphoreSlim(numberOfBuffers, numberOfBuffers);
         //The most likely scenario is that storages for recognized lines will be returned
         //much faster than the buffers for the row bytes. In any case,
         //their size is much smaller than the size of the bytes array,
         //so creating a few extra storages won't be much harm.
         _lineStorages = new ConcurrentStack<ExpandingStorage<LineMemory>>();
     }
-    
+
     private readonly SimpleAsyncSubject<ReadingPhasePackage> _loadNextChunkSubject =
         new SequentialSimpleAsyncSubject<ReadingPhasePackage>();
 
@@ -42,7 +45,7 @@ public class SortingPhasePoolManager : IAsyncObserver<PreReadPackage>, IAsyncObs
     private async ValueTask<(bool ready, ReadingPhasePackage package)> TryAcquireNext()
     {
         await _semaphore.WaitAsync(_cancellationToken);
-        
+
         byte[]?[] buffers = _buffers;
         bool lockTaken = false;
         try
@@ -59,7 +62,8 @@ public class SortingPhasePoolManager : IAsyncObserver<PreReadPackage>, IAsyncObs
                 buffers[_currentBuffer] ??= ArrayPool<byte>.Shared.Rent(_inputBuffersLength);
                 byte[]? buffer = buffers[_currentBuffer++];
                 ExpandingStorage<LineMemory> linesStorage = RentLinesStorage();
-                return (true, new ReadingPhasePackage(buffer!, linesStorage));
+                return (true,
+                    new ReadingPhasePackage(buffer!, linesStorage, Interlocked.Increment(ref _packageNumber)));
             }
         }
         finally
@@ -77,6 +81,7 @@ public class SortingPhasePoolManager : IAsyncObserver<PreReadPackage>, IAsyncObs
         {
             _lineStorages.Push(new ExpandingStorage<LineMemory>(_recordChunksLength));
         }
+
         return storage;
     }
 
@@ -119,7 +124,7 @@ public class SortingPhasePoolManager : IAsyncObserver<PreReadPackage>, IAsyncObs
         try
         {
             _lock.Enter(ref lockTaken);
-            
+
             if (_currentBuffer != 0)
             {
                 _buffers[--_currentBuffer] = buffer;
@@ -148,6 +153,7 @@ public class SortingPhasePoolManager : IAsyncObserver<PreReadPackage>, IAsyncObs
         {
             ArrayPool<byte>.Shared.Return(buffer);
         }
+
         Array.Clear(_buffers);
 
         while (_lineStorages.TryPop(out var storage))

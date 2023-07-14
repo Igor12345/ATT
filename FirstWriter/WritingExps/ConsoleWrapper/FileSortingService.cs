@@ -22,38 +22,40 @@ internal class FileSortingService : IHostedService
       _baseOptions = baseOptions.Value;
       _input = input.Value;
    }
+
    public async Task StartAsync(CancellationToken cancellationToken)
    {
       await ViaIObservable(cancellationToken);
       return;
-      
+
       InputParametersValidator inputParametersValidator = new InputParametersValidator();
       (bool canContinue, ValidatedInputParameters validInput) = inputParametersValidator.CheckInputParameters(_input);
 
       if (!canContinue)
          return;
-         
+
       Console.WriteLine("--> Ready to start");
       var r = Console.ReadLine();
 
-      IEnvironmentAnalyzer analyzer = new EnvironmentAnalyzer();
+      IEnvironmentAnalyzer analyzer = new EnvironmentAnalyzer(_baseOptions);
       IConfig configuration = analyzer.SuggestConfig(validInput);
 
       StreamsMergeExecutor merger = new StreamsMergeExecutor(configuration);
-      
+
       IntermediateResultsDirector chunksDirector =
          IntermediateResultsDirector.Create(configuration.TemporaryFolder, cancellationToken);
       await using ResultWriter resultWriter = ResultWriter.Create(configuration.Output, cancellationToken);
-      
+
       merger.OutputBufferFull += (o, eventArgs) =>
       {
          Console.WriteLine("Writing merge result");
          resultWriter.WriteOutput(eventArgs);
       };
-      
+
       Stopwatch sw = Stopwatch.StartNew();
 
-      await using (IBytesProducer bytesReader = new LongFileReader(validInput.File, validInput.Encoding, cancellationToken))
+      await using (IBytesProducer bytesReader =
+                   new LongFileReader(validInput.File, validInput.Encoding, cancellationToken))
       {
          RecordsSetSorter sorter = new RecordsSetSorter(configuration);
          sorter.SortingCompleted += (o, eventArgs) =>
@@ -67,7 +69,7 @@ internal class FileSortingService : IHostedService
             Console.ReadLine();
             Console.WriteLine(" <---");
          };
-         
+
          Console.WriteLine("Before starting");
 
          Result result = await sorter.SortAsync(bytesReader, cancellationToken);
@@ -83,7 +85,7 @@ internal class FileSortingService : IHostedService
       var memory2 = GC.GetTotalMemory(false);
       Console.WriteLine($"Memory before merge GC {memory2}");
       var res = await merger.MergeWithOrder();
-      
+
       sw.Stop();
       Console.WriteLine(res.Success
          ? $"---> Success - {sw.Elapsed.TotalMinutes} min, {sw.Elapsed.Seconds} sec; Total: {sw.Elapsed.TotalSeconds} sec, {sw.Elapsed.TotalMilliseconds} ms"
@@ -106,44 +108,46 @@ internal class FileSortingService : IHostedService
 
       if (!canContinue)
          return;
-         
+
       Console.WriteLine("--> Ready to start");
       var r = Console.ReadLine();
 
-      IEnvironmentAnalyzer analyzer = new EnvironmentAnalyzer();
+      IEnvironmentAnalyzer analyzer = new EnvironmentAnalyzer(_baseOptions);
       IConfig configuration = analyzer.SuggestConfig(validInput);
 
       //only for demonstration, use NLog, Serilog, ... in real projects
       Logger logger = Logger.Create(cancellationToken);
 
       await logger.LogAsync($"Started at {DateTime.UtcNow:s}");
-      
+
       RecordsExtractorAsSequence extractor = new RecordsExtractorAsSequence(
          configuration.Encoding.GetBytes(Environment.NewLine),
          configuration.Encoding.GetBytes(". "), logger, cancellationToken);
-      
+
       StreamsMergeExecutor merger = new StreamsMergeExecutor(configuration);
-      
+
       IntermediateResultsDirector chunksDirector =
          IntermediateResultsDirector.Create(configuration.TemporaryFolder, cancellationToken);
       await using ResultWriter resultWriter = ResultWriter.Create(configuration.Output, cancellationToken);
 
-      await using IBytesProducer bytesReader = new LongFileReader(validInput.File, validInput.Encoding, cancellationToken);
+      await using IBytesProducer bytesReader =
+         new LongFileReader(validInput.File, validInput.Encoding, cancellationToken);
       LinesSorter sorter = new LinesSorter();
 
       SortingPhasePoolManager sortingPhasePoolManager = new SortingPhasePoolManager(3, configuration.InputBufferLength,
          configuration.RecordsBufferLength, cancellationToken);
-      
+
       var s1 = await sortingPhasePoolManager.LoadNextChunk.SubscribeAsync(bytesReader);
       var s2 = await bytesReader.NextChunkPrepared.SubscribeAsync(extractor);
-      
+
       var s3 = await extractor.ReadyForSorting.SubscribeAsync(sorter);
       var s4 = await extractor.ReadyForNextChunk.SubscribeAsync(sortingPhasePoolManager);
       var s5 = await sorter.SortingCompleted.SubscribeAsync(resultWriter);
       var s6 = await resultWriter.SortedLinesSaved.SubscribeAsync(sortingPhasePoolManager);
 
-      await bytesReader.NextChunkPrepared.SubscribeAsync(
+      await resultWriter.SortedLinesSaved.SubscribeAsync(
          b => { },
+         e => HandleError(e),
          () =>
          {
             MemoryCleaner.CleanMemory();
@@ -153,6 +157,12 @@ internal class FileSortingService : IHostedService
 
       await sortingPhasePoolManager.LetsStart();
 
+      Console.WriteLine("--- Last line");
+      Console.ReadLine();
+   }
+
+   private void HandleError(Exception exception)
+   {
    }
 
    private void StartMerge()

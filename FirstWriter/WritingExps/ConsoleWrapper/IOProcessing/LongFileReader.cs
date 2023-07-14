@@ -1,5 +1,7 @@
-﻿using System.Reactive.Subjects;
+﻿
+using System.Reactive.Subjects;
 using System.Text;
+using Infrastructure.Concurrency;
 using Infrastructure.Parameters;
 using OneOf;
 using OneOf.Types;
@@ -15,7 +17,9 @@ internal class LongFileReader : IBytesProducer, IAsyncDisposable
    private readonly string _fullFileName;
    private readonly Encoding _encoding;
    private FileStream _stream;
-   private long _lastPosition = 0;
+   private long _lastPosition;
+   private int _lastProcessedPackage;
+   private AsyncLock _lock;
 
    private readonly SimpleAsyncSubject<ReadingPhasePackage> _nextChunkPreparedSubject =
       new SequentialSimpleAsyncSubject<ReadingPhasePackage>();
@@ -24,6 +28,7 @@ internal class LongFileReader : IBytesProducer, IAsyncDisposable
 
    public LongFileReader(string fullFileName, Encoding encoding, CancellationToken cancellationToken)
    {
+      _lock = new AsyncLock();
       _fullFileName = Guard.FileExist(fullFileName);
       _encoding = Guard.NotNull(encoding);
       _cancellationToken = Guard.NotNull(cancellationToken);
@@ -37,6 +42,8 @@ internal class LongFileReader : IBytesProducer, IAsyncDisposable
    public async Task<ReadingResult> ReadBytesAsync(byte[] buffer, int offset,
       CancellationToken cancellationToken)
    {
+      //todo either make private or use another lock
+      //it is save in the case of Rx, because it is always called from OnNextAsync
       await using FileStream stream = File.OpenRead(_fullFileName);
       if (_lastPosition > 0)
          stream.Seek(_lastPosition, SeekOrigin.Begin);
@@ -70,18 +77,36 @@ internal class LongFileReader : IBytesProducer, IAsyncDisposable
       return _stream?.DisposeAsync() ?? ValueTask.CompletedTask;
    }
 
-   public async ValueTask OnNextAsync(ReadingPhasePackage readingPhasePackage)
+   public async ValueTask OnNextAsync(ReadingPhasePackage inputPackage)
    {
-      ReadingResult result = await ReadBytesAsync(readingPhasePackage.RowData, readingPhasePackage.PrePopulatedBytesLength, _cancellationToken);
-      
+      ReadingResult result;
+
+      using (var _ = await _lock.LockAsync())
+      {
+         //todo
+         int num = inputPackage.PackageNumber;
+
+         if (inputPackage.PackageNumber != _lastProcessedPackage++)
+            throw new InvalidOperationException("Wrong packages sequence.");
+         result = await ReadBytesAsync(inputPackage.RowData, inputPackage.PrePopulatedBytesLength, _cancellationToken);
+      }
       //todo log
       if (!result.Success)
          await _nextChunkPreparedSubject.OnErrorAsync(new InvalidOperationException(result.Message));
 
       if (result.Size == 0)
-         await _nextChunkPreparedSubject.OnCompletedAsync();
+      {
+         await SendLastPackageAsync(inputPackage);
+      }
 
-      await _nextChunkPreparedSubject.OnNextAsync(readingPhasePackage);
+      var nextPackage = inputPackage with { ReadBytesLength = result.Size };
+      await _nextChunkPreparedSubject.OnNextAsync(nextPackage);
+   }
+
+   private async ValueTask SendLastPackageAsync(ReadingPhasePackage package)
+   {
+      var nextPackage = package with { IsLastPackage = true};
+      await _nextChunkPreparedSubject.OnNextAsync(nextPackage);
    }
 
    public ValueTask OnErrorAsync(Exception error)
@@ -91,6 +116,7 @@ internal class LongFileReader : IBytesProducer, IAsyncDisposable
 
    public ValueTask OnCompletedAsync()
    {
+      //we will complete this sequence as well, in such case there is nothing to do. Something went wrong
       return _nextChunkPreparedSubject.OnCompletedAsync();
    }
 }

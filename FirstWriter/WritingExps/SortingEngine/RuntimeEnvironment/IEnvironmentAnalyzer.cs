@@ -12,22 +12,38 @@ namespace SortingEngine.RuntimeEnvironment
 
    public class EnvironmentAnalyzer : IEnvironmentAnalyzer
    {
+      private readonly BaseConfiguration _baseConfiguration;
+
+      public EnvironmentAnalyzer(BaseConfiguration baseConfiguration)
+      {
+         _baseConfiguration = Guard.NotNull(baseConfiguration);
+      }
+
       public IConfig SuggestConfig(string path, Encoding encoding)
       {
-         int inputBufferSize = 1024 * 1024 * 512;
-         int mergeBuffer = 1024 * 1024;
+         int inputBufferLength =
+            SetBufferLength(_baseConfiguration.InputBufferLength, 1024 * 1024 * 512); // 1024 * 1024 * 512 = 536870912
+         int mergeBufferLength = SetBufferLength(_baseConfiguration.MergeBufferLength, 1024 * 1024); //1024 * 1024;
+         int recordsLength = SetBufferLength(_baseConfiguration.RecordsBufferLength, 2_000);
+         int outputBufferLength = SetBufferLength(_baseConfiguration.OutputBufferLength, 1_000);
 
          string outputPath = GetOutputPath(path);
          var config = RuntimeConfig.Create(conf => conf
-            .UseInputBuffer(inputBufferSize)
-            .UseMergeBuffer(mergeBuffer)
-            .UseRecordsBuffer(2_000_000)
-            .UseOutputBuffer(1_000)
+            .UseInputBuffer(inputBufferLength)
+            .UseMergeBuffer(mergeBufferLength)
+            .UseRecordsBuffer(recordsLength)
+            .UseOutputBuffer(outputBufferLength)
             .UseOutputPath(outputPath)
             .UseFolder(path, "")
             //todo merge with the preset config
             .UseEncoding(encoding));
          return config;
+      }
+
+      private int SetBufferLength(int configurationLength, int defaultLength)
+      {
+         int bufferLength = configurationLength > 0 ? configurationLength : defaultLength;
+         return Math.Min(bufferLength, Array.MaxLength);
       }
 
       public IConfig SuggestConfig(ValidatedInputParameters inputParameters)
