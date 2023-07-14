@@ -20,7 +20,7 @@ namespace ConsoleWrapper.Extensions
       //todo rename
       private static IBytesProducer CreateBytesReader(string fileName, Encoding encoding)
       {
-         return new LongFileReader(fileName, encoding, CancellationToken.None);
+         return new LongFileReader(fileName, encoding, null, CancellationToken.None);
       }
    }
 }

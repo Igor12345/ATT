@@ -31,32 +31,37 @@ public sealed class RecordsExtractorAsSequence : IAsyncObserver<ReadingPhasePack
         _eol = eol;
         _lineDelimiter = lineDelimiter;
         _logger = Guard.NotNull(logger);
-        _token = token;
+        _token = Guard.NotNull(token);
     }
 
     public IAsyncObservable<PreReadPackage> ReadyForNextChunk => _readyForNextChunkSubject;
     public IAsyncObservable<SortingPhasePackage> ReadyForSorting => _readyForSortingSubject;
 
-    [Conditional("VERBOSE")]
-    private void Log(string message)
-    {
-        _logger.LogAsync(message);
-    }
+    // [Conditional("VERBOSE")]
+    // private void Log(string message)
+    // {
+    //     _logger.LogAsync(message);
+    // }
 
     private async Task ExtractNext(ReadingPhasePackage package)
     {
+        await Log(
+            $"Processing package: {package.PackageNumber}, is last: {package.IsLastPackage}, bytes: {package.RowData.Length}, prepopulated: {package.PrePopulatedBytesLength}");
         if (package.IsLastPackage)
         {
             SortingPhasePackage lastPackage = new SortingPhasePackage(package.RowData, package.ReadBytesLength,
                 package.ParsedRecords, 0, package.PackageNumber, true);
+            await Log($"Sending the last package without processing: {package.PackageNumber}");
             await _readyForSortingSubject.OnNextAsync(lastPackage);
             return;
         }
         
         ReadOnlyMemory<byte> inputBytes = package.RowData.AsMemory()[..package.ReadBytesLength];
         ExtractionResult result = ExtractRecords(inputBytes.Span, package.ParsedRecords);
+        
         if (!result.Success)
         {
+            await Log($"Extracted {result.Success}: {result.Message} ");
             await _readyForNextChunkSubject.OnErrorAsync(new InvalidOperationException(result.Message));
         }
 
@@ -66,14 +71,23 @@ public sealed class RecordsExtractorAsSequence : IAsyncObserver<ReadingPhasePack
         package.RowData.AsSpan()[result.StartRemainingBytes..package.ReadBytesLength].CopyTo(remainedBytes);
 
         //todo
-        SortingPhasePackage sortingPhasePackage = new SortingPhasePackage(package.RowData, package.ReadBytesLength,
+        SortingPhasePackage nextPackage = new SortingPhasePackage(package.RowData, package.ReadBytesLength,
             package.ParsedRecords, result.LinesNumber, package.PackageNumber);
 
+        await Log(
+            $"Sending the package {nextPackage.PackageNumber}, extracted {nextPackage.LinesNumber}, bytes: {nextPackage.RowData.Length}, linesBuffer: {nextPackage.ParsedRecords.CurrentCapacity}, used bytes: {nextPackage.OccupiedLength}");
         //todo!!!
-        var t1 = _readyForSortingSubject.OnNextAsync(sortingPhasePackage);
+        var t1 = _readyForSortingSubject.OnNextAsync(nextPackage);
+        await Log(
+            $"Sending the package {nextPackage.PackageNumber}, after 1 - ReadyForSorting");
+        
         var t2 = _readyForNextChunkSubject.OnNextAsync(new PreReadPackage(remainedBytes,
             remainingBytesLength));
+        await Log(
+            $"Sending the package {nextPackage.PackageNumber}, after 2 - ReadyForNextChunk");
         await Task.WhenAll(t1.AsTask(), t2.AsTask());
+        await Log(
+            $"Sending the package {nextPackage.PackageNumber}, after all");
     }
 
     public async Task WaitingForNextPartAsync()
@@ -143,9 +157,9 @@ public sealed class RecordsExtractorAsSequence : IAsyncObserver<ReadingPhasePack
 
     }
       
-    public async ValueTask OnNextAsync(ReadingPhasePackage readingPhasePackage)
+    public async ValueTask OnNextAsync(ReadingPhasePackage package)
     {
-        await ExtractNext(readingPhasePackage);
+        await ExtractNext(package);
     }
 
     public ValueTask OnErrorAsync(Exception error)
@@ -157,5 +171,11 @@ public sealed class RecordsExtractorAsSequence : IAsyncObserver<ReadingPhasePack
     {
         //we will complete this sequence as well, in such case there is nothing to do. Something went wrong
         return _readyForNextChunkSubject.OnCompletedAsync();
+    }
+    private async ValueTask Log(string message)
+    {
+        //in the real projects it will be structured logs
+        string prefix = $"Class: {this.GetType()}, at: {DateTime.UtcNow:hh:mm:ss-fff} ";
+        await _logger.LogAsync(prefix + message);
     }
 }

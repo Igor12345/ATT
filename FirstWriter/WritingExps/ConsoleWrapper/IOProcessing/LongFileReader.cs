@@ -3,6 +3,7 @@ using System.Reactive.Subjects;
 using System.Text;
 using Infrastructure.Concurrency;
 using Infrastructure.Parameters;
+using LogsHub;
 using OneOf;
 using OneOf.Types;
 using SortingEngine;
@@ -13,6 +14,7 @@ namespace ConsoleWrapper.IOProcessing;
 //todo rename
 internal class LongFileReader : IBytesProducer, IAsyncDisposable
 {
+   private readonly Logger _logger;
    private readonly CancellationToken _cancellationToken;
    private readonly string _fullFileName;
    private readonly Encoding _encoding;
@@ -26,11 +28,12 @@ internal class LongFileReader : IBytesProducer, IAsyncDisposable
 
    public IAsyncObservable<ReadingPhasePackage> NextChunkPrepared => _nextChunkPreparedSubject;
 
-   public LongFileReader(string fullFileName, Encoding encoding, CancellationToken cancellationToken)
+   public LongFileReader(string fullFileName, Encoding encoding, Logger logger, CancellationToken cancellationToken)
    {
       _lock = new AsyncLock();
       _fullFileName = Guard.FileExist(fullFileName);
       _encoding = Guard.NotNull(encoding);
+      _logger = Guard.NotNull(logger);
       _cancellationToken = Guard.NotNull(cancellationToken);
    }
 
@@ -79,6 +82,7 @@ internal class LongFileReader : IBytesProducer, IAsyncDisposable
 
    public async ValueTask OnNextAsync(ReadingPhasePackage inputPackage)
    {
+      await Log($"Processing package: {inputPackage.PackageNumber}");
       ReadingResult result;
 
       using (var _ = await _lock.LockAsync())
@@ -105,6 +109,7 @@ internal class LongFileReader : IBytesProducer, IAsyncDisposable
 
    private async ValueTask SendLastPackageAsync(ReadingPhasePackage package)
    {
+      await Log($"Sending the last package: {package.PackageNumber} !!!");
       var nextPackage = package with { IsLastPackage = true};
       await _nextChunkPreparedSubject.OnNextAsync(nextPackage);
    }
@@ -118,5 +123,12 @@ internal class LongFileReader : IBytesProducer, IAsyncDisposable
    {
       //we will complete this sequence as well, in such case there is nothing to do. Something went wrong
       return _nextChunkPreparedSubject.OnCompletedAsync();
+   }
+   
+   private async ValueTask Log(string message)
+   {
+      //in the real projects it will be structured logs
+      string prefix = $"Class: {this.GetType()}, at: {DateTime.UtcNow:hh:mm:ss-fff} ";
+      await _logger.LogAsync(prefix + message);
    }
 }

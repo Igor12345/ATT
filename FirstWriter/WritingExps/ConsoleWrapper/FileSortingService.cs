@@ -41,10 +41,10 @@ internal class FileSortingService : IHostedService
       IConfig configuration = analyzer.SuggestConfig(validInput);
 
       StreamsMergeExecutor merger = new StreamsMergeExecutor(configuration);
-
+      Logger logger = Logger.Create(cancellationToken);
       IntermediateResultsDirector chunksDirector =
          IntermediateResultsDirector.Create(configuration.TemporaryFolder, cancellationToken);
-      await using ResultWriter resultWriter = ResultWriter.Create(configuration.Output, cancellationToken);
+      await using ResultWriter resultWriter = ResultWriter.Create(configuration.Output, logger, cancellationToken);
 
       merger.OutputBufferFull += (o, eventArgs) =>
       {
@@ -55,7 +55,7 @@ internal class FileSortingService : IHostedService
       Stopwatch sw = Stopwatch.StartNew();
 
       await using (IBytesProducer bytesReader =
-                   new LongFileReader(validInput.File, validInput.Encoding, cancellationToken))
+                   new LongFileReader(validInput.File, validInput.Encoding, logger, cancellationToken))
       {
          RecordsSetSorter sorter = new RecordsSetSorter(configuration);
          sorter.SortingCompleted += (o, eventArgs) =>
@@ -128,14 +128,14 @@ internal class FileSortingService : IHostedService
 
       IntermediateResultsDirector chunksDirector =
          IntermediateResultsDirector.Create(configuration.TemporaryFolder, cancellationToken);
-      await using ResultWriter resultWriter = ResultWriter.Create(configuration.Output, cancellationToken);
+      await using ResultWriter resultWriter = ResultWriter.Create(configuration.Output, logger, cancellationToken);
 
       await using IBytesProducer bytesReader =
-         new LongFileReader(validInput.File, validInput.Encoding, cancellationToken);
-      LinesSorter sorter = new LinesSorter();
+         new LongFileReader(validInput.File, validInput.Encoding, logger, cancellationToken);
+      LinesSorter sorter = new LinesSorter(logger);
 
       SortingPhasePoolManager sortingPhasePoolManager = new SortingPhasePoolManager(3, configuration.InputBufferLength,
-         configuration.RecordsBufferLength, cancellationToken);
+         configuration.RecordsBufferLength, logger, cancellationToken);
 
       var s1 = await sortingPhasePoolManager.LoadNextChunk.SubscribeAsync(bytesReader);
       var s2 = await bytesReader.NextChunkPrepared.SubscribeAsync(extractor);
