@@ -106,6 +106,33 @@ internal class LongFileReader : IBytesProducer, IAsyncDisposable
       var nextPackage = inputPackage with { ReadBytesLength = result.Size };
       await _nextChunkPreparedSubject.OnNextAsync(nextPackage);
    }
+   
+   public async Task<ReadingPhasePackage> ProcessPackage(ReadingPhasePackage inputPackage)
+   {
+      await Log($"Processing package: {inputPackage.PackageNumber}");
+      ReadingResult result;
+
+      using (var _ = await _lock.LockAsync())
+      {
+         //todo
+         int num = inputPackage.PackageNumber;
+
+         if (inputPackage.PackageNumber != _lastProcessedPackage++)
+            throw new InvalidOperationException("Wrong packages sequence.");
+         result = await ReadBytesAsync(inputPackage.RowData, inputPackage.PrePopulatedBytesLength, _cancellationToken);
+      }
+      //todo log
+      if (!result.Success)
+         throw new InvalidOperationException(result.Message);
+
+      if (result.Size == 0)
+      {
+         await SendLastPackageAsync(inputPackage);
+      }
+
+      var nextPackage = inputPackage with { ReadBytesLength = result.Size };
+      return nextPackage;
+   }
 
    private async ValueTask SendLastPackageAsync(ReadingPhasePackage package)
    {

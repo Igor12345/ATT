@@ -54,6 +54,19 @@ public class BunchOfLinesSorter : IAsyncObserver<SortingPhasePackage>
             }, inputPackage, CancellationToken.None,
             TaskCreationOptions.LongRunning | TaskCreationOptions.PreferFairness, TaskScheduler.Default);
     }
+    
+    public async Task<AfterSortingPhasePackage> ProcessPackage(SortingPhasePackage package)
+    {
+        await Log(
+            $"Processing package: {package.PackageNumber}, lines: {package.LinesNumber}, " +
+            $"bytes: {package.RowData.Length},linesBuffer: {package.ParsedRecords.CurrentCapacity} ");
+        ReadOnlyMemory<byte> inputBytes = package.RowData.AsMemory()[..package.OccupiedLength];
+        LineMemory[] sorted = SortRecords(inputBytes, package.LinesNumber, package.ParsedRecords);
+
+        await Log($"Sorted {sorted.Length} lines for the package: {package.PackageNumber}");
+        return new AfterSortingPhasePackage(sorted, package.RowData,
+            package.ParsedRecords, package.LinesNumber, package.PackageNumber, package.IsLastPackage);
+    }
 
     public async ValueTask OnErrorAsync(Exception error)
     {

@@ -10,4 +10,5 @@ public interface IBytesProducer : IAsyncDisposable, IAsyncObserver<ReadingPhaseP
     Task<ReadingResult> ReadBytesAsync(byte[] buffer, int offset, CancellationToken cancellationToken);
     ReadingResult ReadBytes(byte[] buffer, int offset);
     IAsyncObservable<ReadingPhasePackage> NextChunkPrepared { get; }
+    Task<ReadingPhasePackage> ProcessPackage(ReadingPhasePackage inputPackage);
 }

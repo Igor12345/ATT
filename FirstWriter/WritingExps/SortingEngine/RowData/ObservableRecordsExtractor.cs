@@ -27,7 +27,50 @@ public sealed class ObservableRecordsExtractor : IAsyncObserver<ReadingPhasePack
     public IAsyncObservable<PreReadPackage> ReadyForNextChunk => _readyForNextChunkSubject;
     public IAsyncObservable<SortingPhasePackage> ReadyForSorting => _readyForSortingSubject;
 
-    private async Task ExtractNext(ReadingPhasePackage package)
+    public async Task<SortingPhasePackage> ExtractNext(ReadingPhasePackage package)
+    {
+        await Log(
+            $"Processing package: {package.PackageNumber}, is last: {package.IsLastPackage}, " +
+            $"bytes: {package.RowData.Length}, pre populated: {package.PrePopulatedBytesLength}");
+
+        ExtractionResult result = _recordsExtractor.ExtractRecords(package.RowData.AsSpan()[..package.ReadBytesLength],
+            package.ParsedRecords);
+        
+        if (!result.Success)
+        {
+            await Log($"Extracted {result.Success}: {result.Message} ");
+            await _readyForNextChunkSubject.OnErrorAsync(new InvalidOperationException(result.Message));
+        }
+
+        int remainingBytesLength = package.ReadBytesLength - result.StartRemainingBytes;
+
+        //will be returned in SortingPhasePoolManager
+        byte[] remainedBytes = ArrayPool<byte>.Shared.Rent(remainingBytesLength);
+        package.RowData.AsSpan()[result.StartRemainingBytes..package.ReadBytesLength].CopyTo(remainedBytes);
+
+        //todo
+        SortingPhasePackage nextPackage = new SortingPhasePackage(package.RowData, package.ReadBytesLength,
+            package.ParsedRecords, result.LinesNumber, package.PackageNumber, package.IsLastPackage);
+
+        await Log(
+            $"Sending the package {nextPackage.PackageNumber}, extracted {nextPackage.LinesNumber}, " +
+            $"bytes: {nextPackage.RowData.Length}, linesBuffer: {nextPackage.ParsedRecords.CurrentCapacity}, " +
+            $"used bytes: {nextPackage.OccupiedLength}");
+        
+        if (package.IsLastPackage)
+        {
+            await _readyForNextChunkSubject.OnCompletedAsync();
+        }
+        else
+        {
+            await _readyForNextChunkSubject.OnNextAsync(new PreReadPackage(remainedBytes,
+                remainingBytesLength));
+        }
+        //todo!!!
+        return nextPackage;
+    }
+      
+    public async ValueTask OnNextAsync(ReadingPhasePackage package)
     {
         await Log(
             $"Processing package: {package.PackageNumber}, is last: {package.IsLastPackage}, " +
@@ -67,11 +110,6 @@ public sealed class ObservableRecordsExtractor : IAsyncObserver<ReadingPhasePack
             await _readyForNextChunkSubject.OnNextAsync(new PreReadPackage(remainedBytes,
                 remainingBytesLength));
         }
-    }
-      
-    public async ValueTask OnNextAsync(ReadingPhasePackage package)
-    {
-        await ExtractNext(package);
     }
 
     public ValueTask OnErrorAsync(Exception error)

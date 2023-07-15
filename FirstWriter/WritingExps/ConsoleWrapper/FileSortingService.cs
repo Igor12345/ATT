@@ -119,6 +119,17 @@ internal class FileSortingService : IHostedService
          configuration.RecordsBufferLength, logger, cancellationToken);
 
       await using var s1 = await sortingPhasePoolManager.LoadNextChunk.SubscribeAsync(bytesReader);
+      sortingPhasePoolManager.LoadNextChunk
+         .Select(async p => await bytesReader.ProcessPackage(p))
+         .Select(async p => await extractor.ExtractNext(p))
+         .SelectMany(async p => AsyncObservable.FromAsync(async t => await sorter.ProcessPackage(p)))
+         .Select(async p => await chunksDirector.ProcessPackage(p))
+         .SubscribeAsync(
+            p => { },
+            ex => { },
+            () => { }
+         );
+         
       await using var s2 = await bytesReader.NextChunkPrepared.SubscribeAsync(extractor);
 
       await using var s3 = await extractor.ReadyForSorting.SubscribeAsync(sorter);
