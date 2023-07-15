@@ -8,7 +8,6 @@
 
   <ItemGroup>
     <PackageReference Include="JetBrains.Profiler.Api" Version="1.4.0" />
-    <PackageReference Include="Microsoft.Diagnostics.Tracing.EventSource" Version="1.1.28" />
     <PackageReference Include="OneOf" Version="3.0.255" />
     <PackageReference Include="System.Reactive.Async" Version="6.0.0-alpha.18" />
   </ItemGroup>
@@ -17,5 +16,6 @@
     <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
     <ProjectReference Include="..\LogsHub\LogsHub.csproj" />
   </ItemGroup>
+
 
 </Project>

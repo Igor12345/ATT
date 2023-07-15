@@ -6,6 +6,12 @@ public record struct Result(bool Success, string Message)
    public static Result Error(string message) => new Result(false, message);
 }
 
+public record struct Result<T>(bool Success, T Value, string Message)
+{
+   public static Result<T> Ok(T value) => new Result<T>(true, value, "");
+   public static Result<T> Error(string message) => new Result<T>(false, default, message);
+}
+
 public record struct ReadingResult(bool Success, int Size, string Message)
 {
    public static ReadingResult Ok(int size) => new ReadingResult(true, size, "");

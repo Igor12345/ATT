@@ -29,41 +29,45 @@ namespace SortingEngine.RowData
                var startLine = endLine;
                //todo
                //text will include eof. the question with the last line.
-               endLine = i + 1;
-               LineMemory line = RecognizeMemoryRecord(input[startLine..endLine], startLine);
+               endLine = i + 2;
+               var result = ParseLine(input[startLine..endLine], startLine);
 
-               records.Add(line);
+               if (!result.Success)
+                  return ExtractionResult.Error(result.Message);
+               
+               records.Add(result.Value);
                lineIndex++;
                i++;
             }
          }
          return ExtractionResult.Ok(lineIndex, endOfLastLine + 1);
       }
-      private LineMemory RecognizeMemoryRecord(ReadOnlySpan<byte> lineSpan, int startIndex)
+
+      private Result<LineMemory> ParseLine(ReadOnlySpan<byte> lineSpan, int startIndex)
       {
-         Span<char> chars = stackalloc char[20];
+         Span<char> numberChars = stackalloc char[Constants.MaxNumberLength];
          for (int i = 0; i < lineSpan.Length - 1; i++)
          {
             if (lineSpan[i] == _lineDelimiter[0] && lineSpan[i + 1] == _lineDelimiter[1])
             {
+               if (i >= numberChars.Length)
+                  break;
                for (int j = 0; j < i; j++)
                {
                   //todo encoding
-                  chars[j] = (char)lineSpan[j];
+                  numberChars[j] = (char)lineSpan[j];
                }
 
-               bool success = long.TryParse(chars, out var number);
+               bool success = ulong.TryParse(numberChars, out var number);
+               if (!success)
+                  return Result<LineMemory>.Error($"wrong line: {ByteToStringConverter.Convert(lineSpan)}");
 
-               //todo !success
-               //todo check last index ????
                //text will include ". "
-               return new LineMemory(number, startIndex + i, startIndex + lineSpan.Length + 1);
+               return Result<LineMemory>.Ok(new LineMemory(number, startIndex + i, startIndex + lineSpan.Length));
             }
          }
 
-         //todo
-         throw new InvalidOperationException($"wrong line {ByteToStringConverter.Convert(lineSpan)}");
-
+         return Result<LineMemory>.Error($"wrong line: {ByteToStringConverter.Convert(lineSpan)}");
       }
 
       //todo remove

@@ -13,7 +13,8 @@ public class LongToBytesConverter : IDisposable, IAsyncDisposable
       _buffer = ArrayPool<byte>.Shared.Rent(20);
    }
 
-   public (ReadOnlyMemory<byte>, int length) ConvertLongToBytes(long value)
+   //todo side effect
+   public (ReadOnlyMemory<byte>, int length) ConvertLongToBytes(ulong value)
    {
       //todo check allocation!!!
       ReadOnlySpan<char> chars = value.ToString().AsSpan();
@@ -26,6 +27,7 @@ public class LongToBytesConverter : IDisposable, IAsyncDisposable
       return (_buffer.AsMemory(), chars.Length);
    }
 
+   //todo benchmark
    public static int WriteULongToBytes(ulong value, Span<byte> destination)
    {
       return ConvertULongToBytesInternal(value, destination);
