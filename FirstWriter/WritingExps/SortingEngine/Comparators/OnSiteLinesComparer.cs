@@ -11,6 +11,13 @@ public class OnSiteLinesComparer : IComparer<LineMemory>
       _source = source;
    }
 
+   /// <summary>
+   /// Provides string comparison based on the required algorithm.
+   /// The line left is compared to the line right to determine
+   /// whether it is less, equal, or greater, and then returns.
+   /// either a negative integer, 0, or a positive integer; respectively.
+   /// The lines are compared firstly by their text and then, it texts are equal, by their numbers 
+   /// </summary>
    public int Compare(LineMemory left, LineMemory right)
    {
       int orderByText =

@@ -150,7 +150,7 @@ internal class FileSortingService : IHostedService
 
       await using IBytesProducer bytesReader =
          new LongFileReader(validInput.File, validInput.Encoding, logger, cancellationToken);
-      LinesSorter sorter = new LinesSorter(logger);
+      BunchOfLinesSorter sorter = new BunchOfLinesSorter(logger);
 
       using SortingPhasePoolManager sortingPhasePoolManager = new SortingPhasePoolManager(3,
          configuration.InputBufferLength,

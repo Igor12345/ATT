@@ -1,4 +1,5 @@
-﻿using Infrastructure.ByteOperations;
+﻿using System.Buffers;
+using Infrastructure.ByteOperations;
 using SortingEngine;
 using SortingEngine.Entities;
 
@@ -43,6 +44,7 @@ public class RecordsWriter : IAsyncDisposable
             if (position - lines[i].From + lines[i].To != _fileStream.Position)
                throw new InvalidOperationException("Wrong position");
          }
+         ArrayPool<LineMemory>.Shared.Return(lines);
 
          return Result.Ok;
       }

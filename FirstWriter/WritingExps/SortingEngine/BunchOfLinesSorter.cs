@@ -1,5 +1,4 @@
-﻿using System.Collections.Immutable;
-using System.Reactive.Subjects;
+﻿using System.Reactive.Subjects;
 using Infrastructure.Parameters;
 using LogsHub;
 using SortingEngine.DataStructures;
@@ -9,14 +8,14 @@ using SortingEngine.Sorters;
 
 namespace SortingEngine;
 
-public class LinesSorter : IAsyncObserver<SortingPhasePackage>
+public class BunchOfLinesSorter : IAsyncObserver<SortingPhasePackage>
 {
     private readonly Logger _logger;
 
     private readonly SimpleAsyncSubject<AfterSortingPhasePackage> _sortingCompletedSubject =
         new SequentialSimpleAsyncSubject<AfterSortingPhasePackage>();
 
-    public LinesSorter(Logger logger)
+    public BunchOfLinesSorter(Logger logger)
     {
         _logger = Guard.NotNull(logger);
     }
@@ -24,10 +23,14 @@ public class LinesSorter : IAsyncObserver<SortingPhasePackage>
     public IAsyncObservable<AfterSortingPhasePackage> SortingCompleted => _sortingCompletedSubject;
     // public event EventHandler<SortingCompletedEventArgs>? SortingCompleted;
 
-    public LineMemory[] SortRecords(ReadOnlyMemory<byte> inputBuffer, int linesNumber,
+    private LineMemory[] SortRecords(ReadOnlyMemory<byte> inputBuffer, int linesNumber,
         ExpandingStorage<LineMemory> recordsStorage)
     {
-        Sorters.LinesSorter sorter = new Sorters.LinesSorter(inputBuffer);
+        //In the case of such a highly specific line comparison algorithm,
+        //it makes no sense to add an interface and use DI
+        //There is no chance that any other sorter will be within the scope of this task.
+        //A mock for testing, in this case, is also not needed.
+        LinesSorter sorter = new LinesSorter(inputBuffer);
         return sorter.Sort(recordsStorage, linesNumber);
     }
 
