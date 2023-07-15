@@ -1,6 +1,8 @@
 using System.Buffers;
 using System.Diagnostics;
 using System.IO;
+using System.Reactive.Disposables;
+using System.Reactive.Linq;
 using System.Text;
 using SimpleReader;
 using SortingEngine;
@@ -138,6 +140,25 @@ namespace ReaderTests
          ArrayPool<int>.Shared.Return(buffer);
 
          Assert.Equal(result[4], 4);
+      }
+   }
+
+   public class RxTests
+   {
+      [Fact]
+      public void CheckComplete()
+      {
+         // Observable.Create(sub => {
+         //    try {
+         //       var res = SomethingThatCanThrow();
+         //       sub.OnNext(res);
+         //       sub.OnCompleted();
+         //    } catch (Exception ex) {
+         //       sub.OnError(ex);
+         //    }
+         //
+         //    return Disposable.Empty;
+         // });
       }
    }
 }

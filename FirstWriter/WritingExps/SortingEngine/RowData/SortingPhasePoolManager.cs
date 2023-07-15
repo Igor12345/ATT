@@ -45,7 +45,7 @@ public class SortingPhasePoolManager : IAsyncObserver<PreReadPackage>, IAsyncObs
     {
         //in the real projects it will be structured logs
         string prefix = $"Class: {this.GetType()}, at: {DateTime.UtcNow:hh:mm:ss-fff} ";
-        await _logger.LogAsync(prefix + message).ConfigureAwait(false);
+        await _logger.LogAsync(prefix + message);
     }
 
     private readonly SimpleAsyncSubject<ReadingPhasePackage> _loadNextChunkSubject =
@@ -55,8 +55,8 @@ public class SortingPhasePoolManager : IAsyncObserver<PreReadPackage>, IAsyncObs
 
     private async ValueTask<(bool ready, ReadingPhasePackage package)> TryAcquireNext()
     {
-        await Log($"Trying acquire new bytes buffer, last package was {_packageNumber}").ConfigureAwait(false);
-        await _semaphore.WaitAsync(_cancellationToken).ConfigureAwait(false);
+        await Log($"Trying acquire new bytes buffer, last package was {_packageNumber}");
+        await _semaphore.WaitAsync(_cancellationToken);
 
         byte[]?[] buffers = _buffers;
         bool lockTaken = false;
@@ -75,7 +75,7 @@ public class SortingPhasePoolManager : IAsyncObserver<PreReadPackage>, IAsyncObs
                 byte[]? buffer = buffers[_currentBuffer++];
                 ExpandingStorage<LineMemory> linesStorage = RentLinesStorage();
 
-                await Log($"New bytes buffer was rented, last package will be {_packageNumber + 1}").ConfigureAwait(false);
+                await Log($"New bytes buffer was rented, last package will be {_packageNumber + 1}");
                 return (true,
                     new ReadingPhasePackage(buffer!, linesStorage, Interlocked.Increment(ref _packageNumber)));
             }
@@ -106,9 +106,9 @@ public class SortingPhasePoolManager : IAsyncObserver<PreReadPackage>, IAsyncObs
 
     public async ValueTask OnNextAsync(PreReadPackage value)
     {
-        (bool ready, ReadingPhasePackage initialPackage) = await TryAcquireNext().ConfigureAwait(false);
+        (bool ready, ReadingPhasePackage initialPackage) = await TryAcquireNext();
         if (!ready)
-            await _loadNextChunkSubject.OnErrorAsync(new InvalidOperationException("Can't acquire free array")).ConfigureAwait(false);
+            await _loadNextChunkSubject.OnErrorAsync(new InvalidOperationException("Can't acquire free array"));
 
         ReadingPhasePackage package = initialPackage with { PrePopulatedBytesLength = value.RemainedBytesLength };
         value.RemainedBytes.CopyTo(package.RowData, 0);
@@ -116,12 +116,12 @@ public class SortingPhasePoolManager : IAsyncObserver<PreReadPackage>, IAsyncObs
         if (value.RemainedBytes.Length > 0)
             ArrayPool<byte>.Shared.Return(value.RemainedBytes);
 
-        await _loadNextChunkSubject.OnNextAsync(package).ConfigureAwait(false);
+        await _loadNextChunkSubject.OnNextAsync(package);
     }
 
     public async ValueTask OnNextAsync(AfterSortingPhasePackage package)
     {
-        await Log($"Returning AfterSortingPhasePackage {package.PackageNumber}, now the package is: {_packageNumber}").ConfigureAwait(false);
+        await Log($"Returning AfterSortingPhasePackage {package.PackageNumber}, now the package is: {_packageNumber}");
         
         ReleaseBuffer(package.ParsedRecords);
         ReleaseBuffer(package.RowData);
@@ -159,6 +159,8 @@ public class SortingPhasePoolManager : IAsyncObserver<PreReadPackage>, IAsyncObs
 
     public ValueTask OnCompletedAsync()
     {
+        Console.WriteLine($"<-- Completed in manager thread: {Thread.CurrentThread.ManagedThreadId}");
+        return ValueTask.CompletedTask;
         return _loadNextChunkSubject.OnCompletedAsync();
     }
 
@@ -180,10 +182,10 @@ public class SortingPhasePoolManager : IAsyncObserver<PreReadPackage>, IAsyncObs
 
     public async ValueTask LetsStart()
     {
-        var (ready, package) = await TryAcquireNext().ConfigureAwait(false);
+        var (ready, package) = await TryAcquireNext();
         if (ready)
         {
-            await _loadNextChunkSubject.OnNextAsync(package).ConfigureAwait(false);
+            await _loadNextChunkSubject.OnNextAsync(package);
         }
         else
         {

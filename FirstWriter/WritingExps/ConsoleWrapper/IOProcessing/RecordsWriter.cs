@@ -58,7 +58,7 @@ public class RecordsWriter : ILinesWriter, IAsyncDisposable
          {
             int length = LongToBytesConverter.WriteULongToBytes(lines[i].Number, buffer.Memory.Span);
             source.Span[lines[i].From..lines[i].To].CopyTo(buffer.Memory.Span[length..]);
-            await _fileStream.WriteAsync(buffer.Memory[..lines[i].To], token).ConfigureAwait(false);
+            await _fileStream.WriteAsync(buffer.Memory[..lines[i].To], token);
          }
 
          return Result.Ok;

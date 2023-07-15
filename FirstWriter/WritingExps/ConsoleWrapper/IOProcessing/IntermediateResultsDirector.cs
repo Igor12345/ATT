@@ -80,31 +80,32 @@ internal class IntermediateResultsDirector: IAsyncObserver<AfterSortingPhasePack
    {
       await Log(
          $"Processing package: {inputPackage.PackageNumber}(last - {inputPackage.IsLastPackage}), " +
-         $"Lines: {inputPackage.LinesNumber}, bytes: {inputPackage.RowData.Length},AllLines: {inputPackage.SortedLines} ").ConfigureAwait(false);
+         $"Lines: {inputPackage.LinesNumber}, bytes: {inputPackage.RowData.Length},AllLines: {inputPackage.SortedLines} ");
 
       await Task.Factory.StartNew<Task<bool>>(async (state) =>
+         {
+            if (state == null) throw new ArgumentNullException(nameof(state));
+            AfterSortingPhasePackage package = (AfterSortingPhasePackage)state;
+
+            Result result = WriteRecords(package);
+            if (!result.Success)
+               await _sortedLinesSavedSubject.OnErrorAsync(new InvalidOperationException(result.Message));
+
+            await Log($"Processed package: {package.PackageNumber}, all lines saved: {result.Success}");
+
+            await _sortedLinesSavedSubject.OnNextAsync(package);
+
+            bool allProcessed = await CheckIfAllProcessed(package);
+
+            if (allProcessed)
             {
-               if (state == null) throw new ArgumentNullException(nameof(state));
-               AfterSortingPhasePackage package = (AfterSortingPhasePackage)state;
-               
-               Result result = WriteRecords(package);
-               if (!result.Success)
-                  await _sortedLinesSavedSubject.OnErrorAsync(new InvalidOperationException(result.Message)).ConfigureAwait(false);
+               Console.WriteLine($"All packages processed after {package.PackageNumber}, thread {Thread.CurrentThread.ManagedThreadId}");
+               await _sortedLinesSavedSubject.OnCompletedAsync();
+            }
 
-               await Log($"Processed package: {package.PackageNumber}, all lines saved: {result.Success}")
-                  .ConfigureAwait(false);
-
-               await _sortedLinesSavedSubject.OnNextAsync(package).ConfigureAwait(false);
-
-               bool allProcessed = await CheckIfAllProcessed(package).ConfigureAwait(false);
-
-               if (allProcessed)
-                  await _sortedLinesSavedSubject.OnCompletedAsync().ConfigureAwait(false);
-               
-               return true;
-            }, inputPackage, _token,
-            TaskCreationOptions.LongRunning | TaskCreationOptions.PreferFairness, TaskScheduler.Default)
-         .ConfigureAwait(false);
+            return true;
+         }, inputPackage, _token,
+         TaskCreationOptions.LongRunning | TaskCreationOptions.PreferFairness, TaskScheduler.Default);
    }
 
    private async Task<bool> CheckIfAllProcessed(AfterSortingPhasePackage package)
@@ -126,13 +127,13 @@ internal class IntermediateResultsDirector: IAsyncObserver<AfterSortingPhasePack
          }
       }
       
-      await Log($"Processed package: {package.PackageNumber}, ready to complete: {allProcessed}").ConfigureAwait(false);
+      await Log($"Processed package: {package.PackageNumber}, ready to complete: {allProcessed}");
       return allProcessed;
    }
 
    public async ValueTask OnErrorAsync(Exception error)
    {
-      await _sortedLinesSavedSubject.OnCompletedAsync().ConfigureAwait(false);
+      await _sortedLinesSavedSubject.OnCompletedAsync();
    }
 
    public ValueTask OnCompletedAsync()
@@ -144,6 +145,6 @@ internal class IntermediateResultsDirector: IAsyncObserver<AfterSortingPhasePack
    {
       //in the real projects it will be structured logs
       string prefix = $"Class: {this.GetType()}, at: {DateTime.UtcNow:hh:mm:ss-fff} ";
-      await _logger.LogAsync(prefix + message).ConfigureAwait(false);
+      await _logger.LogAsync(prefix + message);
    }
 }

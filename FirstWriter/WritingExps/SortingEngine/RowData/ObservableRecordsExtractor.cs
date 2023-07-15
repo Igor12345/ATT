@@ -31,15 +31,15 @@ public sealed class ObservableRecordsExtractor : IAsyncObserver<ReadingPhasePack
     {
         await Log(
             $"Processing package: {package.PackageNumber}, is last: {package.IsLastPackage}, " +
-            $"bytes: {package.RowData.Length}, pre populated: {package.PrePopulatedBytesLength}").ConfigureAwait(false);
+            $"bytes: {package.RowData.Length}, pre populated: {package.PrePopulatedBytesLength}");
 
         ExtractionResult result = _recordsExtractor.ExtractRecords(package.RowData.AsSpan()[..package.ReadBytesLength],
             package.ParsedRecords);
         
         if (!result.Success)
         {
-            await Log($"Extracted {result.Success}: {result.Message} ").ConfigureAwait(false);
-            await _readyForNextChunkSubject.OnErrorAsync(new InvalidOperationException(result.Message)).ConfigureAwait(false);
+            await Log($"Extracted {result.Success}: {result.Message} ");
+            await _readyForNextChunkSubject.OnErrorAsync(new InvalidOperationException(result.Message));
         }
 
         int remainingBytesLength = package.ReadBytesLength - result.StartRemainingBytes;
@@ -55,23 +55,23 @@ public sealed class ObservableRecordsExtractor : IAsyncObserver<ReadingPhasePack
         await Log(
             $"Sending the package {nextPackage.PackageNumber}, extracted {nextPackage.LinesNumber}, " +
             $"bytes: {nextPackage.RowData.Length}, linesBuffer: {nextPackage.ParsedRecords.CurrentCapacity}, " +
-            $"used bytes: {nextPackage.OccupiedLength}").ConfigureAwait(false);
+            $"used bytes: {nextPackage.OccupiedLength}");
         //todo!!!
-        await _readyForSortingSubject.OnNextAsync(nextPackage).ConfigureAwait(false);
+        await _readyForSortingSubject.OnNextAsync(nextPackage);
         if (package.IsLastPackage)
         {
-            await _readyForNextChunkSubject.OnCompletedAsync().ConfigureAwait(false);
+            await _readyForNextChunkSubject.OnCompletedAsync();
         }
         else
         {
             await _readyForNextChunkSubject.OnNextAsync(new PreReadPackage(remainedBytes,
-                remainingBytesLength)).ConfigureAwait(false);
+                remainingBytesLength));
         }
     }
       
     public async ValueTask OnNextAsync(ReadingPhasePackage package)
     {
-        await ExtractNext(package).ConfigureAwait(false);
+        await ExtractNext(package);
     }
 
     public ValueTask OnErrorAsync(Exception error)
@@ -88,6 +88,6 @@ public sealed class ObservableRecordsExtractor : IAsyncObserver<ReadingPhasePack
     {
         //in the real projects it will be structured logs
         string prefix = $"Class: {this.GetType()}, at: {DateTime.UtcNow:hh:mm:ss-fff} ";
-        await _logger.LogAsync(prefix + message).ConfigureAwait(false);
+        await _logger.LogAsync(prefix + message);
     }
 }

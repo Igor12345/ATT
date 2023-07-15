@@ -64,8 +64,8 @@ internal class FileSortingService : IHostedService
       IConfig configuration = analyzer.SuggestConfig(validInput);
 
       //only for demonstration, use NLog, Serilog, ... in real projects
-      // ILogger logger = Logger.Create(cancellationToken);
-      ILogger logger = Logger.CreateEmpty(cancellationToken);
+      ILogger logger = Logger.Create(cancellationToken);
+      // ILogger logger = Logger.CreateEmpty(cancellationToken);
 
       // await logger.LogAsync($"Started at {DateTime.UtcNow:s}");
 
@@ -75,11 +75,10 @@ internal class FileSortingService : IHostedService
 
       Console.WriteLine("After sorting phase");
 
-      
-      Console.WriteLine("----->  Awaiting semaphore");
+
+      Console.WriteLine($"----->  Awaiting semaphore, thread {Thread.CurrentThread.ManagedThreadId}");
       await semaphore.WaitAsync(cancellationToken);
-      
-      Console.WriteLine("<---- Semaphore passed");
+      Console.WriteLine($"<---- Semaphore passed thread {Thread.CurrentThread.ManagedThreadId}");
       var result = await MergingPhase(cancellationToken, configuration, logger);
       
       Console.WriteLine("******* Final ********");
@@ -125,10 +124,14 @@ internal class FileSortingService : IHostedService
       await using var s3 = await extractor.ReadyForSorting.SubscribeAsync(sorter);
       await using var s4 = await extractor.ReadyForNextChunk.SubscribeAsync(sortingPhasePoolManager);
       await using var s5 = await sorter.SortingCompleted.SubscribeAsync(chunksDirector);
-      await using var s6 = await chunksDirector.SortedLinesSaved.SubscribeSafeAsync(sortingPhasePoolManager);
+      await using var s6 = await chunksDirector.SortedLinesSaved.SubscribeAsync(sortingPhasePoolManager);
 
       await using var s7 = await chunksDirector.SortedLinesSaved.SubscribeAsync(
-         b => { },
+         p =>
+         {
+            Console.WriteLine(
+               $"--> Process package {p.PackageNumber} on thread: {Thread.CurrentThread.ManagedThreadId} ");
+         },
          e => HandleError(e),
          () =>
          {

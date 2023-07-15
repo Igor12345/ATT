@@ -37,7 +37,7 @@ public sealed class StreamsMergeExecutor
 
       CreateBuffers();
 
-      return await ExecuteMerge().ConfigureAwait(false);
+      return await ExecuteMerge();
    }
 
    private void CreateBuffers()
@@ -64,7 +64,7 @@ public sealed class StreamsMergeExecutor
 
       for (int i = 0; i < _files.Length; i++)
       {
-         (bool hasLine, LineMemory line) = await managers[i].TryGetNextLineAsync().ConfigureAwait(false);
+         (bool hasLine, LineMemory line) = await managers[i].TryGetNextLineAsync();
          if (hasLine)
          {
             queue.Enqueue(line, i);
@@ -74,7 +74,7 @@ public sealed class StreamsMergeExecutor
       while (queue.Any())
       {
          var (line, streamIndex) = queue.Dequeue();
-         var (lineAvailable, nextLine) = await managers[streamIndex].TryGetNextLineAsync().ConfigureAwait(false);
+         var (lineAvailable, nextLine) = await managers[streamIndex].TryGetNextLineAsync();
          if (lineAvailable)
             queue.Enqueue(nextLine, streamIndex);
 
