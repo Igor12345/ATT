@@ -2,11 +2,11 @@
 
 namespace SortingEngine.Comparators;
 
-internal class InSiteRecordsComparer : IComparer<LineMemory>
+public class OnSiteLinesComparer : IComparer<LineMemory>
 {
    private readonly ReadOnlyMemory<byte> _source;
 
-   public InSiteRecordsComparer(ReadOnlyMemory<byte> source)
+   public OnSiteLinesComparer(ReadOnlyMemory<byte> source)
    {
       _source = source;
    }

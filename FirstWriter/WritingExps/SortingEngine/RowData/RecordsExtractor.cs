@@ -5,11 +5,18 @@ using SortingEngine.Entities;
 
 namespace SortingEngine.RowData
 {
+   //todo two responsibilities
    public class RecordsExtractor
    {
       private readonly byte[] _eol;
       private readonly byte[] _lineDelimiter;
       
+      /// <summary>
+      /// This class works only with bytes and knows nothing about encoding.
+      /// It needs to know the byte sequences for the end of a line and for the delimiter between a number and a text to extract and then parse lines.
+      /// </summary>
+      /// <param name="eol">The byte sequence of the end of a line in the used encoding</param>
+      /// <param name="lineDelimiter">The byte sequence of the delimiter in the used encoding</param>
       public RecordsExtractor(byte[] eol, byte[] lineDelimiter)
       {
          _eol = Guard.NotNull(eol);

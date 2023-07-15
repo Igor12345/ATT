@@ -1,24 +1,32 @@
 ﻿using System.Text;
 using Infrastructure.Parameters;
+using SortingEngine;
+using SortingEngine.DataStructures;
+using SortingEngine.Entities;
+using SortingEngine.RowData;
 
-namespace SortingEngineTests.RowData;
+namespace SortingEngineTests.TestUtils;
 
 public class DataGenerator
 {
     private readonly Encoding _encoding;
 
-    private static DataGenerator _default = new DataGenerator(Encoding.UTF8);
+    private static readonly DataGenerator _default = new(Encoding.UTF8);
+    private readonly byte[] _eol;
+    private readonly byte[] _delimiter;
     public static DataGenerator UTF8 => _default;
     private DataGenerator(Encoding encoding)
     {
         _encoding = Guard.NotNull(encoding);
+        _eol = encoding.GetBytes(Environment.NewLine);
+        _delimiter = encoding.GetBytes(Constants.Delimiter);
     }
 
     public static DataGenerator Use(Encoding encoding)
     {
         return new DataGenerator(encoding);
     }
-    public byte[] Create(string[] lines, byte[] randomBytes)
+    public byte[] CreateWholeBytes(string[] lines, byte[] randomBytes)
     {
         int fullLength = 0;
         foreach (string line in lines)
@@ -48,5 +56,21 @@ public class DataGenerator
         byte[] result = new byte[length];
         random.NextBytes(result);
         return result;
+    }
+
+    public (LineMemory[], byte[]) CreateLinesFromStrings(string[] originalStrings)
+    {
+        byte[] source = CreateWholeBytes(originalStrings, RandomBytes(242));
+        RecordsExtractor extractor = new RecordsExtractor(_eol, _delimiter);
+        ExpandingStorage<LineMemory> linesStorage = new ExpandingStorage<LineMemory>(100);
+        ExtractionResult result = extractor.ExtractRecords(source.AsSpan(), linesStorage);
+
+        LineMemory[] lines = new LineMemory[result.LinesNumber];
+        for (int i = 0; i < result.LinesNumber; i++)
+        {
+            lines[i] = linesStorage[i];
+        }
+
+        return (lines, source);
     }
 }

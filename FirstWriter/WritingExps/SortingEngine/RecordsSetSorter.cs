@@ -156,7 +156,7 @@ namespace SortingEngine
 
       private void SortRecords(ReadOnlyMemory<byte> inputBuffer, ExpandingStorage<LineMemory> recordsStorage, int linesNumber)
       {
-         InSiteRecordsSorter sorter = new InSiteRecordsSorter(inputBuffer);
+         Sorters.LinesSorter sorter = new Sorters.LinesSorter(inputBuffer);
          LineMemory[] sorted = sorter.Sort(recordsStorage, linesNumber);
 
          OnSortingCompleted(new SortingCompletedEventArgs(sorted, linesNumber, inputBuffer));

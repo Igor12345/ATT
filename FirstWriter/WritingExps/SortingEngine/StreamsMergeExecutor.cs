@@ -44,7 +44,7 @@ public class StreamsMergeExecutor
             _config.RecordsBufferLength);
       }
 
-      IComparer<LineMemory> comparer = new InSiteRecordsComparer(_inputBuffer);
+      IComparer<LineMemory> comparer = new OnSiteLinesComparer(_inputBuffer);
       IndexPriorityQueue<LineMemory, IComparer<LineMemory>> queue =
          new IndexPriorityQueue<LineMemory, IComparer<LineMemory>>(_files.Length, comparer);
 

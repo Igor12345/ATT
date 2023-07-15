@@ -27,7 +27,7 @@ public class LinesSorter : IAsyncObserver<SortingPhasePackage>
     public LineMemory[] SortRecords(ReadOnlyMemory<byte> inputBuffer, int linesNumber,
         ExpandingStorage<LineMemory> recordsStorage)
     {
-        InSiteRecordsSorter sorter = new InSiteRecordsSorter(inputBuffer);
+        Sorters.LinesSorter sorter = new Sorters.LinesSorter(inputBuffer);
         return sorter.Sort(recordsStorage, linesNumber);
     }
 
