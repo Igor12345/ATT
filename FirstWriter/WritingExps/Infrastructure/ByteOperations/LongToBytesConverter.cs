@@ -6,17 +6,11 @@ namespace Infrastructure.ByteOperations;
 
 public class LongToBytesConverter : IDisposable, IAsyncDisposable
 {
-   private readonly byte[] _buffer;
+   private readonly byte[] _buffer = ArrayPool<byte>.Shared.Rent(20);
 
-   public LongToBytesConverter()
-   {
-      _buffer = ArrayPool<byte>.Shared.Rent(20);
-   }
-
-   //todo side effect
+   //only for benchmarks
    public (ReadOnlyMemory<byte>, int length) ConvertLongToBytes(ulong value)
    {
-      //todo check allocation!!!
       ReadOnlySpan<char> chars = value.ToString().AsSpan();
 
       for (int i = 0; i < chars.Length; i++)
@@ -26,15 +20,14 @@ public class LongToBytesConverter : IDisposable, IAsyncDisposable
 
       return (_buffer.AsMemory(), chars.Length);
    }
-
-   //todo benchmark
+   
    public static int WriteULongToBytes(ulong value, Span<byte> destination)
    {
       return ConvertULongToBytesInternal(value, destination);
    }
 
    //by motives System.Number
-   internal static unsafe int ConvertULongToBytesInternal(ulong value, Span<byte> destination)
+   private static unsafe int ConvertULongToBytesInternal(ulong value, Span<byte> destination)
    {
       int bufferLength = CountDigits(value);
 
@@ -60,7 +53,7 @@ public class LongToBytesConverter : IDisposable, IAsyncDisposable
       return ValueTask.CompletedTask;
    }
 
-   //System.Number 
+   //by motives System.Number
 #if TARGET_64BIT
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #endif
@@ -85,7 +78,7 @@ public class LongToBytesConverter : IDisposable, IAsyncDisposable
    }
 
    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-   public static int CountDigits(ulong value)
+   private static int CountDigits(ulong value)
    {
       int digits = 1;
       uint part;

@@ -1,8 +1,8 @@
-﻿// See https://aka.ms/new-console-template for more information
-
-using BenchmarkDotNet.Running;
+﻿using BenchmarkDotNet.Running;
 using SimpleBenchmarks;
+using SimpleBenchmarks.ByteOperations;
 
 // var summary = BenchmarkRunner.Run<RandomBenchmark>();
 // var summaryComparer = BenchmarkRunner.Run<StringsComparisonBenchmark>();
-var summaryComparer = BenchmarkRunner.Run<ArrayVsSpan>();
+// var summaryComparer = BenchmarkRunner.Run<ArrayVsSpan>();
+var longToBytesAlgorithmsComparison = BenchmarkRunner.Run<NumberToBytesConversion>();

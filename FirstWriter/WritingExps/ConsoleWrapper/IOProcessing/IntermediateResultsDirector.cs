@@ -44,8 +44,8 @@ internal class IntermediateResultsDirector: IAsyncObserver<AfterSortingPhasePack
       string fileName = GetNextFileName();
       var fullFileName = Path.Combine(_path, fileName);
 
-      await using RecordsWriter writer = RecordsWriter.Create(fullFileName);
-      return await writer.WriteRecordsAsync(records, eventArgs.LinesNumber, sourceBytes, _token);
+      using RecordsWriter writer = RecordsWriter.Create(fullFileName);
+      return writer.WriteRecords(records, eventArgs.LinesNumber, sourceBytes);
    }
    
    private async Task<Result> WriteRecordsAsync(AfterSortingPhasePackage package)
@@ -53,8 +53,10 @@ internal class IntermediateResultsDirector: IAsyncObserver<AfterSortingPhasePack
       string fileName = GetNextFileName();
       string fullFileName = Path.Combine(_path, fileName);
 
-      await using RecordsWriter writer = RecordsWriter.Create(fullFileName);
-      return await writer.WriteRecordsAsync(package.SortedLines, package.LinesNumber, package.RowData, _token);
+      //use synchronous version to prevent from holding the variable by async state machine
+      //it looks like something wrong this this version of async code
+      using RecordsWriter writer = RecordsWriter.Create(fullFileName);
+      return writer.WriteRecords(package.SortedLines, package.LinesNumber, package.RowData);
    }
 
    public Result WriteRecords(SortingCompletedEventArgs eventArgs)
