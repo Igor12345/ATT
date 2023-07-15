@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using SortingEngine;
 using SortingEngine.DataStructures;
 using SortingEngine.Entities;
 using SortingEngine.RowData;
@@ -111,7 +112,7 @@ public class RecordsExtractorTests
 
     private static RecordsExtractor GetUsual(Encoding encoding)
     {
-        return new RecordsExtractor(encoding.GetBytes(Environment.NewLine), encoding.GetBytes(". "));
+        return new RecordsExtractor(encoding.GetBytes(Environment.NewLine), encoding.GetBytes(Constants.Delimiter));
     }
 
     //todo temp

@@ -136,7 +136,7 @@ namespace SortingEngine
       {
          RecordsExtractor extractor =
             new RecordsExtractor(_configuration.Encoding.GetBytes(Environment.NewLine),
-               _configuration.Encoding.GetBytes(". "));
+               _configuration.Encoding.GetBytes(Constants.Delimiter));
 
          //todo array vs slice
          ExtractionResult result = extractor.ExtractRecords(inputBuffer.Span, recordsStorage);

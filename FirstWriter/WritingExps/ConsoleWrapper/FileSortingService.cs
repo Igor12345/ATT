@@ -143,7 +143,7 @@ internal class FileSortingService : IHostedService
    {
       ObservableRecordsExtractor extractor = new ObservableRecordsExtractor(
          configuration.Encoding.GetBytes(Environment.NewLine),
-         configuration.Encoding.GetBytes(". "), logger, cancellationToken);
+         configuration.Encoding.GetBytes(Constants.Delimiter), logger, cancellationToken);
 
       IntermediateResultsDirector chunksDirector =
          IntermediateResultsDirector.Create(configuration.TemporaryFolder, logger, cancellationToken);
