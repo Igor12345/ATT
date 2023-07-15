@@ -59,7 +59,7 @@ internal class DataChunkManager : IAsyncDisposable
    {
       if (NeedLoadLines())
       {
-         ExtractionResult result = await LoadLinesAsync();
+         ExtractionResult result = await LoadLinesAsync().ConfigureAwait(false);
          if (result is { Success: true, LinesNumber: 0 })
          {
             return (false, default);
@@ -87,7 +87,7 @@ internal class DataChunkManager : IAsyncDisposable
          _remainedBytes.CopyTo(_rowStorage);
       }
 
-      int received = await _dataSource.ReadAsync(_rowStorage[_remindedBytesLength..]);
+      int received = await _dataSource.ReadAsync(_rowStorage[_remindedBytesLength..]).ConfigureAwait(false);
       if (received == 0)
          return ExtractionResult.Ok(0, -1);
       _currentPosition = 0;

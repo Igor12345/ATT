@@ -38,14 +38,15 @@ internal class ResultWriter : IAsyncDisposable
    {
       ResultWriter instance = new ResultWriter(logger, token)
       {
-         _writer = RecordsWriter.Create(pathToResult)
+         //todo remove whole class
+         _writer = RecordsWriter.Create(pathToResult, 1, logger)
       };
       return instance;
    }
 
    public Result WriteOutput(SortingCompletedEventArgs eventArgs)
    {
-      return WriteOutputAsync(eventArgs).GetAwaiter().GetResult();
+      return _writer.WriteRecords(eventArgs.Sorted, eventArgs.LinesNumber, eventArgs.Source);
    }
 
    public async Task<Result> WriteOutputAsync(SortingCompletedEventArgs eventArgs)

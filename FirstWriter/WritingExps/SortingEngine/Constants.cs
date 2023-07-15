@@ -6,7 +6,8 @@ public class Constants
    public static readonly int MaxTextLength = 1024;
    // public static readonly int MaxNumberLength = 3;
    public static readonly int MaxNumberLength = 20;
-   public static readonly int MaxLineLength_UTF8 = MaxNumberLength + MaxTextLength + 2 + 2;
+   public static readonly int MaxLineLengthUtf8 = MaxNumberLength + MaxTextLength + 2 + 2;
+   public static readonly int MaxStackLimit  = 1048;
 
    public const string Delimiter = ". ";
 }

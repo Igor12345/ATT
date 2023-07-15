@@ -2,7 +2,7 @@
 
 namespace LogsHub;
 
-public class Logger
+public class Logger : ILogger
 {
     private readonly Input _input;
     private readonly ConsoleLog _consoleLogger;
@@ -29,5 +29,10 @@ public class Logger
     {
         await Task.Delay(1);
         _consoleLogger.Stop();
+    }
+
+    public static ILogger CreateEmpty(CancellationToken cancellationToken)
+    {
+        return new EmptyLogger();
     }
 }

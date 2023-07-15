@@ -1,10 +1,7 @@
 ﻿using System.Buffers;
 using System.Reactive.Subjects;
-using Infrastructure.ByteOperations;
 using Infrastructure.Parameters;
 using LogsHub;
-using SortingEngine.DataStructures;
-using SortingEngine.Entities;
 
 namespace SortingEngine.RowData;
 
@@ -16,10 +13,10 @@ public sealed class ObservableRecordsExtractor : IAsyncObserver<ReadingPhasePack
     private readonly SimpleAsyncSubject<SortingPhasePackage> _readyForSortingSubject = 
         new SequentialSimpleAsyncSubject<SortingPhasePackage>();
       
-    private readonly Logger _logger;
+    private readonly ILogger _logger;
     private readonly RecordsExtractor _recordsExtractor;
 
-    public ObservableRecordsExtractor(byte[] eol, byte[] lineDelimiter, Logger logger, CancellationToken token)
+    public ObservableRecordsExtractor(byte[] eol, byte[] lineDelimiter, ILogger logger, CancellationToken token)
     {
         _recordsExtractor = new RecordsExtractor(eol, lineDelimiter);
         _logger = Guard.NotNull(logger);
@@ -34,15 +31,15 @@ public sealed class ObservableRecordsExtractor : IAsyncObserver<ReadingPhasePack
     {
         await Log(
             $"Processing package: {package.PackageNumber}, is last: {package.IsLastPackage}, " +
-            $"bytes: {package.RowData.Length}, pre populated: {package.PrePopulatedBytesLength}");
+            $"bytes: {package.RowData.Length}, pre populated: {package.PrePopulatedBytesLength}").ConfigureAwait(false);
 
         ExtractionResult result = _recordsExtractor.ExtractRecords(package.RowData.AsSpan()[..package.ReadBytesLength],
             package.ParsedRecords);
         
         if (!result.Success)
         {
-            await Log($"Extracted {result.Success}: {result.Message} ");
-            await _readyForNextChunkSubject.OnErrorAsync(new InvalidOperationException(result.Message));
+            await Log($"Extracted {result.Success}: {result.Message} ").ConfigureAwait(false);
+            await _readyForNextChunkSubject.OnErrorAsync(new InvalidOperationException(result.Message)).ConfigureAwait(false);
         }
 
         int remainingBytesLength = package.ReadBytesLength - result.StartRemainingBytes;
@@ -58,23 +55,23 @@ public sealed class ObservableRecordsExtractor : IAsyncObserver<ReadingPhasePack
         await Log(
             $"Sending the package {nextPackage.PackageNumber}, extracted {nextPackage.LinesNumber}, " +
             $"bytes: {nextPackage.RowData.Length}, linesBuffer: {nextPackage.ParsedRecords.CurrentCapacity}, " +
-            $"used bytes: {nextPackage.OccupiedLength}");
+            $"used bytes: {nextPackage.OccupiedLength}").ConfigureAwait(false);
         //todo!!!
-        await _readyForSortingSubject.OnNextAsync(nextPackage);
+        await _readyForSortingSubject.OnNextAsync(nextPackage).ConfigureAwait(false);
         if (package.IsLastPackage)
         {
-            await _readyForNextChunkSubject.OnCompletedAsync();
+            await _readyForNextChunkSubject.OnCompletedAsync().ConfigureAwait(false);
         }
         else
         {
             await _readyForNextChunkSubject.OnNextAsync(new PreReadPackage(remainedBytes,
-                        remainingBytesLength));
+                remainingBytesLength)).ConfigureAwait(false);
         }
     }
       
     public async ValueTask OnNextAsync(ReadingPhasePackage package)
     {
-        await ExtractNext(package);
+        await ExtractNext(package).ConfigureAwait(false);
     }
 
     public ValueTask OnErrorAsync(Exception error)
@@ -91,6 +88,6 @@ public sealed class ObservableRecordsExtractor : IAsyncObserver<ReadingPhasePack
     {
         //in the real projects it will be structured logs
         string prefix = $"Class: {this.GetType()}, at: {DateTime.UtcNow:hh:mm:ss-fff} ";
-        await _logger.LogAsync(prefix + message);
+        await _logger.LogAsync(prefix + message).ConfigureAwait(false);
     }
 }

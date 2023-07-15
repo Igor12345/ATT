@@ -6,7 +6,7 @@ public class MemoryCleaner
 {
     public static void CleanMemory()
     {
-        for (int i = 0; i < 10; i++)
+        for (int i = 0; i < 2; i++)
         {
             // Garbage collect as much as GC-able objects as possible.
             GC.Collect();

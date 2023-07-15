@@ -1,27 +1,42 @@
 ﻿using System.Buffers;
 using Infrastructure.ByteOperations;
 using Infrastructure.Parameters;
+using LogsHub;
 using SortingEngine;
 using SortingEngine.Entities;
+using SortingEngine.RowData;
 
 namespace ConsoleWrapper.IOProcessing;
 
-public class RecordsWriter : IAsyncDisposable, IDisposable
+public class RecordsWriter : ILinesWriter, IAsyncDisposable
 {
+   private readonly int _charLength;
+   private readonly ILogger _logger;
    private readonly string _filePath;
    private FileStream? _fileStream;
    private FileStream? _syncFileStream;
 
-   private RecordsWriter(string filePath)
+   private RecordsWriter(string filePath, int charLength, ILogger logger)
    {
+      _charLength = Guard.Positive(charLength);
       _filePath = Guard.NotNullOrEmpty(filePath);
+      _logger = Guard.NotNull(logger);
    }
 
-   public static RecordsWriter Create(string filePath)
+   public static RecordsWriter Create(string filePath, int charLength, ILogger logger)
    {
       CheckFilePath(filePath);
-      RecordsWriter instance = new RecordsWriter(filePath);
+      RecordsWriter instance = new RecordsWriter(filePath, charLength, logger);
       return instance;
+   }
+
+   //todo
+   // [Conditional("Verbose")]
+   private async ValueTask Log(string message)
+   {
+      //in the real projects it will be structured logs
+      string prefix = $"Class: {this.GetType()}, at: {DateTime.UtcNow:hh:mm:ss-fff} ";
+      await _logger.LogAsync(prefix + message);
    }
 
    private static void CheckFilePath(string filePath)
@@ -36,7 +51,7 @@ public class RecordsWriter : IAsyncDisposable, IDisposable
    {
       _fileStream ??= File.Open(_filePath, FileMode.Create, FileAccess.Write);
       //todo dirty hack to support many encodings (*4)
-      IMemoryOwner<byte> buffer = MemoryPool<byte>.Shared.Rent(Constants.MaxLineLength_UTF8 * 4);
+      IMemoryOwner<byte> buffer = MemoryPool<byte>.Shared.Rent(Constants.MaxLineLengthUtf8 * 4);
       try
       {
          for (int i = 0; i < linesNumber; i++)
@@ -63,18 +78,25 @@ public class RecordsWriter : IAsyncDisposable, IDisposable
       _syncFileStream ??= new FileStream(_filePath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None,
          bufferSize: 4096, false);
 
+      byte[]? rented = null;
       try
       {
          //todo dirty hack to support many encodings (*4)
          //todo check for required size to prevent stackoverflow
-         Span<byte> buffer = stackalloc byte[Constants.MaxLineLength_UTF8 * 4];
+         int requiredLength = Constants.MaxLineLengthUtf8 * _charLength;
+         Span<byte> buffer = requiredLength <= Constants.MaxStackLimit
+            ? stackalloc byte[requiredLength]
+            : rented = ArrayPool<byte>.Shared.Rent(requiredLength);
+         
          for (int i = 0; i < linesNumber; i++)
          {
             int length = LongToBytesConverter.WriteULongToBytes(lines[i].Number, buffer);
             source.Span[lines[i].From..lines[i].To].CopyTo(buffer[length..]);
-            _syncFileStream.Write(buffer[..lines[i].To]);
+            int fullLength = length + lines[i].To - lines[i].From;
+            _syncFileStream.Write(buffer[..fullLength]);
          }
-
+         if (rented != null)
+            ArrayPool<byte>.Shared.Return(rented);
          return Result.Ok;
       }
       catch (Exception e)

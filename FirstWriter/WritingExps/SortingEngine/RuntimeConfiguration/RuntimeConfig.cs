@@ -49,6 +49,7 @@ public class RuntimeConfig : IConfig
       TemporaryFolder = "";
    }
 
+   public int NumberSortingWorkers { get; private set; } = 3;
    public int InputBufferLength { get; private set; }
    public string TemporaryFolder { get; private set; }
    public int MergeBufferLength { get; private set; }

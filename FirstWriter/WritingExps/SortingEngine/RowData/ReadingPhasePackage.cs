@@ -32,4 +32,4 @@ public record AfterSortingPhasePackage(
     ExpandingStorage<LineMemory> ParsedRecords, 
     int LinesNumber, 
     int PackageNumber,
-    bool IsLastPackage = false);
+    bool IsLastPackage);

@@ -14,7 +14,7 @@ namespace ConsoleWrapper.IOProcessing;
 //todo rename
 internal class LongFileReader : IBytesProducer, IAsyncDisposable
 {
-   private readonly Logger _logger;
+   private readonly ILogger _logger;
    private readonly CancellationToken _cancellationToken;
    private readonly string _fullFileName;
    private readonly Encoding _encoding;
@@ -28,7 +28,7 @@ internal class LongFileReader : IBytesProducer, IAsyncDisposable
 
    public IAsyncObservable<ReadingPhasePackage> NextChunkPrepared => _nextChunkPreparedSubject;
 
-   public LongFileReader(string fullFileName, Encoding encoding, Logger logger, CancellationToken cancellationToken)
+   public LongFileReader(string fullFileName, Encoding encoding, ILogger logger, CancellationToken cancellationToken)
    {
       _lock = new AsyncLock();
       _fullFileName = Guard.FileExist(fullFileName);

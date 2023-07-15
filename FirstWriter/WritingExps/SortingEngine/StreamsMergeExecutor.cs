@@ -2,14 +2,15 @@
 using SortingEngine.Entities;
 using SortingEngine.RuntimeConfiguration;
 using SortingEngine.Sorters;
-using System.Collections.Generic;
-using Infrastructure.ByteOperations;
+using Infrastructure.Parameters;
+using SortingEngine.RowData;
 
 namespace SortingEngine;
 
-public class StreamsMergeExecutor
+public sealed class StreamsMergeExecutor
 {
    private readonly IConfig _config;
+   private readonly ILinesWriter _linesWriter;
    private string[] _files = null!;
 
    private LineMemory[] _outputBuffer = null!;
@@ -22,14 +23,27 @@ public class StreamsMergeExecutor
       //todo static vs Guard
       _config = config ?? throw new ArgumentNullException(nameof(config));
    }
+   public StreamsMergeExecutor(IConfig config, ILinesWriter linesWriter)
+   {
+      //todo static vs Guard
+      _config = config ?? throw new ArgumentNullException(nameof(config));
+      _linesWriter = Guard.NotNull(linesWriter);
+   }
 
+   //todo file system dependence
    public async Task<Result> MergeWithOrder()
    {
       _files = Directory.GetFiles(_config.TemporaryFolder);
 
       CreateBuffers();
 
-      return await ExecuteMerge();
+      return await ExecuteMerge().ConfigureAwait(false);
+   }
+
+   private void CreateBuffers()
+   {
+      _inputBuffer = new byte[_config.MergeBufferLength * _files.Length].AsMemory();
+      _outputBuffer = new LineMemory[_config.OutputBufferLength];
    }
 
    private async Task<Result> ExecuteMerge()
@@ -48,48 +62,44 @@ public class StreamsMergeExecutor
       IndexPriorityQueue<LineMemory, IComparer<LineMemory>> queue =
          new IndexPriorityQueue<LineMemory, IComparer<LineMemory>>(_files.Length, comparer);
 
-
       for (int i = 0; i < _files.Length; i++)
       {
-         (bool hasLine, LineMemory line) = await managers[i].TryGetNextLineAsync();
+         (bool hasLine, LineMemory line) = await managers[i].TryGetNextLineAsync().ConfigureAwait(false);
          if (hasLine)
          {
             queue.Enqueue(line, i);
-            //todo remove
-            if (line.Number == 8446805350952162698 || line.Number == 1243027978022674890)
-            {
-               var text = ByteToStringConverter.Convert(_inputBuffer[line.From..line.To]);
-            }
          }
       }
 
       while (queue.Any())
       {
          var (line, streamIndex) = queue.Dequeue();
-         var (lineAvailable, nextLine) = await managers[streamIndex].TryGetNextLineAsync();
-         if(lineAvailable)
+         var (lineAvailable, nextLine) = await managers[streamIndex].TryGetNextLineAsync().ConfigureAwait(false);
+         if (lineAvailable)
             queue.Enqueue(nextLine, streamIndex);
 
          _outputBuffer[_lastLine++] = line;
          if (_lastLine >= _outputBuffer.Length)
          {
-            OnOutputBufferFull(new SortingCompletedEventArgs(_outputBuffer, _outputBuffer.Length, _inputBuffer));
+            Result result = WriteLinesFromBuffer(_outputBuffer, _outputBuffer.Length, _inputBuffer);
+            if (!result.Success)
+               return result;
+            // OnOutputBufferFull(new SortingCompletedEventArgs(_outputBuffer, _outputBuffer.Length, _inputBuffer));
             _lastLine = 0;
          }
       }
 
-      OnOutputBufferFull(new SortingCompletedEventArgs(_outputBuffer, _lastLine, _inputBuffer));
-      //todo flush output
-      return Result.Ok;
+      // OnOutputBufferFull(new SortingCompletedEventArgs(_outputBuffer, _lastLine, _inputBuffer));
+      //todo
+      return _lastLine == 0 ? Result.Ok : WriteLinesFromBuffer(_outputBuffer, _lastLine, _inputBuffer);
    }
 
-   private void CreateBuffers()
+   private Result WriteLinesFromBuffer(LineMemory[] lines, int linesNumber, ReadOnlyMemory<byte> source)
    {
-      _inputBuffer = new byte[_config.MergeBufferLength * _files.Length].AsMemory();
-      _outputBuffer = new LineMemory[_config.OutputBufferLength];
+      return _linesWriter.WriteRecords(lines, linesNumber, source);
    }
 
-   protected virtual void OnOutputBufferFull(SortingCompletedEventArgs e)
+   private void OnOutputBufferFull(SortingCompletedEventArgs e)
    {
       OutputBufferFull?.Invoke(this, e);
    }

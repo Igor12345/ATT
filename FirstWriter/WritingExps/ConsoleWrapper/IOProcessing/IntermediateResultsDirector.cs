@@ -3,12 +3,14 @@ using Infrastructure.Parameters;
 using LogsHub;
 using SortingEngine;
 using SortingEngine.RowData;
+using SortingEngine.RuntimeConfiguration;
 
 namespace ConsoleWrapper.IOProcessing;
 
 internal class IntermediateResultsDirector: IAsyncObserver<AfterSortingPhasePackage>
 {
-   private readonly Logger _logger;
+   private readonly IConfig _configuration;
+   private readonly ILogger _logger;
    private volatile int _lastFileNumber;
    private readonly string _path;
    private readonly CancellationToken _token;
@@ -16,17 +18,18 @@ internal class IntermediateResultsDirector: IAsyncObserver<AfterSortingPhasePack
    private readonly HashSet<int> _processedPackages = new();
    private volatile int _lastPackageNumber = -1;
 
-   private IntermediateResultsDirector(string path, Logger logger, CancellationToken token)
+   private IntermediateResultsDirector(IConfig configuration, ILogger logger, CancellationToken token)
    {
-      _path = Guard.NotNullOrEmpty(path);
+      _configuration = Guard.NotNull(configuration);
+      _path = Guard.NotNullOrEmpty(configuration.TemporaryFolder);
       _logger = Guard.NotNull(logger);
       _token = Guard.NotNull(token);
    }
 
-   public static IntermediateResultsDirector Create(string path, Logger logger, CancellationToken token = default)
+   public static IntermediateResultsDirector Create(IConfig configuration, ILogger logger, CancellationToken token = default)
    {
-      IntermediateResultsDirector instance = new IntermediateResultsDirector(path, logger, token);
-      instance.Init(path);
+      IntermediateResultsDirector instance = new IntermediateResultsDirector(configuration, logger, token);
+      instance.Init(configuration.TemporaryFolder);
       return instance;
    }
 
@@ -36,7 +39,7 @@ internal class IntermediateResultsDirector: IAsyncObserver<AfterSortingPhasePack
          Directory.CreateDirectory(_path);
    }
 
-   private async Task<Result> WriteRecordsAsync(SortingCompletedEventArgs eventArgs)
+   public Result WriteRecords(SortingCompletedEventArgs eventArgs)
    {
       var records = eventArgs.Sorted;
       var sourceBytes = eventArgs.Source;
@@ -44,24 +47,22 @@ internal class IntermediateResultsDirector: IAsyncObserver<AfterSortingPhasePack
       string fileName = GetNextFileName();
       var fullFileName = Path.Combine(_path, fileName);
 
-      using RecordsWriter writer = RecordsWriter.Create(fullFileName);
+      using RecordsWriter writer = RecordsWriter.Create(fullFileName, _configuration.Encoding.GetBytes(".").Length, _logger);
       return writer.WriteRecords(records, eventArgs.LinesNumber, sourceBytes);
    }
    
-   private async Task<Result> WriteRecordsAsync(AfterSortingPhasePackage package)
+   private Result WriteRecords(AfterSortingPhasePackage package)
    {
+      if(package.LinesNumber==0)
+         return Result.Ok;
+      
       string fileName = GetNextFileName();
       string fullFileName = Path.Combine(_path, fileName);
 
       //use synchronous version to prevent from holding the variable by async state machine
       //it looks like something wrong this this version of async code
-      using RecordsWriter writer = RecordsWriter.Create(fullFileName);
+      using RecordsWriter writer = RecordsWriter.Create(fullFileName, _configuration.Encoding.GetBytes(".").Length, _logger);
       return writer.WriteRecords(package.SortedLines, package.LinesNumber, package.RowData);
-   }
-
-   public Result WriteRecords(SortingCompletedEventArgs eventArgs)
-   {
-      return WriteRecordsAsync(eventArgs).GetAwaiter().GetResult();
    }
 
    private string GetNextFileName()
@@ -79,56 +80,59 @@ internal class IntermediateResultsDirector: IAsyncObserver<AfterSortingPhasePack
    {
       await Log(
          $"Processing package: {inputPackage.PackageNumber}(last - {inputPackage.IsLastPackage}), " +
-         $"Lines: {inputPackage.LinesNumber}, bytes: {inputPackage.RowData.Length},AllLines: {inputPackage.SortedLines} ");
-      
+         $"Lines: {inputPackage.LinesNumber}, bytes: {inputPackage.RowData.Length},AllLines: {inputPackage.SortedLines} ").ConfigureAwait(false);
+
       await Task.Factory.StartNew<Task<bool>>(async (state) =>
-         {
-            if (state == null) throw new ArgumentNullException(nameof(state));
-            
-            AfterSortingPhasePackage package = (AfterSortingPhasePackage)state;
-            Result result = await WriteRecordsAsync(package);
+            {
+               if (state == null) throw new ArgumentNullException(nameof(state));
+               AfterSortingPhasePackage package = (AfterSortingPhasePackage)state;
+               
+               Result result = WriteRecords(package);
+               if (!result.Success)
+                  await _sortedLinesSavedSubject.OnErrorAsync(new InvalidOperationException(result.Message)).ConfigureAwait(false);
 
-            if (!result.Success)
-               await _sortedLinesSavedSubject.OnErrorAsync(new InvalidOperationException(result.Message));
+               await Log($"Processed package: {package.PackageNumber}, all lines saved: {result.Success}")
+                  .ConfigureAwait(false);
 
-            await Log($"Processed package: {package.PackageNumber}, all lines saved: {result.Success}");
-      
-            await _sortedLinesSavedSubject.OnNextAsync(package);
+               await _sortedLinesSavedSubject.OnNextAsync(package).ConfigureAwait(false);
 
-            bool allProcessed = await CheckIfAllProcessed(package);
+               bool allProcessed = await CheckIfAllProcessed(package).ConfigureAwait(false);
 
-            if (allProcessed)
-               await _sortedLinesSavedSubject.OnCompletedAsync();
-
-            return true;
-         }, inputPackage, _token, 
-         TaskCreationOptions.LongRunning | TaskCreationOptions.PreferFairness, TaskScheduler.Default);
+               if (allProcessed)
+                  await _sortedLinesSavedSubject.OnCompletedAsync().ConfigureAwait(false);
+               
+               return true;
+            }, inputPackage, _token,
+            TaskCreationOptions.LongRunning | TaskCreationOptions.PreferFairness, TaskScheduler.Default)
+         .ConfigureAwait(false);
    }
 
    private async Task<bool> CheckIfAllProcessed(AfterSortingPhasePackage package)
    {
-      bool allProcessed = true;
+      bool allProcessed = false;
       lock (_lock)
       {
          _processedPackages.Add(package.PackageNumber);
          if (package.IsLastPackage)
             _lastPackageNumber = package.PackageNumber;
+         
          if (package.PackageNumber <= _lastPackageNumber)
          {
+            allProcessed = true;
             for (int i = 0; i < _lastPackageNumber; i++)
             {
                allProcessed &= _processedPackages.Contains(i);
             }
          }
       }
-
-      await Log($"Processed package: {package.PackageNumber}, ready to complete: {allProcessed}");
+      
+      await Log($"Processed package: {package.PackageNumber}, ready to complete: {allProcessed}").ConfigureAwait(false);
       return allProcessed;
    }
 
    public async ValueTask OnErrorAsync(Exception error)
    {
-      await _sortedLinesSavedSubject.OnCompletedAsync();
+      await _sortedLinesSavedSubject.OnCompletedAsync().ConfigureAwait(false);
    }
 
    public ValueTask OnCompletedAsync()
@@ -140,6 +144,6 @@ internal class IntermediateResultsDirector: IAsyncObserver<AfterSortingPhasePack
    {
       //in the real projects it will be structured logs
       string prefix = $"Class: {this.GetType()}, at: {DateTime.UtcNow:hh:mm:ss-fff} ";
-      await _logger.LogAsync(prefix + message);
+      await _logger.LogAsync(prefix + message).ConfigureAwait(false);
    }
 }

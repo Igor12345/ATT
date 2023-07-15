@@ -21,6 +21,10 @@ namespace SortingEngine.RuntimeEnvironment
 
       public IConfig SuggestConfig(string path, Encoding encoding)
       {
+         //todo
+         int cpus = Environment.ProcessorCount;
+         var availableMemory = GC.GetGCMemoryInfo().TotalAvailableMemoryBytes;
+         
          int inputBufferLength =
             SetBufferLength(_baseConfiguration.InputBufferLength, 1024 * 1024 * 512); // 1024 * 1024 * 512 = 536870912
          int mergeBufferLength = SetBufferLength(_baseConfiguration.MergeBufferLength, 1024 * 1024); //1024 * 1024;

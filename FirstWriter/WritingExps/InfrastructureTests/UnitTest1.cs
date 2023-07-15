@@ -7,6 +7,18 @@ namespace InfrastructureTests
    public class UnitTest1
    {
       [Fact]
+      public void HardWareExp()
+      {
+         var envVariables = Environment.GetEnvironmentVariables();
+         long total = GC.GetTotalMemory(false);
+         var heap = GC.GetGCMemoryInfo().HeapSizeBytes;
+         int cpus = Environment.ProcessorCount;
+         var av = GC.GetGCMemoryInfo().TotalAvailableMemoryBytes;
+
+         var t = cpus;
+      }
+      
+      [Fact]
       public void LongToBytes()
       {
          Random random = new Random();

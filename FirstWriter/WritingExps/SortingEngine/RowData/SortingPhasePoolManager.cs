@@ -11,7 +11,7 @@ namespace SortingEngine.RowData;
 public class SortingPhasePoolManager : IAsyncObserver<PreReadPackage>, IAsyncObserver<AfterSortingPhasePackage>,
     IDisposable
 {
-    private readonly Logger _logger;
+    private readonly ILogger _logger;
     private readonly SemaphoreSlim _semaphore;
     private readonly int _inputBuffersLength;
     private volatile int _packageNumber = -1;
@@ -23,7 +23,7 @@ public class SortingPhasePoolManager : IAsyncObserver<PreReadPackage>, IAsyncObs
     private SpinLock _lock;
 
     public SortingPhasePoolManager(int numberOfBuffers, int inputBuffersLength, int recordChunksLength,
-        Logger logger,
+        ILogger logger,
         CancellationToken cancellationToken)
     {
         _lock = new SpinLock();
@@ -45,7 +45,7 @@ public class SortingPhasePoolManager : IAsyncObserver<PreReadPackage>, IAsyncObs
     {
         //in the real projects it will be structured logs
         string prefix = $"Class: {this.GetType()}, at: {DateTime.UtcNow:hh:mm:ss-fff} ";
-        await _logger.LogAsync(prefix + message);
+        await _logger.LogAsync(prefix + message).ConfigureAwait(false);
     }
 
     private readonly SimpleAsyncSubject<ReadingPhasePackage> _loadNextChunkSubject =
@@ -55,8 +55,8 @@ public class SortingPhasePoolManager : IAsyncObserver<PreReadPackage>, IAsyncObs
 
     private async ValueTask<(bool ready, ReadingPhasePackage package)> TryAcquireNext()
     {
-        await Log($"Trying acquire new bytes buffer, last package was {_packageNumber}");
-        await _semaphore.WaitAsync(_cancellationToken);
+        await Log($"Trying acquire new bytes buffer, last package was {_packageNumber}").ConfigureAwait(false);
+        await _semaphore.WaitAsync(_cancellationToken).ConfigureAwait(false);
 
         byte[]?[] buffers = _buffers;
         bool lockTaken = false;
@@ -75,7 +75,7 @@ public class SortingPhasePoolManager : IAsyncObserver<PreReadPackage>, IAsyncObs
                 byte[]? buffer = buffers[_currentBuffer++];
                 ExpandingStorage<LineMemory> linesStorage = RentLinesStorage();
 
-                await Log($"New bytes buffer was rented, last package will be {_packageNumber + 1}");
+                await Log($"New bytes buffer was rented, last package will be {_packageNumber + 1}").ConfigureAwait(false);
                 return (true,
                     new ReadingPhasePackage(buffer!, linesStorage, Interlocked.Increment(ref _packageNumber)));
             }
@@ -106,9 +106,9 @@ public class SortingPhasePoolManager : IAsyncObserver<PreReadPackage>, IAsyncObs
 
     public async ValueTask OnNextAsync(PreReadPackage value)
     {
-        (bool ready, ReadingPhasePackage initialPackage) = await TryAcquireNext();
+        (bool ready, ReadingPhasePackage initialPackage) = await TryAcquireNext().ConfigureAwait(false);
         if (!ready)
-            await _loadNextChunkSubject.OnErrorAsync(new InvalidOperationException("Can't acquire free array"));
+            await _loadNextChunkSubject.OnErrorAsync(new InvalidOperationException("Can't acquire free array")).ConfigureAwait(false);
 
         ReadingPhasePackage package = initialPackage with { PrePopulatedBytesLength = value.RemainedBytesLength };
         value.RemainedBytes.CopyTo(package.RowData, 0);
@@ -116,12 +116,12 @@ public class SortingPhasePoolManager : IAsyncObserver<PreReadPackage>, IAsyncObs
         if (value.RemainedBytes.Length > 0)
             ArrayPool<byte>.Shared.Return(value.RemainedBytes);
 
-        await _loadNextChunkSubject.OnNextAsync(package);
+        await _loadNextChunkSubject.OnNextAsync(package).ConfigureAwait(false);
     }
 
     public async ValueTask OnNextAsync(AfterSortingPhasePackage package)
     {
-        await Log($"Returning AfterSortingPhasePackage {package.PackageNumber}, now the package is: {_packageNumber}");
+        await Log($"Returning AfterSortingPhasePackage {package.PackageNumber}, now the package is: {_packageNumber}").ConfigureAwait(false);
         
         ReleaseBuffer(package.ParsedRecords);
         ReleaseBuffer(package.RowData);
@@ -180,10 +180,10 @@ public class SortingPhasePoolManager : IAsyncObserver<PreReadPackage>, IAsyncObs
 
     public async ValueTask LetsStart()
     {
-        var (ready, package) = await TryAcquireNext();
+        var (ready, package) = await TryAcquireNext().ConfigureAwait(false);
         if (ready)
         {
-            await _loadNextChunkSubject.OnNextAsync(package);
+            await _loadNextChunkSubject.OnNextAsync(package).ConfigureAwait(false);
         }
         else
         {

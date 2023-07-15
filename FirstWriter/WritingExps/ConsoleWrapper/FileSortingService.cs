@@ -25,9 +25,151 @@ internal class FileSortingService : IHostedService
 
    public async Task StartAsync(CancellationToken cancellationToken)
    {
-      await ViaIObservable(cancellationToken);
+      Stopwatch sw1 = Stopwatch.StartNew();
+      
+      var final = await ViaIObservable(cancellationToken);
+      
+      sw1.Stop();
+      Console.ForegroundColor = ConsoleColor.Green;
+      Console.WriteLine(final.Success
+         ? $"---> Success - {sw1.Elapsed.TotalMinutes} min, {sw1.Elapsed.Seconds} sec; " +
+           $"Total: {sw1.Elapsed.TotalSeconds} sec, {sw1.Elapsed.TotalMilliseconds} ms"
+         : $"---> Error: {final.Message}");
+
+      Console.ReadLine();
+      
       return;
 
+      await FirstHardCodedApproach(cancellationToken);
+   }
+   public async Task StopAsync(CancellationToken cancellationToken)
+   {
+      //todo
+      Console.WriteLine("Bye service");
+      await Task.Delay(2);
+   }
+
+   private async Task<Result> ViaIObservable(CancellationToken cancellationToken)
+   {
+      InputParametersValidator inputParametersValidator = new InputParametersValidator();
+      (bool canContinue, ValidatedInputParameters validInput) = inputParametersValidator.CheckInputParameters(_input);
+
+      if (!canContinue)
+         return Result.Error("Error");
+
+      Console.WriteLine("--> Ready to start");
+      var r = Console.ReadLine();
+
+      IEnvironmentAnalyzer analyzer = new EnvironmentAnalyzer(_baseOptions);
+      IConfig configuration = analyzer.SuggestConfig(validInput);
+
+      //only for demonstration, use NLog, Serilog, ... in real projects
+      // ILogger logger = Logger.Create(cancellationToken);
+      ILogger logger = Logger.CreateEmpty(cancellationToken);
+
+      // await logger.LogAsync($"Started at {DateTime.UtcNow:s}");
+
+      SemaphoreSlim semaphore = new SemaphoreSlim(0, 1);
+
+      await SortingPhase(cancellationToken, configuration, validInput, semaphore, logger);
+
+      Console.WriteLine("After sorting phase");
+
+      
+      Console.WriteLine("----->  Awaiting semaphore");
+      await semaphore.WaitAsync(cancellationToken);
+      
+      Console.WriteLine("<---- Semaphore passed");
+      var result = await MergingPhase(cancellationToken, configuration, logger);
+      
+      Console.WriteLine("******* Final ********");
+
+      return result;
+   }
+
+   private static async Task<Result> MergingPhase(CancellationToken cancellationToken, IConfig configuration,
+      ILogger logger)
+   {
+      // Console.WriteLine("_____ Before merging");
+      using ILinesWriter resultWriter =
+         RecordsWriter.Create(configuration.Output, configuration.Encoding.GetBytes(".").Length, logger);
+      StreamsMergeExecutor merger = new StreamsMergeExecutor(configuration, resultWriter);
+
+      var result = await merger.MergeWithOrder();
+
+      // Console.WriteLine("--- After merging");
+      return result;
+   }
+
+   private async Task SortingPhase(CancellationToken cancellationToken, IConfig configuration,
+      ValidatedInputParameters validInput, SemaphoreSlim semaphore, ILogger logger)
+   {
+      ObservableRecordsExtractor extractor = new ObservableRecordsExtractor(
+         configuration.Encoding.GetBytes(Environment.NewLine),
+         configuration.Encoding.GetBytes(Constants.Delimiter), logger, cancellationToken);
+
+      IntermediateResultsDirector chunksDirector =
+         IntermediateResultsDirector.Create(configuration, logger, cancellationToken);
+
+      await using IBytesProducer bytesReader =
+         new LongFileReader(validInput.File, configuration.Encoding, logger, cancellationToken);
+      BunchOfLinesSorter sorter = new BunchOfLinesSorter(logger);
+
+      using SortingPhasePoolManager sortingPhasePoolManager = new SortingPhasePoolManager(3,
+         configuration.InputBufferLength,
+         configuration.RecordsBufferLength, logger, cancellationToken);
+
+      await using var s1 = await sortingPhasePoolManager.LoadNextChunk.SubscribeAsync(bytesReader);
+      await using var s2 = await bytesReader.NextChunkPrepared.SubscribeAsync(extractor);
+
+      await using var s3 = await extractor.ReadyForSorting.SubscribeAsync(sorter);
+      await using var s4 = await extractor.ReadyForNextChunk.SubscribeAsync(sortingPhasePoolManager);
+      await using var s5 = await sorter.SortingCompleted.SubscribeAsync(chunksDirector);
+      await using var s6 = await chunksDirector.SortedLinesSaved.SubscribeSafeAsync(sortingPhasePoolManager);
+
+      await using var s7 = await chunksDirector.SortedLinesSaved.SubscribeAsync(
+         b => { },
+         e => HandleError(e),
+         () =>
+         {
+            Console.WriteLine("--->  Before GC");
+            MemoryCleaner.CleanMemory();
+            Console.WriteLine("<---  After GC");
+            
+            Console.WriteLine("Releasing semaphore");
+            semaphore.Release();
+            Console.WriteLine("Semaphore released");
+            StartMerge();
+         }
+      );
+
+      await sortingPhasePoolManager.LetsStart();
+   }
+
+   private void HandleError(Exception exception)
+   {
+      var color = Console.ForegroundColor;
+      try
+      {
+         Console.ForegroundColor = ConsoleColor.DarkRed;
+         Console.WriteLine(exception.Message);
+         Console.WriteLine(exception.ToString());
+         Console.WriteLine(exception.StackTrace);
+      }
+      finally
+      {
+         Console.ForegroundColor = color;
+      }
+      
+   }
+
+   private void StartMerge()
+   {
+      Console.WriteLine("---> Ready for merge! <---");
+   }
+
+   private async Task FirstHardCodedApproach(CancellationToken cancellationToken)
+   {
       InputParametersValidator inputParametersValidator = new InputParametersValidator();
       (bool canContinue, ValidatedInputParameters validInput) = inputParametersValidator.CheckInputParameters(_input);
 
@@ -43,7 +185,7 @@ internal class FileSortingService : IHostedService
       StreamsMergeExecutor merger = new StreamsMergeExecutor(configuration);
       Logger logger = Logger.Create(cancellationToken);
       IntermediateResultsDirector chunksDirector =
-         IntermediateResultsDirector.Create(configuration.TemporaryFolder, logger, cancellationToken);
+         IntermediateResultsDirector.Create(configuration, logger, cancellationToken);
       await using ResultWriter resultWriter = ResultWriter.Create(configuration.Output, logger, cancellationToken);
 
       merger.OutputBufferFull += (o, eventArgs) =>
@@ -79,7 +221,6 @@ internal class FileSortingService : IHostedService
          MemoryCleaner.CleanMemory();
          memory = GC.GetTotalMemory(false);
          Console.WriteLine($"Memory after GC {memory}");
-
       }
 
       var memory2 = GC.GetTotalMemory(false);
@@ -94,99 +235,4 @@ internal class FileSortingService : IHostedService
       await Task.Delay(2);
    }
 
-   public async Task StopAsync(CancellationToken cancellationToken)
-   {
-      //todo
-      Console.WriteLine("Bye service");
-      await Task.Delay(2);
-   }
-
-   private async Task ViaIObservable(CancellationToken cancellationToken)
-   {
-      InputParametersValidator inputParametersValidator = new InputParametersValidator();
-      (bool canContinue, ValidatedInputParameters validInput) = inputParametersValidator.CheckInputParameters(_input);
-
-      if (!canContinue)
-         return;
-
-      Console.WriteLine("--> Ready to start");
-      var r = Console.ReadLine();
-
-      IEnvironmentAnalyzer analyzer = new EnvironmentAnalyzer(_baseOptions);
-      IConfig configuration = analyzer.SuggestConfig(validInput);
-
-      //only for demonstration, use NLog, Serilog, ... in real projects
-      Logger logger = Logger.Create(cancellationToken);
-
-      await logger.LogAsync($"Started at {DateTime.UtcNow:s}");
-
-      SortingPhase(cancellationToken, configuration, logger, validInput).GetAwaiter().GetResult();
-
-      Console.WriteLine("After sorting phase");
-      Console.ReadLine();
-      await MergingPhase(cancellationToken, configuration, logger);
-      
-      Console.WriteLine("******* Final ********");
-      Console.ReadLine();
-   }
-
-   private static async Task MergingPhase(CancellationToken cancellationToken, IConfig configuration, Logger logger)
-   {
-      Console.WriteLine("_____ Before merging");
-      await using ResultWriter resultWriter = ResultWriter.Create(configuration.Output, logger, cancellationToken);
-      StreamsMergeExecutor merger = new StreamsMergeExecutor(configuration);
-      Console.WriteLine("--- Last line");
-   }
-
-   private async Task SortingPhase(CancellationToken cancellationToken, IConfig configuration, Logger logger,
-      ValidatedInputParameters validInput)
-   {
-      ObservableRecordsExtractor extractor = new ObservableRecordsExtractor(
-         configuration.Encoding.GetBytes(Environment.NewLine),
-         configuration.Encoding.GetBytes(Constants.Delimiter), logger, cancellationToken);
-
-      IntermediateResultsDirector chunksDirector =
-         IntermediateResultsDirector.Create(configuration.TemporaryFolder, logger, cancellationToken);
-
-      await using IBytesProducer bytesReader =
-         new LongFileReader(validInput.File, validInput.Encoding, logger, cancellationToken);
-      BunchOfLinesSorter sorter = new BunchOfLinesSorter(logger);
-
-      using SortingPhasePoolManager sortingPhasePoolManager = new SortingPhasePoolManager(3,
-         configuration.InputBufferLength,
-         configuration.RecordsBufferLength, logger, cancellationToken);
-
-      await using var s1 = await sortingPhasePoolManager.LoadNextChunk.SubscribeAsync(bytesReader);
-      await using var s2 = await bytesReader.NextChunkPrepared.SubscribeAsync(extractor);
-
-      await using var s3 = await extractor.ReadyForSorting.SubscribeAsync(sorter);
-      await using var s4 = await extractor.ReadyForNextChunk.SubscribeAsync(sortingPhasePoolManager);
-      await using var s5 = await sorter.SortingCompleted.SubscribeAsync(chunksDirector);
-      await using var s6 = await chunksDirector.SortedLinesSaved.SubscribeSafeAsync(sortingPhasePoolManager);
-
-      await using var s7 = await chunksDirector.SortedLinesSaved.SubscribeAsync(
-         b => { },
-         e => HandleError(e),
-         () =>
-         {
-            Console.WriteLine("--->  Before GC");
-            Console.ReadLine();
-            MemoryCleaner.CleanMemory();
-            Console.WriteLine("<---  After GC");
-            Console.ReadLine();
-            StartMerge();
-         }
-      );
-
-      await sortingPhasePoolManager.LetsStart();
-   }
-
-   private void HandleError(Exception exception)
-   {
-   }
-
-   private void StartMerge()
-   {
-      Console.WriteLine("---> Ready for merge! <---");
-   }
 }

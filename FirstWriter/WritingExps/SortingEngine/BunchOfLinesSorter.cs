@@ -10,12 +10,12 @@ namespace SortingEngine;
 
 public class BunchOfLinesSorter : IAsyncObserver<SortingPhasePackage>
 {
-    private readonly Logger _logger;
+    private readonly ILogger _logger;
 
     private readonly SimpleAsyncSubject<AfterSortingPhasePackage> _sortingCompletedSubject =
         new SequentialSimpleAsyncSubject<AfterSortingPhasePackage>();
 
-    public BunchOfLinesSorter(Logger logger)
+    public BunchOfLinesSorter(ILogger logger)
     {
         _logger = Guard.NotNull(logger);
     }
@@ -37,38 +37,42 @@ public class BunchOfLinesSorter : IAsyncObserver<SortingPhasePackage>
     public async ValueTask OnNextAsync(SortingPhasePackage inputPackage)
     {
         await Log(
-            $"Processing package: {inputPackage.PackageNumber}, lines: {inputPackage.LinesNumber}, " +
-            $"bytes: {inputPackage.RowData.Length},linesBuffer: {inputPackage.ParsedRecords.CurrentCapacity} ");
+                $"Processing package: {inputPackage.PackageNumber}, lines: {inputPackage.LinesNumber}, " +
+                $"bytes: {inputPackage.RowData.Length},linesBuffer: {inputPackage.ParsedRecords.CurrentCapacity} ")
+            .ConfigureAwait(false);
         await Task.Factory.StartNew<Task<bool>>(async (state) =>
-            {
-                if (state == null) throw new ArgumentNullException(nameof(state));
+                {
+                    if (state == null) throw new ArgumentNullException(nameof(state));
 
-                SortingPhasePackage package = (SortingPhasePackage)state;
-                ReadOnlyMemory<byte> inputBytes = package.RowData.AsMemory()[..package.OccupiedLength];
-                LineMemory[] sorted = SortRecords(inputBytes, package.LinesNumber, package.ParsedRecords);
+                    SortingPhasePackage package = (SortingPhasePackage)state;
+                    ReadOnlyMemory<byte> inputBytes = package.RowData.AsMemory()[..package.OccupiedLength];
+                    LineMemory[] sorted = SortRecords(inputBytes, package.LinesNumber, package.ParsedRecords);
 
-                await Log($"Sorted {sorted.Length} lines for the package: {package.PackageNumber}");
-                await _sortingCompletedSubject.OnNextAsync(new AfterSortingPhasePackage(sorted, package.RowData,
-                    package.ParsedRecords, package.LinesNumber, package.PackageNumber));
-                return true;
-            }, inputPackage, CancellationToken.None,
-            TaskCreationOptions.LongRunning | TaskCreationOptions.PreferFairness, TaskScheduler.Default);
+                    await Log($"Sorted {sorted.Length} lines for the package: {package.PackageNumber}")
+                        .ConfigureAwait(false);
+                    await _sortingCompletedSubject.OnNextAsync(new AfterSortingPhasePackage(sorted, package.RowData,
+                            package.ParsedRecords, package.LinesNumber, package.PackageNumber, package.IsLastPackage))
+                        .ConfigureAwait(false);
+                    return true;
+                }, inputPackage, CancellationToken.None,
+                TaskCreationOptions.LongRunning | TaskCreationOptions.PreferFairness, TaskScheduler.Default)
+            .ConfigureAwait(false);
     }
 
     public async ValueTask OnErrorAsync(Exception error)
     {
-        await _sortingCompletedSubject.OnCompletedAsync();
+        await _sortingCompletedSubject.OnCompletedAsync().ConfigureAwait(false);
     }
 
     public async ValueTask OnCompletedAsync()
     {
-        await _sortingCompletedSubject.OnCompletedAsync();
+        await _sortingCompletedSubject.OnCompletedAsync().ConfigureAwait(false);
     }
-    
+
     private async ValueTask Log(string message)
     {
         //in the real projects it will be structured logs
-        string prefix = $"Class: {this.GetType()}, at: {DateTime.UtcNow:hh:mm:ss-fff} ";
-        await _logger.LogAsync(prefix + message);
+        string prefix = $"Class: {GetType()}, at: {DateTime.UtcNow:hh:mm:ss-fff} ";
+        await _logger.LogAsync(prefix + message).ConfigureAwait(false);
     }
 }
