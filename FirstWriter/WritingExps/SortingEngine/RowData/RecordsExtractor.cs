@@ -126,7 +126,7 @@ namespace SortingEngine.RowData
                   //todo encoding
                   chars[j] = (char)lineSpan[j];
                }
-               var success = long.TryParse(chars, out long number);
+               var success = ulong.TryParse(chars, out ulong number);
                //todo !success
                return new LineRecord(number, lineSpan[(i + 2)..].ToArray());
             }

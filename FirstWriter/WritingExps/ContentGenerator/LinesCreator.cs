@@ -85,7 +85,7 @@ public class LinesCreator:IDisposable
 
    public int NextLine(Span<byte> line)
    {
-      long number = _randomNumbers.NextInt64(0, Int64.MaxValue);
+      ulong number = (ulong)_randomNumbers.NextInt64(0, Int64.MaxValue);
       var (bytes, numberLength) = _converter.ConvertLongToBytes(number);
       for (int i = 0; i < numberLength; i++)
       {
