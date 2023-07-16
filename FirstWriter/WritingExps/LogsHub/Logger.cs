@@ -27,7 +27,8 @@ public class Logger : ILogger
 
     public async ValueTask StopAsync()
     {
-        await Task.Delay(1);
+        //todo double-check vs Task.Delay(1)
+        await Task.Yield();
         _consoleLogger.Stop();
     }
 
