@@ -121,6 +121,8 @@ public class SortingPhasePoolManager : IAsyncObserver<PreReadPackage>, IAsyncObs
         if (package.RemainedBytes.Length > 0)
             ArrayPool<byte>.Shared.Return(package.RemainedBytes);
 
+        Console.WriteLine($"-> In SortingPhasePoolManager before _loadNextChunkSubject.OnNextAsync for {nextPackage.PackageNumber}, is last: {package.IsLastPackage}");
+
         await _loadNextChunkSubject.OnNextAsync(nextPackage);
     }
 
@@ -134,7 +136,10 @@ public class SortingPhasePoolManager : IAsyncObserver<PreReadPackage>, IAsyncObs
         ArrayPool<LineMemory>.Shared.Return(package.SortedLines);
 
         if (package.IsLastPackage)
+        {
+            Console.WriteLine($"-> In SortingPhasePoolManager before _loadNextChunkSubject.OnCompletedAsync for {package.PackageNumber}, is last: {package.IsLastPackage}");
             await _loadNextChunkSubject.OnCompletedAsync();
+        }
     }
 
     private void ReleaseBuffer(ExpandingStorage<LineMemory> expandingStorage)
@@ -171,7 +176,6 @@ public class SortingPhasePoolManager : IAsyncObserver<PreReadPackage>, IAsyncObs
         Console.WriteLine($"<---->! In SortingPhasePoolManager OOnCompletedAsync thread: {Thread.CurrentThread.ManagedThreadId}");
         
         return ValueTask.CompletedTask;
-        return _loadNextChunkSubject.OnCompletedAsync();
     }
 
     public void Dispose()
@@ -195,6 +199,7 @@ public class SortingPhasePoolManager : IAsyncObserver<PreReadPackage>, IAsyncObs
         var (ready, package) = await TryAcquireNext();
         if (ready)
         {
+            Console.WriteLine($"-> In SortingPhasePoolManager LetsStart before _loadNextChunkSubject.OnNextAsync for {package.PackageNumber}, is last: {package.IsLastPackage}");
             await _loadNextChunkSubject.OnNextAsync(package);
         }
         else

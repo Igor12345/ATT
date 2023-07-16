@@ -98,7 +98,7 @@ public class RecordsWriter : ILinesWriter, IAsyncDisposable
          }
          _syncFileStream.Flush();
          
-         Console.WriteLine($"----> Saved {linesNumber} lines, from {initPosition} to {_syncFileStream.Position}");
+         // Console.WriteLine($"----> Saved {linesNumber} lines, from {initPosition} to {_syncFileStream.Position}");
          if (rented != null)
             ArrayPool<byte>.Shared.Return(rented);
          return Result.Ok;

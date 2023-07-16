@@ -54,7 +54,7 @@ ITextCreator utf32 = new TextConvertor(creator, Encoding.UTF32);
 Console.WriteLine("Creating first big file");
 
 string fileName = "first";
-long lines = 3_000_000;
+long lines = 4_000_042;
 // await using(InfoLogger logger = new InfoLogger(fileName, $"{Encoding.UTF8.BodyName} - {lines}"))
 // {
 //    FirstExecutor firstExecutor = new FirstExecutor(fileName, lines);
@@ -84,7 +84,7 @@ long lines = 3_000_000;
 Console.WriteLine("________________________________________________________________________________");
 
 Console.WriteLine("Creating fourth big file");
-fileName = "onlyLetters_middle2";
+fileName = "onlyLetters_middle4";
 using (InfoLogger logger = new InfoLogger(fileName, $"{Encoding.UTF8.BodyName} - {lines}"))
 {
    FourthExecutor fourthExecutor = new FourthExecutor(fileName, lines);

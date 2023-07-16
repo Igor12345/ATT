@@ -124,20 +124,12 @@ internal class LongFileReader : IBytesProducer, IAsyncDisposable
       if (result.Size == 0)
       {
          await Log($"Sending the last package: {inputPackage.PackageNumber} !!!");
-         await SendLastPackageAsync(inputPackage);
       }
 
       var nextPackage = result.Size == 0
          ? inputPackage with { IsLastPackage = true }
          : inputPackage with { ReadBytesLength = result.Size };
       return nextPackage;
-   }
-
-   private async ValueTask SendLastPackageAsync(ReadingPhasePackage package)
-   {
-      await Log($"Sending the last package: {package.PackageNumber} !!!");
-      var nextPackage = package with { IsLastPackage = true};
-      // await _nextChunkPreparedSubject.OnNextAsync(nextPackage);
    }
 
    // public ValueTask OnErrorAsync(Exception error)
