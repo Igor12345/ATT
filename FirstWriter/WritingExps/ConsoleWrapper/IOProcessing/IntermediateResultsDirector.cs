@@ -76,7 +76,7 @@ internal class IntermediateResultsDirector: IAsyncObserver<AfterSortingPhasePack
 
    public IAsyncObservable<AfterSortingPhasePackage> SortedLinesSaved => _sortedLinesSavedSubject;
 
-   public async ValueTask ProcessPackage(AfterSortingPhasePackage package)
+   public async ValueTask<AfterSortingPhasePackage> ProcessPackage(AfterSortingPhasePackage package)
    {
       await Log(
          $"Processing package: {package.PackageNumber}(last - {package.IsLastPackage}), " +
@@ -95,9 +95,11 @@ internal class IntermediateResultsDirector: IAsyncObserver<AfterSortingPhasePack
       if (allProcessed)
       {
          Console.WriteLine(
-            $"All packages processed after {package.PackageNumber}, thread {Thread.CurrentThread.ManagedThreadId}");
+            $"<__________> All packages processed after {package.PackageNumber}, closing SortedLinesSaved !!!, thread {Thread.CurrentThread.ManagedThreadId}");
          await _sortedLinesSavedSubject.OnCompletedAsync();
       }
+
+      return package;
    }
 
    public async ValueTask OnNextAsync(AfterSortingPhasePackage inputPackage)

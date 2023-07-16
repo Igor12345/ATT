@@ -75,7 +75,7 @@ public class SortingPhasePoolManager : IAsyncObserver<PreReadPackage>, IAsyncObs
                 byte[]? buffer = buffers[_currentBuffer++];
                 ExpandingStorage<LineMemory> linesStorage = RentLinesStorage();
 
-                await Log($"New bytes buffer was rented, last package will be {_packageNumber + 1}");
+                await Log($"New bytes buffer has been rented, this package is {_packageNumber + 1}");
                 return (true,
                     new ReadingPhasePackage(buffer!, linesStorage, Interlocked.Increment(ref _packageNumber)));
             }
@@ -104,28 +104,37 @@ public class SortingPhasePoolManager : IAsyncObserver<PreReadPackage>, IAsyncObs
         _lineStorages.Push(storage);
     }
 
-    public async ValueTask OnNextAsync(PreReadPackage value)
+    public async ValueTask OnNextAsync(PreReadPackage package)
     {
+        Console.WriteLine($"-> In SortingPhasePoolManager OnNextAsync PreReadPackage for {package.PackageNumber}, is last: {package.IsLastPackage}");
+        
+        if(package.IsLastPackage)
+            return;
+        
         (bool ready, ReadingPhasePackage initialPackage) = await TryAcquireNext();
         if (!ready)
             await _loadNextChunkSubject.OnErrorAsync(new InvalidOperationException("Can't acquire free array"));
 
-        ReadingPhasePackage package = initialPackage with { PrePopulatedBytesLength = value.RemainedBytesLength };
-        value.RemainedBytes.CopyTo(package.RowData, 0);
+        ReadingPhasePackage nextPackage = initialPackage with { PrePopulatedBytesLength = package.RemainedBytesLength };
+        package.RemainedBytes.CopyTo(nextPackage.RowData, 0);
 
-        if (value.RemainedBytes.Length > 0)
-            ArrayPool<byte>.Shared.Return(value.RemainedBytes);
+        if (package.RemainedBytes.Length > 0)
+            ArrayPool<byte>.Shared.Return(package.RemainedBytes);
 
-        await _loadNextChunkSubject.OnNextAsync(package);
+        await _loadNextChunkSubject.OnNextAsync(nextPackage);
     }
 
     public async ValueTask OnNextAsync(AfterSortingPhasePackage package)
     {
+        Console.WriteLine($"-->! In SortingPhasePoolManager OnNextAsync AfterSortingPhasePackage for {package.PackageNumber}");
         await Log($"Returning AfterSortingPhasePackage {package.PackageNumber}, now the package is: {_packageNumber}");
         
         ReleaseBuffer(package.ParsedRecords);
         ReleaseBuffer(package.RowData);
         ArrayPool<LineMemory>.Shared.Return(package.SortedLines);
+
+        if (package.IsLastPackage)
+            await _loadNextChunkSubject.OnCompletedAsync();
     }
 
     private void ReleaseBuffer(ExpandingStorage<LineMemory> expandingStorage)
@@ -159,7 +168,8 @@ public class SortingPhasePoolManager : IAsyncObserver<PreReadPackage>, IAsyncObs
 
     public ValueTask OnCompletedAsync()
     {
-        Console.WriteLine($"<-- Completed in manager thread: {Thread.CurrentThread.ManagedThreadId}");
+        Console.WriteLine($"<---->! In SortingPhasePoolManager OOnCompletedAsync thread: {Thread.CurrentThread.ManagedThreadId}");
+        
         return ValueTask.CompletedTask;
         return _loadNextChunkSubject.OnCompletedAsync();
     }
