@@ -15,8 +15,13 @@ public record ReadingPhasePackage(byte[] RowData, ExpandingStorage<LineMemory> P
 }
 
 public record PreReadPackage(
-    byte[] RemainedBytes, 
-    int RemainedBytesLength);
+    byte[] RemainedBytes,
+    int RemainedBytesLength,
+    int PackageNumber,
+    bool IsLastPackage)
+{
+    public static PreReadPackage LastPackage(int packageNumber) => new PreReadPackage(Array.Empty<byte>(), 0, packageNumber, true);
+};
 
 public record SortingPhasePackage(
     byte[] RowData,

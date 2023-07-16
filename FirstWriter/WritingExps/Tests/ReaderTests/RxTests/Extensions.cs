@@ -45,43 +45,52 @@ public static class Extensions
             }
         );
     }
-    public static IObserver<T> PrintSync<T>(string name)
+    public static IObserver<T> PrintSync<T>(string name, ITestOutputHelper? testOutputHelper = null,
+        SemaphoreSlim? semaphore = null)
     {
         return Observer.Create<T>(
             x =>
             {
-                Debug.WriteLine($"OnNext from {name} ({Thread.CurrentThread.ManagedThreadId}): {x}");
+                testOutputHelper?.WriteLine($"OnNext from {name} ({Thread.CurrentThread.ManagedThreadId}): {x}");
                 Console.WriteLine($"OnNext from {name} ({Thread.CurrentThread.ManagedThreadId}): {x}");
             },
              ex =>
             {
-                Debug.WriteLine($"Error by {name} ({Thread.CurrentThread.ManagedThreadId}): {ex}");
+                testOutputHelper?.WriteLine($"Error by {name} ({Thread.CurrentThread.ManagedThreadId}): {ex}");
                 Console.WriteLine($"Error by {name} ({Thread.CurrentThread.ManagedThreadId}): {ex}");
+                semaphore?.Release();
             },
              () =>
             {
-                Debug.WriteLine($"Completed in {name} ({Thread.CurrentThread.ManagedThreadId})");
+                testOutputHelper?.WriteLine($"Completed in {name} ({Thread.CurrentThread.ManagedThreadId})");
                 Console.WriteLine($"Completed in {name} ({Thread.CurrentThread.ManagedThreadId})");
+                semaphore?.Release();
             }
         );
     }
 
-    public static IAsyncObserver<T> Print<T>(string name)
+    public static IAsyncObserver<T> Print<T>(string name, ITestOutputHelper? testOutputHelper = null,
+        SemaphoreSlim? semaphore = null)
     {
         return AsyncObserver.Create<T>(
             x =>
             {
+                testOutputHelper?.WriteLine($"OnNext from {name} ({Thread.CurrentThread.ManagedThreadId}): {x}");
                 Console.WriteLine($"OnNext from {name} ({Thread.CurrentThread.ManagedThreadId}): {x}");
                 return default;
             },
             ex =>
             {
+                testOutputHelper?.WriteLine($"Error by {name} ({Thread.CurrentThread.ManagedThreadId}): {ex}");
                 Console.WriteLine($"Error by {name} ({Thread.CurrentThread.ManagedThreadId}): {ex}");
+                semaphore?.Release();
                 return default;
             },
             () =>
             {
+                testOutputHelper?.WriteLine($"Completed in {name} ({Thread.CurrentThread.ManagedThreadId})");
                 Console.WriteLine($"Completed in {name} ({Thread.CurrentThread.ManagedThreadId})");
+                semaphore?.Release();
                 return default;
             }
         );

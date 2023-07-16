@@ -110,7 +110,9 @@ internal class FileSortingService : IHostedService
       IntermediateResultsDirector chunksDirector =
          IntermediateResultsDirector.Create(configuration, logger, cancellationToken);
 
-      await using IBytesProducer bytesReader =
+      //todo!!!
+      // await using 
+         IBytesProducer bytesReader =
          new LongFileReader(validInput.File, configuration.Encoding, logger, cancellationToken);
       BunchOfLinesSorter sorter = new BunchOfLinesSorter(logger);
 
@@ -118,44 +120,88 @@ internal class FileSortingService : IHostedService
          configuration.InputBufferLength,
          configuration.RecordsBufferLength, logger, cancellationToken);
 
-      await using var s1 = await sortingPhasePoolManager.LoadNextChunk.SubscribeAsync(bytesReader);
-      sortingPhasePoolManager.LoadNextChunk
-         .Select(async p => await bytesReader.ProcessPackage(p))
-         .Select(async p => await extractor.ExtractNext(p))
-         .SelectMany(async p => AsyncObservable.FromAsync(async t => await sorter.ProcessPackage(p)))
-         .Select(async p => await chunksDirector.ProcessPackage(p))
-         .SubscribeAsync(
-            p => { },
-            ex => { },
-            () => { }
-         );
-         
-      await using var s2 = await bytesReader.NextChunkPrepared.SubscribeAsync(extractor);
-
-      await using var s3 = await extractor.ReadyForSorting.SubscribeAsync(sorter);
-      await using var s4 = await extractor.ReadyForNextChunk.SubscribeAsync(sortingPhasePoolManager);
-      await using var s5 = await sorter.SortingCompleted.SubscribeAsync(chunksDirector);
+      // await using var s1 = await sortingPhasePoolManager.LoadNextChunk.SubscribeAsync(bytesReader);
+      
+      // await using var s4 = await extractor.ReadyForNextChunk.SubscribeAsync(sortingPhasePoolManager);
       await using var s6 = await chunksDirector.SortedLinesSaved.SubscribeAsync(sortingPhasePoolManager);
 
-      await using var s7 = await chunksDirector.SortedLinesSaved.SubscribeAsync(
-         p =>
-         {
-            Console.WriteLine(
-               $"--> Process package {p.PackageNumber} on thread: {Thread.CurrentThread.ManagedThreadId} ");
-         },
-         e => HandleError(e),
-         () =>
-         {
-            Console.WriteLine("--->  Before GC");
-            MemoryCleaner.CleanMemory();
-            Console.WriteLine("<---  After GC");
-            
-            Console.WriteLine("Releasing semaphore");
-            semaphore.Release();
-            Console.WriteLine("Semaphore released");
-            StartMerge();
-         }
-      );
+      var published = sortingPhasePoolManager.LoadNextChunk
+         .Select(async p => await bytesReader.ProcessPackage(p))
+         .Select(async p => await extractor.ExtractNext(p))
+         .Publish();
+
+      var backSeq = await published.Select(pp => pp.Item2)
+         .Select(async p => await sortingPhasePoolManager.OnNextAsync(p))
+         .SubscribeAsync(
+            (p) =>
+            {
+               Console.WriteLine($"OnNext in subscription ReadyForNextChunk");
+            },
+            ex =>
+            {
+               //todo
+            },
+            () => { 
+               Console.WriteLine($"OnCompleted in subscription ReadyForNextChunk");}
+         );
+
+      var sortingSeq = await published
+         .Select(pp => pp.Item1)
+         .Select(p => AsyncObservable.FromAsync(async () => await sorter.ProcessPackage(p)))
+         .Merge()
+         .Select(async p => await chunksDirector.ProcessPackage(p))
+         .SubscribeAsync(
+            p =>
+            {
+               Console.WriteLine($"sortingPhasePoolManager.LoadNextChunk processed package: {p.PackageNumber}");
+            },
+            ex =>
+            {
+               semaphore.Release();
+            },
+            () =>
+            {
+               Console.WriteLine($"sortingPhasePoolManager.LoadNextChunk completed");
+
+               Console.WriteLine("--->  Before GC");
+               MemoryCleaner.CleanMemory();
+               Console.WriteLine("<---  After GC");
+
+               Console.WriteLine("Releasing semaphore");
+               semaphore.Release();
+               Console.WriteLine("Semaphore released");
+               StartMerge();
+            }
+         );
+
+      await published.ConnectAsync();
+
+      Console.WriteLine("All subscriptions ready");
+      await sortingPhasePoolManager.LetsStart();
+         
+      // await using var s2 = await bytesReader.NextChunkPrepared.SubscribeAsync(extractor);
+      // await using var s3 = await extractor.ReadyForSorting.SubscribeAsync(sorter);
+      // await using var s5 = await sorter.SortingCompleted.SubscribeAsync(chunksDirector);
+
+      // await using var s7 = await chunksDirector.SortedLinesSaved.SubscribeAsync(
+      //    p =>
+      //    {
+      //       Console.WriteLine(
+      //          $"--> Process package {p.PackageNumber} on thread: {Thread.CurrentThread.ManagedThreadId} ");
+      //    },
+      //    e => HandleError(e),
+      //    () =>
+      //    {
+      //       Console.WriteLine("--->  Before GC");
+      //       MemoryCleaner.CleanMemory();
+      //       Console.WriteLine("<---  After GC");
+      //       
+      //       Console.WriteLine("Releasing semaphore");
+      //       semaphore.Release();
+      //       Console.WriteLine("Semaphore released");
+      //       StartMerge();
+      //    }
+      // );
 
       await sortingPhasePoolManager.LetsStart();
    }

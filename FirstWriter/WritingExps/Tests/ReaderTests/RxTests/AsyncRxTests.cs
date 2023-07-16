@@ -4,6 +4,7 @@ using System.Reactive;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using Xunit.Abstractions;
+using Xunit.Sdk;
 
 namespace ReaderTests;
 
@@ -29,27 +30,38 @@ public class AsyncRxTests
         //     .Select(v => AnotherWork(v))
         //     .SubscribeAsync(Extensions.PrintAsync<int>("first"));
         
-        
-        //!!!!!!!!!!!!!! WORKING !!!!!!!!!!!!!!!
-        //parallel execution!!!
-        var t2 = await AsyncObservable.Range(0, 10)
+        SynchronizationContext context = new MaxConcurrencySyncContext(2);
+        var t1 = await AsyncObservable.Range(0, 10)
+            // .ObserveOn(new SynchronizationContextAsyncScheduler(context))
             .Select(i => AsyncObservable.FromAsync(async () => await LongWork(i, 22)))
             // .ObserveOn(new SynchronizationContextAsyncScheduler())
             .Merge()
             // .Do(v => AnotherWork2(v))
             .Select(v => AnotherSyncWork(v))
             .Select(v => AnotherWork(v))
-            .SubscribeAsync(Extensions.PrintAsync<int>("first", _testOutputHelper, semaphore));
+            .SubscribeAsync(Extensions.Print<int>("first", _testOutputHelper, semaphore));
 
-        //single sequence!!!
-        var t3 = await AsyncObservable.Range(0, 10)
-            // .Select(i => AsyncObservable.FromAsync(async () => await LongWork(i, 22)))
-            .Select(async i => await LongWork(i, 22))
-            // .Merge()
-            // .Do(v => AnotherWork2(v))
-            .Select(v => AnotherSyncWork(v))
-            .Select(async v => await AnotherWork(v))
-            .SubscribeAsync(Extensions.PrintAsync<int>("first", _testOutputHelper, semaphore));
+        
+        //!!!!!!!!!!!!!! WORKING !!!!!!!!!!!!!!!
+        //parallel execution!!!
+        // var t2 = await AsyncObservable.Range(0, 10)
+        //     .Select(i => AsyncObservable.FromAsync(async () => await LongWork(i, 22)))
+        //     // .ObserveOn(new SynchronizationContextAsyncScheduler())
+        //     .Merge()
+        //     // .Do(v => AnotherWork2(v))
+        //     .Select(v => AnotherSyncWork(v))
+        //     .Select(v => AnotherWork(v))
+        //     .SubscribeAsync(Extensions.PrintAsync<int>("first", _testOutputHelper, semaphore));
+        //
+        // //single sequence!!!
+        // var t3 = await AsyncObservable.Range(0, 10)
+        //     // .Select(i => AsyncObservable.FromAsync(async () => await LongWork(i, 22)))
+        //     .Select(async i => await LongWork(i, 22))
+        //     // .Merge()
+        //     // .Do(v => AnotherWork2(v))
+        //     .Select(v => AnotherSyncWork(v))
+        //     .Select(async v => await AnotherWork(v))
+        //     .SubscribeAsync(Extensions.PrintAsync<int>("first", _testOutputHelper, semaphore));
 
 
         // var t4 = await AsyncObservable.Range(0, 10)
@@ -138,8 +150,9 @@ public class AsyncRxTests
 
     private async ValueTask<T> AnotherWork<T>((T, int) valueTuple)
     {
-        await Task.Yield();
-        _testOutputHelper.WriteLine($"AnotherWork Processing {valueTuple.Item1} in ({Thread.CurrentThread.ManagedThreadId}), earlier was: {valueTuple.Item2}");
+        _testOutputHelper.WriteLine($"AnotherWork Processing {valueTuple.Item1} entered in ({Thread.CurrentThread.ManagedThreadId}), earlier was: {valueTuple.Item2}");
+        // await Task.Yield();
+        _testOutputHelper.WriteLine($"AnotherWork Processing {valueTuple.Item1} after yield in ({Thread.CurrentThread.ManagedThreadId}), earlier was: {valueTuple.Item2}");
         Console.WriteLine($"AnotherWork Processing {valueTuple.Item1} in ({Thread.CurrentThread.ManagedThreadId}), earlier was: {valueTuple.Item2}");
         return valueTuple.Item1;
     }
@@ -156,6 +169,18 @@ public class AsyncRxTests
         _testOutputHelper.WriteLine($"AnotherWork Processing {valueTuple.Item1} in ({Thread.CurrentThread.ManagedThreadId}), earlier was: {valueTuple.Item2}");
         Console.WriteLine($"AnotherWork Processing {valueTuple.Item1} in ({Thread.CurrentThread.ManagedThreadId}), earlier was: {valueTuple.Item2}");
         return valueTuple.Item1;
+    }
+    
+    
+    private ValueTask<(T,int)> LongSyncWork<T>(T value, int maxDelay)
+    {
+        _testOutputHelper.WriteLine($"LongWork Processing {value} in ({Thread.CurrentThread.ManagedThreadId})");
+        Console.WriteLine($"LongWork Processing {value} in ({Thread.CurrentThread.ManagedThreadId})");
+        int delay = Random.Shared.Next(0, maxDelay);
+        Task.Delay(delay).ConfigureAwait(true);
+        _testOutputHelper.WriteLine($"Value {value} was processed in ({Thread.CurrentThread.ManagedThreadId})");
+        Console.WriteLine($"Value {value} was processed in ({Thread.CurrentThread.ManagedThreadId})");
+        return ValueTask.FromResult((value, Thread.CurrentThread.ManagedThreadId));
     }
 
     private async ValueTask<(T,int)> LongWork<T>(T value, int maxDelay)

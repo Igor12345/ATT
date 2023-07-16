@@ -50,8 +50,7 @@ public class RecordsWriter : ILinesWriter, IAsyncDisposable
       CancellationToken token)
    {
       _fileStream ??= File.Open(_filePath, FileMode.Create, FileAccess.Write);
-      //todo dirty hack to support many encodings (*4)
-      IMemoryOwner<byte> buffer = MemoryPool<byte>.Shared.Rent(Constants.MaxLineLengthUtf8 * 4);
+      IMemoryOwner<byte> buffer = MemoryPool<byte>.Shared.Rent(Constants.MaxLineLengthUtf8 * _charLength);
       try
       {
          for (int i = 0; i < linesNumber; i++)
@@ -60,7 +59,8 @@ public class RecordsWriter : ILinesWriter, IAsyncDisposable
             source.Span[lines[i].From..lines[i].To].CopyTo(buffer.Memory.Span[length..]);
             await _fileStream.WriteAsync(buffer.Memory[..lines[i].To], token);
          }
-
+         await _fileStream.FlushAsync(token);
+         
          return Result.Ok;
       }
       catch (Exception e)
@@ -78,6 +78,7 @@ public class RecordsWriter : ILinesWriter, IAsyncDisposable
       _syncFileStream ??= new FileStream(_filePath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None,
          bufferSize: 4096, false);
 
+      long initPosition = _syncFileStream.Position;
       byte[]? rented = null;
       try
       {
@@ -95,6 +96,9 @@ public class RecordsWriter : ILinesWriter, IAsyncDisposable
             int fullLength = length + lines[i].To - lines[i].From;
             _syncFileStream.Write(buffer[..fullLength]);
          }
+         _syncFileStream.Flush();
+         
+         Console.WriteLine($"----> Saved {linesNumber} lines, from {initPosition} to {_syncFileStream.Position}");
          if (rented != null)
             ArrayPool<byte>.Shared.Return(rented);
          return Result.Ok;

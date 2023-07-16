@@ -8,19 +8,19 @@ using SortingEngine.Sorters;
 
 namespace SortingEngine;
 
-public class BunchOfLinesSorter : IAsyncObserver<SortingPhasePackage>
+public class BunchOfLinesSorter //: IAsyncObserver<SortingPhasePackage>
 {
     private readonly ILogger _logger;
 
-    private readonly SimpleAsyncSubject<AfterSortingPhasePackage> _sortingCompletedSubject =
-        new SequentialSimpleAsyncSubject<AfterSortingPhasePackage>();
+    // private readonly SimpleAsyncSubject<AfterSortingPhasePackage> _sortingCompletedSubject =
+    //     new SequentialSimpleAsyncSubject<AfterSortingPhasePackage>();
 
     public BunchOfLinesSorter(ILogger logger)
     {
         _logger = Guard.NotNull(logger);
     }
 
-    public IAsyncObservable<AfterSortingPhasePackage> SortingCompleted => _sortingCompletedSubject;
+    // public IAsyncObservable<AfterSortingPhasePackage> SortingCompleted => _sortingCompletedSubject;
     // public event EventHandler<SortingCompletedEventArgs>? SortingCompleted;
 
     private LineMemory[] SortRecords(ReadOnlyMemory<byte> inputBuffer, int linesNumber,
@@ -34,29 +34,30 @@ public class BunchOfLinesSorter : IAsyncObserver<SortingPhasePackage>
         return sorter.Sort(recordsStorage, linesNumber);
     }
 
-    public async ValueTask OnNextAsync(SortingPhasePackage inputPackage)
-    {
-        await Log(
-            $"Processing package: {inputPackage.PackageNumber}, lines: {inputPackage.LinesNumber}, " +
-            $"bytes: {inputPackage.RowData.Length},linesBuffer: {inputPackage.ParsedRecords.CurrentCapacity} ");
-        await Task.Factory.StartNew<Task<bool>>(async (state) =>
-            {
-                if (state == null) throw new ArgumentNullException(nameof(state));
-
-                SortingPhasePackage package = (SortingPhasePackage)state;
-                ReadOnlyMemory<byte> inputBytes = package.RowData.AsMemory()[..package.OccupiedLength];
-                LineMemory[] sorted = SortRecords(inputBytes, package.LinesNumber, package.ParsedRecords);
-
-                await Log($"Sorted {sorted.Length} lines for the package: {package.PackageNumber}");
-                await _sortingCompletedSubject.OnNextAsync(new AfterSortingPhasePackage(sorted, package.RowData,
-                    package.ParsedRecords, package.LinesNumber, package.PackageNumber, package.IsLastPackage));
-                return true;
-            }, inputPackage, CancellationToken.None,
-            TaskCreationOptions.LongRunning | TaskCreationOptions.PreferFairness, TaskScheduler.Default);
-    }
+    // public async ValueTask OnNextAsync(SortingPhasePackage inputPackage)
+    // {
+    //     await Log(
+    //         $"Processing package: {inputPackage.PackageNumber}, lines: {inputPackage.LinesNumber}, " +
+    //         $"bytes: {inputPackage.RowData.Length},linesBuffer: {inputPackage.ParsedRecords.CurrentCapacity} ");
+    //     await Task.Factory.StartNew<Task<bool>>(async (state) =>
+    //         {
+    //             if (state == null) throw new ArgumentNullException(nameof(state));
+    //
+    //             SortingPhasePackage package = (SortingPhasePackage)state;
+    //             ReadOnlyMemory<byte> inputBytes = package.RowData.AsMemory()[..package.OccupiedLength];
+    //             LineMemory[] sorted = SortRecords(inputBytes, package.LinesNumber, package.ParsedRecords);
+    //
+    //             await Log($"Sorted {sorted.Length} lines for the package: {package.PackageNumber}");
+    //             await _sortingCompletedSubject.OnNextAsync(new AfterSortingPhasePackage(sorted, package.RowData,
+    //                 package.ParsedRecords, package.LinesNumber, package.PackageNumber, package.IsLastPackage));
+    //             return true;
+    //         }, inputPackage, CancellationToken.None,
+    //         TaskCreationOptions.LongRunning | TaskCreationOptions.PreferFairness, TaskScheduler.Default);
+    // }
     
     public async Task<AfterSortingPhasePackage> ProcessPackage(SortingPhasePackage package)
     {
+        Console.WriteLine($"---> Inside Sorter for {package.PackageNumber}, is last: {package.IsLastPackage}");
         await Log(
             $"Processing package: {package.PackageNumber}, lines: {package.LinesNumber}, " +
             $"bytes: {package.RowData.Length},linesBuffer: {package.ParsedRecords.CurrentCapacity} ");
@@ -68,15 +69,15 @@ public class BunchOfLinesSorter : IAsyncObserver<SortingPhasePackage>
             package.ParsedRecords, package.LinesNumber, package.PackageNumber, package.IsLastPackage);
     }
 
-    public async ValueTask OnErrorAsync(Exception error)
-    {
-        await _sortingCompletedSubject.OnCompletedAsync();
-    }
-
-    public async ValueTask OnCompletedAsync()
-    {
-        await _sortingCompletedSubject.OnCompletedAsync();
-    }
+    // public async ValueTask OnErrorAsync(Exception error)
+    // {
+    //     await _sortingCompletedSubject.OnCompletedAsync();
+    // }
+    //
+    // public async ValueTask OnCompletedAsync()
+    // {
+    //     await _sortingCompletedSubject.OnCompletedAsync();
+    // }
 
     private async ValueTask Log(string message)
     {

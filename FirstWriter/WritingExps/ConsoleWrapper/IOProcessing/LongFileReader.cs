@@ -21,12 +21,7 @@ internal class LongFileReader : IBytesProducer, IAsyncDisposable
    private FileStream _stream;
    private long _lastPosition;
    private int _lastProcessedPackage;
-   private AsyncLock _lock;
-
-   private readonly SimpleAsyncSubject<ReadingPhasePackage> _nextChunkPreparedSubject =
-      new SequentialSimpleAsyncSubject<ReadingPhasePackage>();
-
-   public IAsyncObservable<ReadingPhasePackage> NextChunkPrepared => _nextChunkPreparedSubject;
+   private readonly AsyncLock _lock;
 
    public LongFileReader(string fullFileName, Encoding encoding, ILogger logger, CancellationToken cancellationToken)
    {
@@ -80,33 +75,33 @@ internal class LongFileReader : IBytesProducer, IAsyncDisposable
       return _stream?.DisposeAsync() ?? ValueTask.CompletedTask;
    }
 
-   public async ValueTask OnNextAsync(ReadingPhasePackage inputPackage)
-   {
-      await Log($"Processing package: {inputPackage.PackageNumber}");
-      ReadingResult result;
+   // public async ValueTask OnNextAsync(ReadingPhasePackage inputPackage)
+   // {
+   //    await Log($"Processing package: {inputPackage.PackageNumber}");
+   //    ReadingResult result;
+   //
+   //    using (var _ = await _lock.LockAsync())
+   //    {
+   //       //todo
+   //       int num = inputPackage.PackageNumber;
+   //
+   //       if (inputPackage.PackageNumber != _lastProcessedPackage++)
+   //          throw new InvalidOperationException("Wrong packages sequence.");
+   //       result = await ReadBytesAsync(inputPackage.RowData, inputPackage.PrePopulatedBytesLength, _cancellationToken);
+   //    }
+   //    //todo log
+   //    if (!result.Success)
+   //       await _nextChunkPreparedSubject.OnErrorAsync(new InvalidOperationException(result.Message));
+   //
+   //    if (result.Size == 0)
+   //    {
+   //       await SendLastPackageAsync(inputPackage);
+   //    }
+   //
+   //    var nextPackage = inputPackage with { ReadBytesLength = result.Size };
+   //    await _nextChunkPreparedSubject.OnNextAsync(nextPackage);
+   // }
 
-      using (var _ = await _lock.LockAsync())
-      {
-         //todo
-         int num = inputPackage.PackageNumber;
-
-         if (inputPackage.PackageNumber != _lastProcessedPackage++)
-            throw new InvalidOperationException("Wrong packages sequence.");
-         result = await ReadBytesAsync(inputPackage.RowData, inputPackage.PrePopulatedBytesLength, _cancellationToken);
-      }
-      //todo log
-      if (!result.Success)
-         await _nextChunkPreparedSubject.OnErrorAsync(new InvalidOperationException(result.Message));
-
-      if (result.Size == 0)
-      {
-         await SendLastPackageAsync(inputPackage);
-      }
-
-      var nextPackage = inputPackage with { ReadBytesLength = result.Size };
-      await _nextChunkPreparedSubject.OnNextAsync(nextPackage);
-   }
-   
    public async Task<ReadingPhasePackage> ProcessPackage(ReadingPhasePackage inputPackage)
    {
       await Log($"Processing package: {inputPackage.PackageNumber}");
@@ -121,16 +116,20 @@ internal class LongFileReader : IBytesProducer, IAsyncDisposable
             throw new InvalidOperationException("Wrong packages sequence.");
          result = await ReadBytesAsync(inputPackage.RowData, inputPackage.PrePopulatedBytesLength, _cancellationToken);
       }
+
       //todo log
       if (!result.Success)
          throw new InvalidOperationException(result.Message);
 
       if (result.Size == 0)
       {
+         await Log($"Sending the last package: {inputPackage.PackageNumber} !!!");
          await SendLastPackageAsync(inputPackage);
       }
 
-      var nextPackage = inputPackage with { ReadBytesLength = result.Size };
+      var nextPackage = result.Size == 0
+         ? inputPackage with { IsLastPackage = true }
+         : inputPackage with { ReadBytesLength = result.Size };
       return nextPackage;
    }
 
@@ -138,19 +137,19 @@ internal class LongFileReader : IBytesProducer, IAsyncDisposable
    {
       await Log($"Sending the last package: {package.PackageNumber} !!!");
       var nextPackage = package with { IsLastPackage = true};
-      await _nextChunkPreparedSubject.OnNextAsync(nextPackage);
+      // await _nextChunkPreparedSubject.OnNextAsync(nextPackage);
    }
 
-   public ValueTask OnErrorAsync(Exception error)
-   {
-      return _nextChunkPreparedSubject.OnCompletedAsync();
-   }
-
-   public ValueTask OnCompletedAsync()
-   {
-      //we will complete this sequence as well, in such case there is nothing to do. Something went wrong
-      return _nextChunkPreparedSubject.OnCompletedAsync();
-   }
+   // public ValueTask OnErrorAsync(Exception error)
+   // {
+   //    // return _nextChunkPreparedSubject.OnCompletedAsync();
+   // }
+   //
+   // public ValueTask OnCompletedAsync()
+   // {
+   //    //we will complete this sequence as well, in such case there is nothing to do. Something went wrong
+   //    // return _nextChunkPreparedSubject.OnCompletedAsync();
+   // }
    
    private async ValueTask Log(string message)
    {

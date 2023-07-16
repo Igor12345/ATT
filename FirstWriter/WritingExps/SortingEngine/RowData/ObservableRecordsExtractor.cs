@@ -5,13 +5,13 @@ using LogsHub;
 
 namespace SortingEngine.RowData;
 
-public sealed class ObservableRecordsExtractor : IAsyncObserver<ReadingPhasePackage>
+public sealed class ObservableRecordsExtractor //: IAsyncObserver<ReadingPhasePackage>
 {
     private readonly CancellationToken _token;
     private readonly SimpleAsyncSubject<PreReadPackage> _readyForNextChunkSubject =
         new SequentialSimpleAsyncSubject<PreReadPackage>();
-    private readonly SimpleAsyncSubject<SortingPhasePackage> _readyForSortingSubject = 
-        new SequentialSimpleAsyncSubject<SortingPhasePackage>();
+    // private readonly SimpleAsyncSubject<SortingPhasePackage> _readyForSortingSubject = 
+    //     new SequentialSimpleAsyncSubject<SortingPhasePackage>();
       
     private readonly ILogger _logger;
     private readonly RecordsExtractor _recordsExtractor;
@@ -25,9 +25,9 @@ public sealed class ObservableRecordsExtractor : IAsyncObserver<ReadingPhasePack
     }
 
     public IAsyncObservable<PreReadPackage> ReadyForNextChunk => _readyForNextChunkSubject;
-    public IAsyncObservable<SortingPhasePackage> ReadyForSorting => _readyForSortingSubject;
+    // public IAsyncObservable<SortingPhasePackage> ReadyForSorting => _readyForSortingSubject;
 
-    public async Task<SortingPhasePackage> ExtractNext(ReadingPhasePackage package)
+    public async Task<(SortingPhasePackage,PreReadPackage)> ExtractNext(ReadingPhasePackage package)
     {
         await Log(
             $"Processing package: {package.PackageNumber}, is last: {package.IsLastPackage}, " +
@@ -59,69 +59,75 @@ public sealed class ObservableRecordsExtractor : IAsyncObserver<ReadingPhasePack
         
         if (package.IsLastPackage)
         {
-            await _readyForNextChunkSubject.OnCompletedAsync();
+            Console.WriteLine($"<**> From Extractor last package {package.PackageNumber}, !!! closing ReadyForNextChunk");
+            // await _readyForNextChunkSubject.OnCompletedAsync();
         }
-        else
-        {
-            await _readyForNextChunkSubject.OnNextAsync(new PreReadPackage(remainedBytes,
-                remainingBytesLength));
-        }
+        // else
+        // {
+        //     await _readyForNextChunkSubject.OnNextAsync(new PreReadPackage(remainedBytes,
+        //         remainingBytesLength));
+        // }
+
+        PreReadPackage preReadPackage = package.IsLastPackage
+            ? PreReadPackage.LastPackage(package.PackageNumber)
+            : new PreReadPackage(remainedBytes,
+                remainingBytesLength, package.PackageNumber, false);
         //todo!!!
-        return nextPackage;
+        return (nextPackage, preReadPackage);
     }
       
-    public async ValueTask OnNextAsync(ReadingPhasePackage package)
-    {
-        await Log(
-            $"Processing package: {package.PackageNumber}, is last: {package.IsLastPackage}, " +
-            $"bytes: {package.RowData.Length}, pre populated: {package.PrePopulatedBytesLength}");
+    // public async ValueTask OnNextAsync(ReadingPhasePackage package)
+    // {
+    //     await Log(
+    //         $"Processing package: {package.PackageNumber}, is last: {package.IsLastPackage}, " +
+    //         $"bytes: {package.RowData.Length}, pre populated: {package.PrePopulatedBytesLength}");
+    //
+    //     ExtractionResult result = _recordsExtractor.ExtractRecords(package.RowData.AsSpan()[..package.ReadBytesLength],
+    //         package.ParsedRecords);
+    //     
+    //     if (!result.Success)
+    //     {
+    //         await Log($"Extracted {result.Success}: {result.Message} ");
+    //         await _readyForNextChunkSubject.OnErrorAsync(new InvalidOperationException(result.Message));
+    //     }
+    //
+    //     int remainingBytesLength = package.ReadBytesLength - result.StartRemainingBytes;
+    //
+    //     //will be returned in SortingPhasePoolManager
+    //     byte[] remainedBytes = ArrayPool<byte>.Shared.Rent(remainingBytesLength);
+    //     package.RowData.AsSpan()[result.StartRemainingBytes..package.ReadBytesLength].CopyTo(remainedBytes);
+    //
+    //     //todo
+    //     SortingPhasePackage nextPackage = new SortingPhasePackage(package.RowData, package.ReadBytesLength,
+    //         package.ParsedRecords, result.LinesNumber, package.PackageNumber, package.IsLastPackage);
+    //
+    //     await Log(
+    //         $"Sending the package {nextPackage.PackageNumber}, extracted {nextPackage.LinesNumber}, " +
+    //         $"bytes: {nextPackage.RowData.Length}, linesBuffer: {nextPackage.ParsedRecords.CurrentCapacity}, " +
+    //         $"used bytes: {nextPackage.OccupiedLength}");
+    //     //todo!!!
+    //     // await _readyForSortingSubject.OnNextAsync(nextPackage);
+    //     if (package.IsLastPackage)
+    //     {
+    //         await _readyForNextChunkSubject.OnCompletedAsync();
+    //     }
+    //     else
+    //     {
+    //         await _readyForNextChunkSubject.OnNextAsync(new PreReadPackage(remainedBytes,
+    //             remainingBytesLength));
+    //     }
+    // }
 
-        ExtractionResult result = _recordsExtractor.ExtractRecords(package.RowData.AsSpan()[..package.ReadBytesLength],
-            package.ParsedRecords);
-        
-        if (!result.Success)
-        {
-            await Log($"Extracted {result.Success}: {result.Message} ");
-            await _readyForNextChunkSubject.OnErrorAsync(new InvalidOperationException(result.Message));
-        }
-
-        int remainingBytesLength = package.ReadBytesLength - result.StartRemainingBytes;
-
-        //will be returned in SortingPhasePoolManager
-        byte[] remainedBytes = ArrayPool<byte>.Shared.Rent(remainingBytesLength);
-        package.RowData.AsSpan()[result.StartRemainingBytes..package.ReadBytesLength].CopyTo(remainedBytes);
-
-        //todo
-        SortingPhasePackage nextPackage = new SortingPhasePackage(package.RowData, package.ReadBytesLength,
-            package.ParsedRecords, result.LinesNumber, package.PackageNumber, package.IsLastPackage);
-
-        await Log(
-            $"Sending the package {nextPackage.PackageNumber}, extracted {nextPackage.LinesNumber}, " +
-            $"bytes: {nextPackage.RowData.Length}, linesBuffer: {nextPackage.ParsedRecords.CurrentCapacity}, " +
-            $"used bytes: {nextPackage.OccupiedLength}");
-        //todo!!!
-        await _readyForSortingSubject.OnNextAsync(nextPackage);
-        if (package.IsLastPackage)
-        {
-            await _readyForNextChunkSubject.OnCompletedAsync();
-        }
-        else
-        {
-            await _readyForNextChunkSubject.OnNextAsync(new PreReadPackage(remainedBytes,
-                remainingBytesLength));
-        }
-    }
-
-    public ValueTask OnErrorAsync(Exception error)
-    {
-        return _readyForNextChunkSubject.OnCompletedAsync();
-    }
-
-    public ValueTask OnCompletedAsync()
-    {
-        //we will complete this sequence as well, in such case there is nothing to do. Something went wrong
-        return _readyForNextChunkSubject.OnCompletedAsync();
-    }
+    // public ValueTask OnErrorAsync(Exception error)
+    // {
+    //     return _readyForNextChunkSubject.OnCompletedAsync();
+    // }
+    //
+    // public ValueTask OnCompletedAsync()
+    // {
+    //     //we will complete this sequence as well, in such case there is nothing to do. Something went wrong
+    //     return _readyForNextChunkSubject.OnCompletedAsync();
+    // }
     private async ValueTask Log(string message)
     {
         //in the real projects it will be structured logs
