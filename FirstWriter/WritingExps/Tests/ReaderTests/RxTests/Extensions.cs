@@ -1,4 +1,7 @@
-﻿using System.Reactive.Linq;
+﻿using System.Diagnostics;
+using System.Reactive;
+using System.Reactive.Linq;
+using Xunit.Abstractions;
 
 namespace ReaderTests;
 
@@ -16,22 +19,48 @@ public static class Extensions
         return observable.Subscribe(new ConsoleObserver<T>(name));
     }
     
-    public static IAsyncObserver<T> PrintAsync<T>(string name)
+    public static IAsyncObserver<T> PrintAsync<T>(string name, ITestOutputHelper? testOutputHelper = null,
+        SemaphoreSlim? semaphore = null)
     {
         return AsyncObserver.Create<T>(
             async x =>
             {
                 await Task.Yield();
+                testOutputHelper?.WriteLine($"OnNext from {name} ({Thread.CurrentThread.ManagedThreadId}): {x}");
                 Console.WriteLine($"OnNext from {name} ({Thread.CurrentThread.ManagedThreadId}): {x}");
             },
             async ex =>
             {
                 await Task.Yield();
+                testOutputHelper?.WriteLine($"Error by {name} ({Thread.CurrentThread.ManagedThreadId}): {ex}");
                 Console.WriteLine($"Error by {name} ({Thread.CurrentThread.ManagedThreadId}): {ex}");
+                semaphore?.Release();
             },
             async () =>
             {
                 await Task.Yield();
+                testOutputHelper?.WriteLine($"Completed in {name} ({Thread.CurrentThread.ManagedThreadId})");
+                Console.WriteLine($"Completed in {name} ({Thread.CurrentThread.ManagedThreadId})");
+                semaphore?.Release();
+            }
+        );
+    }
+    public static IObserver<T> PrintSync<T>(string name)
+    {
+        return Observer.Create<T>(
+            x =>
+            {
+                Debug.WriteLine($"OnNext from {name} ({Thread.CurrentThread.ManagedThreadId}): {x}");
+                Console.WriteLine($"OnNext from {name} ({Thread.CurrentThread.ManagedThreadId}): {x}");
+            },
+             ex =>
+            {
+                Debug.WriteLine($"Error by {name} ({Thread.CurrentThread.ManagedThreadId}): {ex}");
+                Console.WriteLine($"Error by {name} ({Thread.CurrentThread.ManagedThreadId}): {ex}");
+            },
+             () =>
+            {
+                Debug.WriteLine($"Completed in {name} ({Thread.CurrentThread.ManagedThreadId})");
                 Console.WriteLine($"Completed in {name} ({Thread.CurrentThread.ManagedThreadId})");
             }
         );
