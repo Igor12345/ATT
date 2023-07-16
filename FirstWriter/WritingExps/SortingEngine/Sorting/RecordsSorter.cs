@@ -1,7 +1,7 @@
 ﻿using SortingEngine.Comparators;
 using SortingEngine.Entities;
 
-namespace SortingEngine.Sorters
+namespace SortingEngine.Sorting
 {
    public class RecordsSorter
    {

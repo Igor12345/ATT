@@ -55,21 +55,25 @@ internal class DataChunkManager : IAsyncDisposable
    //    }
    // }
 
-   public async Task<(bool, LineMemory)> TryGetNextLineAsync()
+   public async Task<(ExtractionResult, bool, LineMemory)> TryGetNextLineAsync()
    {
       if (NeedLoadLines())
       {
          ExtractionResult result = await LoadLinesAsync();
          if (result is { Success: true, LinesNumber: 0 })
          {
-            return (false, default);
+            return (result, false, default);
          }
 
+         if (!result.Success)
+            return (result, false, default);
+
          _loadedLines = result.LinesNumber;
-         return (true, _recordsStorage[_currentPosition++]);
+         return (result, true, _recordsStorage[_currentPosition++]);
       }
 
-      return (true, _recordsStorage[_currentPosition++]);
+      //todo useless result
+      return (ExtractionResult.Ok(0,0), true, _recordsStorage[_currentPosition++]);
    }
 
    private bool NeedLoadLines()
@@ -96,9 +100,9 @@ internal class DataChunkManager : IAsyncDisposable
       ExtractionResult result =
          _extractor.ExtractRecords(_rowStorage.Span[..recognizableBytes], _recordsStorage);
 
-      //todo railway
+      //todo railway 
       if (!result.Success)
-         throw new InvalidOperationException(result.Message);
+         return result;
 
       if (result.LinesNumber == 0)
          return result;

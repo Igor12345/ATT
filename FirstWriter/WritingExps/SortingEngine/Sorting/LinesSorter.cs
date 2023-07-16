@@ -3,7 +3,7 @@ using SortingEngine.Comparators;
 using SortingEngine.DataStructures;
 using SortingEngine.Entities;
 
-namespace SortingEngine.Sorters;
+namespace SortingEngine.Sorting;
 
 public sealed class LinesSorter
 {

@@ -17,7 +17,8 @@ public class SortingPhasePoolManager : IAsyncObserver<PreReadPackage>, IAsyncObs
     private volatile int _packageNumber = -1;
     private readonly int _recordChunksLength;
     private readonly CancellationToken _cancellationToken;
-    private readonly byte[][] _buffers;
+    private readonly byte[][] _buffersOld;
+    private readonly Dictionary<int, byte[]> _buffers;
     private readonly ConcurrentStack<ExpandingStorage<LineMemory>> _lineStorages;
     private int _currentBuffer;
     private SpinLock _lock;
@@ -32,7 +33,8 @@ public class SortingPhasePoolManager : IAsyncObserver<PreReadPackage>, IAsyncObs
         _recordChunksLength = Guard.Positive(recordChunksLength);
         _logger = Guard.NotNull(logger);
         _cancellationToken = Guard.NotNull(cancellationToken);
-        _buffers = new byte[numberOfBuffers][];
+        // _buffers = new byte[numberOfBuffers][];
+        _buffers = new Dictionary<int, byte[]>(numberOfBuffers);
         _semaphore = new SemaphoreSlim(numberOfBuffers, numberOfBuffers);
         //The most likely scenario is that storages for recognized lines will be returned
         //much faster than the buffers for the row bytes. In any case,
@@ -55,22 +57,25 @@ public class SortingPhasePoolManager : IAsyncObserver<PreReadPackage>, IAsyncObs
 
     private async ValueTask<(bool ready, ReadingPhasePackage package)> TryAcquireNext()
     {
-        await Log($"Trying acquire new bytes buffer, last package was {_packageNumber}");
+        //todo remove semaphore
+        await Log($"Trying acquire new bytes buffer, last package was {_packageNumber}, semaphore: {_semaphore.CurrentCount}");
         await _semaphore.WaitAsync(_cancellationToken);
 
-        byte[]?[] buffers = _buffers;
+        Dictionary<int, byte[]> buffers = _buffers;
         bool lockTaken = false;
         try
         {
             _lock.Enter(ref lockTaken);
-            if (_currentBuffer < _buffers.Length)
+            if (_currentBuffer < _buffers.Count)
             {
-                IMemoryOwner<byte> owner = MemoryPool<byte>.Shared.Rent(_inputBuffersLength);
-                // owner.Memory
-                owner.Dispose();
+                // IMemoryOwner<byte> owner = MemoryPool<byte>.Shared.Rent(_inputBuffersLength);
+                // // owner.Memory
+                // owner.Dispose();
                 //todo check
                 //it has a default max array length, equal to 2^20 (1024*1024 = 1 048 576)
                 //https://adamsitnik.com/Array-Pool/
+                
+                
                 buffers[_currentBuffer] ??= ArrayPool<byte>.Shared.Rent(_inputBuffersLength);
                 byte[]? buffer = buffers[_currentBuffer++];
                 ExpandingStorage<LineMemory> linesStorage = RentLinesStorage();
@@ -138,6 +143,7 @@ public class SortingPhasePoolManager : IAsyncObserver<PreReadPackage>, IAsyncObs
         if (package.IsLastPackage)
         {
             Console.WriteLine($"-> In SortingPhasePoolManager before _loadNextChunkSubject.OnCompletedAsync for {package.PackageNumber}, is last: {package.IsLastPackage}");
+            await Task.Delay(20);
             await _loadNextChunkSubject.OnCompletedAsync();
         }
     }

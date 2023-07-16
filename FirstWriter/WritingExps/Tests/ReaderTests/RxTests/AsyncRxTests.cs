@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Reactive;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
+using System.Runtime.InteropServices.JavaScript;
 using Xunit.Abstractions;
 using Xunit.Sdk;
 
@@ -16,7 +17,42 @@ public class AsyncRxTests
     {
         _testOutputHelper = testOutputHelper;
     }
-    
+
+
+    [Fact]
+    public async Task SemaphoreExps()
+    {
+        SemaphoreSlim semaphore = new SemaphoreSlim(3, 3);
+
+        List<Task> tasks = new List<Task>();
+        for (int i = 0; i < 6; i++)
+        {
+            _testOutputHelper.WriteLine($"Starting task {i}");
+            var j = i;
+            var t = Task.Run(async () =>
+            {
+                _testOutputHelper.WriteLine($"Inside task {j}, at: {DateTime.UtcNow:hh:mm:ss-fff}");
+                await Task.Delay(400);
+                _testOutputHelper.WriteLine(
+                    $"Inside task {j}, after delay at: {DateTime.UtcNow:hh:mm:ss-fff}, awaiting semaphore.CurrentCount: {semaphore.CurrentCount}");
+                await semaphore.WaitAsync();
+                _testOutputHelper.WriteLine(
+                    $"Task {j}, semaphore passed, at: ({DateTime.UtcNow:hh:mm:ss-fff}), semaphore.CurrentCount: {semaphore.CurrentCount}");
+                await Task.Delay(500 * j);
+                semaphore.Release();
+                _testOutputHelper.WriteLine(
+                    $"Task {j}, semaphore released, at: ({DateTime.UtcNow:hh:mm:ss-fff}), semaphore.CurrentCount: {semaphore.CurrentCount}");
+            });
+            tasks.Add(t);
+            _testOutputHelper.WriteLine($"After task {i}");
+        }
+
+        _testOutputHelper.WriteLine($"After loop waiting all tasks, semaphore.CurrentCount: {semaphore.CurrentCount}");
+        await Task.WhenAll(tasks);
+        _testOutputHelper.WriteLine($"After loop and alll tasks, semaphore.CurrentCount: {semaphore.CurrentCount}");
+        Assert.True(2 == 3);
+    }
+
     [Fact]
     public async Task TrySeveralWorkersAsync()
     {

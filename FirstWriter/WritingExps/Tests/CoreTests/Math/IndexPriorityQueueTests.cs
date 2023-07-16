@@ -1,4 +1,4 @@
-﻿using SortingEngine.Sorters;
+﻿using SortingEngine.Sorting;
 
 namespace CoreTests.Math
 {

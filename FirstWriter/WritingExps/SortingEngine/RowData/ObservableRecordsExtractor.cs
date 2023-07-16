@@ -2,6 +2,7 @@
 using System.Reactive.Subjects;
 using Infrastructure.Parameters;
 using LogsHub;
+using SortingEngine.Entities;
 
 namespace SortingEngine.RowData;
 
@@ -29,6 +30,8 @@ public sealed class ObservableRecordsExtractor //: IAsyncObserver<ReadingPhasePa
 
     public async Task<(SortingPhasePackage,PreReadPackage)> ExtractNext(ReadingPhasePackage package)
     {
+        int i = package.PackageNumber;
+        
         await Log(
             $"Processing package: {package.PackageNumber}, is last: {package.IsLastPackage}, " +
             $"bytes: {package.RowData.Length}, pre populated: {package.PrePopulatedBytesLength}");
@@ -48,6 +51,32 @@ public sealed class ObservableRecordsExtractor //: IAsyncObserver<ReadingPhasePa
         byte[] remainedBytes = ArrayPool<byte>.Shared.Rent(remainingBytesLength);
         package.RowData.AsSpan()[result.StartRemainingBytes..package.ReadBytesLength].CopyTo(remainedBytes);
 
+        if (package.PackageNumber == 3)
+        {
+            ReadOnlyMemory<byte> inputBytes = package.RowData.AsMemory()[..package.ReadBytesLength];
+            LineMemory[] result2 = ArrayPool<LineMemory>.Shared.Rent(result.LinesNumber);
+            package.ParsedRecords.CopyTo(result2, result.LinesNumber);
+            
+            var wrongLine = result2.FirstOrDefault(l => l.Number == 6748015574496075763||l.Number == 2415040422824707043||l.Number == 8633638752424593355);
+            var cnt = result2.Count(l => l.Number == 6748015574496075763||l.Number == 2415040422824707043||l.Number == 8633638752424593355);
+            if (cnt == 1)
+            {
+                var c = cnt;
+            }
+
+            if (wrongLine.Number != 0 || cnt > 0)
+            {
+                string wrongStr = LinesUtils2.LineToString(wrongLine, package.RowData);
+                Console.WriteLine();
+                Console.WriteLine(
+                    $"!!!Wrong line {wrongStr}, in package {package.PackageNumber}, from: {wrongLine.From}.. to {wrongLine.To}");
+                string bytes = string.Join(", ",
+                    package.RowData.Take(wrongLine.From..wrongLine.To).Select(b => (char)b));
+                Console.WriteLine($"Bytes: {bytes}");
+                Console.WriteLine();
+            }
+        }
+        
         //todo
         SortingPhasePackage nextPackage = new SortingPhasePackage(package.RowData, package.ReadBytesLength,
             package.ParsedRecords, result.LinesNumber, package.PackageNumber, package.IsLastPackage);

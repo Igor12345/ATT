@@ -1,4 +1,5 @@
 ﻿using System.Buffers;
+using System.Diagnostics;
 using Infrastructure.Parameters;
 
 namespace SortingEngine.DataStructures
@@ -32,6 +33,10 @@ namespace SortingEngine.DataStructures
       {
          get
          {
+            //use resources for strings,
+            //depends on the teams agreements
+            if (_lastBuffer < 0)
+               throw new InvalidOperationException("The storage does not contain data.");
             //todo possible error, but I'm not expect it in real cases
             int buffer = (int)(i / _chunkSize);
             int position = (int)(i % _chunkSize);

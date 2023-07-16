@@ -5,7 +5,7 @@ using System.Text;
 using SimpleReader;
 using SortingEngine;
 using SortingEngine.Entities;
-using SortingEngine.Sorters;
+using SortingEngine.Sorting;
 
 namespace ReaderTests
 {

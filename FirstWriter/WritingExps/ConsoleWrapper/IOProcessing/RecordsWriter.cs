@@ -78,7 +78,6 @@ public class RecordsWriter : ILinesWriter, IAsyncDisposable
       _syncFileStream ??= new FileStream(_filePath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None,
          bufferSize: 4096, false);
 
-      long initPosition = _syncFileStream.Position;
       byte[]? rented = null;
       try
       {
@@ -89,8 +88,15 @@ public class RecordsWriter : ILinesWriter, IAsyncDisposable
             ? stackalloc byte[requiredLength]
             : rented = ArrayPool<byte>.Shared.Rent(requiredLength);
          
+         //todo increase output buffer size (benchmark!)
          for (int i = 0; i < linesNumber; i++)
          {
+            //todo
+            if (lines[i].Number == 6748015574496075763 || lines[i].Number == 2415040422824707043 || lines[i].Number == 8633638752424593355)
+            {
+               var l = lines[i];
+            }
+            
             int length = LongToBytesConverter.WriteULongToBytes(lines[i].Number, buffer);
             source.Span[lines[i].From..lines[i].To].CopyTo(buffer[length..]);
             int fullLength = length + lines[i].To - lines[i].From;

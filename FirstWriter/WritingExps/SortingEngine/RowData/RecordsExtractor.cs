@@ -69,7 +69,18 @@ namespace SortingEngine.RowData
                if (!success)
                   return Result<LineMemory>.Error($"wrong line: {ByteToStringConverter.Convert(lineSpan)}");
 
-               //text will include ". "
+               //todo delete!!!
+               if (number == 6748015574496075763 || number == 8008584279310375288 || number == 4429398608499600645)
+               {
+                  var color = Console.ForegroundColor;
+                  Console.ForegroundColor = ConsoleColor.DarkRed;
+                  Console.WriteLine();
+                  Console.WriteLine($"###-- {number} : {ByteToStringConverter.Convert(lineSpan)}");
+                  Console.WriteLine();
+                  Console.ForegroundColor = color;
+               }
+               
+               //text will include ". " and eol
                return Result<LineMemory>.Ok(new LineMemory(number, startIndex + i, startIndex + lineSpan.Length));
             }
          }

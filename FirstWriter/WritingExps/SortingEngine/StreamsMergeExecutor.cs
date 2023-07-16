@@ -1,9 +1,9 @@
 ﻿using SortingEngine.Comparators;
 using SortingEngine.Entities;
 using SortingEngine.RuntimeConfiguration;
-using SortingEngine.Sorters;
 using Infrastructure.Parameters;
 using SortingEngine.RowData;
+using SortingEngine.Sorting;
 
 namespace SortingEngine;
 
@@ -37,7 +37,13 @@ public sealed class StreamsMergeExecutor
 
       CreateBuffers();
 
-      return await ExecuteMerge();
+      var mergeResult = await ExecuteMerge();
+      if (!mergeResult.Success)
+      {
+         Console.WriteLine($"ERROR: {mergeResult.Message}");
+      }
+
+      return mergeResult;
    }
 
    private void CreateBuffers()
@@ -64,7 +70,9 @@ public sealed class StreamsMergeExecutor
 
       for (int i = 0; i < _files.Length; i++)
       {
-         (bool hasLine, LineMemory line) = await managers[i].TryGetNextLineAsync();
+         (ExtractionResult extractionResult, bool hasLine, LineMemory line) = await managers[i].TryGetNextLineAsync();
+         if(!extractionResult.Success)
+            return Result.Error(extractionResult.Message);
          if (hasLine)
          {
             queue.Enqueue(line, i);
@@ -74,16 +82,19 @@ public sealed class StreamsMergeExecutor
       while (queue.Any())
       {
          var (line, streamIndex) = queue.Dequeue();
-         var (lineAvailable, nextLine) = await managers[streamIndex].TryGetNextLineAsync();
+         var (extractionResult, lineAvailable, nextLine) = await managers[streamIndex].TryGetNextLineAsync();
+         if(!extractionResult.Success)
+            return Result.Error(extractionResult.Message);
+         
          if (lineAvailable)
             queue.Enqueue(nextLine, streamIndex);
 
          _outputBuffer[_lastLine++] = line;
          if (_lastLine >= _outputBuffer.Length)
          {
-            Result result = WriteLinesFromBuffer(_outputBuffer, _outputBuffer.Length, _inputBuffer);
-            if (!result.Success)
-               return result;
+            Result writingResult = WriteLinesFromBuffer(_outputBuffer, _outputBuffer.Length, _inputBuffer);
+            if (!writingResult.Success)
+               return writingResult;
             // OnOutputBufferFull(new SortingCompletedEventArgs(_outputBuffer, _outputBuffer.Length, _inputBuffer));
             _lastLine = 0;
          }

@@ -126,7 +126,11 @@ internal class FileSortingService : IHostedService
       await using var s6 = await chunksDirector.SortedLinesSaved.SubscribeAsync(sortingPhasePoolManager);
 
       var published = sortingPhasePoolManager.LoadNextChunk
-         .Select(async p => await bytesReader.ProcessPackage(p))
+         .Select(async p =>
+         {
+            Console.WriteLine($"<<-->> before bytesReader.ProcessPackage {p.PackageNumber}");
+            return await bytesReader.ProcessPackage(p);
+         })
          .Select(async p => await extractor.ExtractNext(p))
          .Publish();
 
@@ -203,7 +207,6 @@ internal class FileSortingService : IHostedService
       //    }
       // );
 
-      await sortingPhasePoolManager.LetsStart();
    }
 
    private void HandleError(Exception exception)

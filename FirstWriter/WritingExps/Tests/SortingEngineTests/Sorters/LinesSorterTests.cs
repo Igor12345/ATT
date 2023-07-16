@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using SortingEngine.DataStructures;
 using SortingEngine.Entities;
-using SortingEngine.Sorters;
+using SortingEngine.Sorting;
 using SortingEngineTests.TestUtils;
 
 namespace SortingEngineTests.Sorters;

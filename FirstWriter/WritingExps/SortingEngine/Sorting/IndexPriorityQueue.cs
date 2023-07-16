@@ -1,6 +1,6 @@
 ﻿using Infrastructure.Parameters;
 
-namespace SortingEngine.Sorters
+namespace SortingEngine.Sorting
 {
    //can be internal if make this assembly friendly for tests
    //There is an "official" implementation: System.Collections.Generic.PriorityQueue

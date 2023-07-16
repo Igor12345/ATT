@@ -104,6 +104,7 @@ internal class LongFileReader : IBytesProducer, IAsyncDisposable
 
    public async Task<ReadingPhasePackage> ProcessPackage(ReadingPhasePackage inputPackage)
    {
+      await Task.Yield();
       await Log($"Processing package: {inputPackage.PackageNumber}");
       ReadingResult result;
 

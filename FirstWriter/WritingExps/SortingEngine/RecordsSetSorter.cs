@@ -7,7 +7,7 @@ using SortingEngine.DataStructures;
 using SortingEngine.Entities;
 using SortingEngine.RowData;
 using SortingEngine.RuntimeConfiguration;
-using SortingEngine.Sorters;
+using SortingEngine.Sorting;
 
 namespace SortingEngine
 {
@@ -156,7 +156,7 @@ namespace SortingEngine
 
       private void SortRecords(ReadOnlyMemory<byte> inputBuffer, ExpandingStorage<LineMemory> recordsStorage, int linesNumber)
       {
-         Sorters.LinesSorter sorter = new Sorters.LinesSorter(inputBuffer);
+         LinesSorter sorter = new LinesSorter(inputBuffer);
          LineMemory[] sorted = sorter.Sort(recordsStorage, linesNumber);
 
          OnSortingCompleted(new SortingCompletedEventArgs(sorted, linesNumber, inputBuffer));
