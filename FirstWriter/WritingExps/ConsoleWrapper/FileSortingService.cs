@@ -116,16 +116,18 @@ internal class FileSortingService : IHostedService
          new LongFileReader(validInput.File, configuration.Encoding, logger, cancellationToken);
       BunchOfLinesSorter sorter = new BunchOfLinesSorter(logger);
 
-      using SortingPhasePoolManager sortingPhasePoolManager = new SortingPhasePoolManager(3,
+      using SortingPhasePool sortingPhasePool = new SortingPhasePool(configuration.SortingPhaseConcurrency,
          configuration.InputBufferLength,
-         configuration.RecordsBufferLength, logger, cancellationToken);
+         configuration.RecordsBufferLength, logger);
+      
+      using SortingPhasePoolAsObserver sortingPhasePoolAsObserver = new SortingPhasePoolAsObserver(sortingPhasePool, logger);
 
       // await using var s1 = await sortingPhasePoolManager.LoadNextChunk.SubscribeAsync(bytesReader);
       
       // await using var s4 = await extractor.ReadyForNextChunk.SubscribeAsync(sortingPhasePoolManager);
-      await using var s6 = await chunksDirector.SortedLinesSaved.SubscribeAsync(sortingPhasePoolManager);
+      await using var s6 = await chunksDirector.SortedLinesSaved.SubscribeAsync(sortingPhasePoolAsObserver);
 
-      var published = sortingPhasePoolManager.LoadNextChunk
+      var published = sortingPhasePoolAsObserver.LoadNextChunk
          .Select(async p =>
          {
             Console.WriteLine($"<<-->> before bytesReader.ProcessPackage {p.PackageNumber}");
@@ -135,7 +137,7 @@ internal class FileSortingService : IHostedService
          .Publish();
 
       var backSeq = await published.Select(pp => pp.Item2)
-         .Select(async p => await sortingPhasePoolManager.OnNextAsync(p))
+         .Select(async p => await sortingPhasePoolAsObserver.OnNextAsync(p))
          .SubscribeAsync(
             (p) =>
             {
@@ -181,7 +183,7 @@ internal class FileSortingService : IHostedService
       await published.ConnectAsync();
 
       Console.WriteLine("All subscriptions ready");
-      await sortingPhasePoolManager.LetsStart();
+      await sortingPhasePoolAsObserver.LetsStart();
          
       // await using var s2 = await bytesReader.NextChunkPrepared.SubscribeAsync(extractor);
       // await using var s3 = await extractor.ReadyForSorting.SubscribeAsync(sorter);

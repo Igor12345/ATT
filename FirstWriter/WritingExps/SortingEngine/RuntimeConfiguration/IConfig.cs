@@ -4,7 +4,7 @@ namespace SortingEngine.RuntimeConfiguration
 {
    public interface IConfig
    {
-      int NumberSortingWorkers { get; }
+      int SortingPhaseConcurrency { get; }
       int InputBufferLength { get; }
       int MergeBufferLength { get; }
       int OutputBufferLength { get; }
