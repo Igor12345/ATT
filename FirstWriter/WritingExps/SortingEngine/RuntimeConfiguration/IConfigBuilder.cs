@@ -9,6 +9,7 @@ public interface IConfigBuilder
    IConfigBuilder UseMergeBuffer(int mergeBuffer);
    IConfigBuilder UseOutputBuffer(int outputBuffer);
    IConfigBuilder UseRecordsBuffer(int recordsBuffer);
+   IConfigBuilder SortingPhaseConcurrency(int sortingPhaseConcurrency);
    IConfigBuilder UseEncoding(Encoding encoding);
    IConfigBuilder UseOutputPath(string outputPath);
 }

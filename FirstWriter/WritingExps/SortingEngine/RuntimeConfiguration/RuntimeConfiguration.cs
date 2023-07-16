@@ -3,80 +3,41 @@ using System.Text;
 
 namespace SortingEngine.RuntimeConfiguration;
 
-public class BaseConfiguration
+public class RuntimeConfiguration : IConfig
 {
-   public int InputBufferLength { get; set; }
-   public string TemporaryFolder { get; set; }
-   public int MergeBufferLength { get; set; }
-   public int OutputBufferLength { get; set; }
-   public int RecordsBufferLength { get; set; }
-   public int AvailableMemory { get; set; }
-}
-
-public class InputParameters
-{
-   public string? Encoding { get; set; }
-
-   public string? File { get; set; }
-}
-
-public class ValidatedInputParameters
-{
-   private ValidatedInputParameters()
-   {
-   }
-
-   public ValidatedInputParameters(string file, Encoding encoding)
-   {
-      //todo check values
-      File = file;
-      Encoding = encoding;
-   }
-
-   public Encoding Encoding { get; init; }
-
-   public string File { get; init; }
-
-   private static readonly ValidatedInputParameters _empty = new ValidatedInputParameters()
-      { File = "", Encoding = Encoding.Default };
-   public static ValidatedInputParameters Empty => _empty;
-}
-
-public class RuntimeConfig : IConfig
-{
-   private RuntimeConfig()
+   private RuntimeConfiguration()
    {
       TemporaryFolder = "";
    }
 
-   public int SortingPhaseConcurrency { get; private set; } = 3;
+   public int SortingPhaseConcurrency { get; private set; } = 4;
    public int InputBufferLength { get; private set; }
    public string TemporaryFolder { get; private set; }
    public int MergeBufferLength { get; private set; }
    public int OutputBufferLength { get; private set; }
    public Encoding Encoding { get; private set; } = Encoding.UTF8;
    public int RecordsBufferLength { get; private set; }
-   public string Output { get; private set; }
+   public string? Output { get; private set; }
 
    public static IConfig Create(Action<IConfigBuilder> buildConfig)
    {
-      RuntimeConfig config = new RuntimeConfig();
-      buildConfig(new ConfigBuilder(config));
-      return config;
+      RuntimeConfiguration configuration = new RuntimeConfiguration();
+      buildConfig(new ConfigBuilder(configuration));
+      return configuration;
    }
 
    private class ConfigBuilder : IConfigBuilder
    {
-      private readonly RuntimeConfig _config;
+      private readonly RuntimeConfiguration _configuration;
 
-      public ConfigBuilder(RuntimeConfig config)
+      public ConfigBuilder(RuntimeConfiguration configuration)
       {
-         _config = config;
+         _configuration = configuration;
       }
 
       public IConfigBuilder UseInputBuffer(int inputBufferSize)
       {
-         _config.InputBufferLength = inputBufferSize;
+         _configuration.InputBufferLength = inputBufferSize;
          return this;
       }
 
@@ -102,37 +63,43 @@ public class RuntimeConfig : IConfig
             folderForChunks = Directory.CreateTempSubdirectory().FullName;
          }
 
-         _config.TemporaryFolder = folderForChunks;
+         _configuration.TemporaryFolder = folderForChunks;
          return this;
       }
 
       public IConfigBuilder UseMergeBuffer(int mergeBuffer)
       {
-         _config.MergeBufferLength = mergeBuffer;
+         _configuration.MergeBufferLength = mergeBuffer;
          return this;
       }
 
       public IConfigBuilder UseOutputBuffer(int outputBuffer)
       {
-         _config.OutputBufferLength = outputBuffer;
+         _configuration.OutputBufferLength = outputBuffer;
          return this;
       }
 
       public IConfigBuilder UseRecordsBuffer(int recordsBuffer)
       {
-         _config.RecordsBufferLength = recordsBuffer;
+         _configuration.RecordsBufferLength = recordsBuffer;
+         return this;
+      }
+
+      public IConfigBuilder SortingPhaseConcurrency(int sortingPhaseConcurrency)
+      {
+         _configuration.SortingPhaseConcurrency = sortingPhaseConcurrency;
          return this;
       }
 
       public IConfigBuilder UseEncoding(Encoding encoding)
       {
-         _config.Encoding = encoding;
+         _configuration.Encoding = encoding;
          return this;
       }
 
       public IConfigBuilder UseOutputPath(string outputPath)
       {
-         _config.Output = outputPath;
+         _configuration.Output = outputPath;
          return this;
       }
    }

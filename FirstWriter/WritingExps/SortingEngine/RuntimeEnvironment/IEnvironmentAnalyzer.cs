@@ -24,7 +24,6 @@ namespace SortingEngine.RuntimeEnvironment
          //todo
          int cpus = Environment.ProcessorCount;
          var availableMemory = GC.GetGCMemoryInfo().TotalAvailableMemoryBytes;
-         
          int inputBufferLength =
             SetBufferLength(_baseConfiguration.InputBufferLength, 1024 * 1024 * 512); // 1024 * 1024 * 512 = 536870912
          int mergeBufferLength = SetBufferLength(_baseConfiguration.MergeBufferLength, 1024 * 1024); //1024 * 1024;
@@ -32,10 +31,12 @@ namespace SortingEngine.RuntimeEnvironment
          int outputBufferLength = SetBufferLength(_baseConfiguration.OutputBufferLength, 1_000);
 
          string outputPath = GetOutputPath(path);
-         var config = RuntimeConfig.Create(conf => conf
+         //can be implemented more elegantly and concisely with using reflection or dynamic
+         var config = RuntimeConfiguration.RuntimeConfiguration.Create(conf => conf
             .UseInputBuffer(inputBufferLength)
             .UseMergeBuffer(mergeBufferLength)
             .UseRecordsBuffer(recordsLength)
+            .SortingPhaseConcurrency(_baseConfiguration.SortingPhaseConcurrency)
             .UseOutputBuffer(outputBufferLength)
             .UseOutputPath(outputPath)
             .UseFolder(path, "")
