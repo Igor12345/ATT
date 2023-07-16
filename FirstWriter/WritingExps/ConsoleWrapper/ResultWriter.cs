@@ -30,7 +30,7 @@ internal class ResultWriter : IAsyncDisposable
    private async ValueTask Log(string message)
    {
       //in the real projects it will be structured logs
-      string prefix = $"Class: {this.GetType()}, at: {DateTime.UtcNow:hh:mm:ss-fff} ";
+      string prefix = $"{this.GetType()}, at: {DateTime.UtcNow:hh:mm:ss-fff} ";
       await _logger.LogAsync(prefix + message);
    }
 

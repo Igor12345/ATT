@@ -125,7 +125,7 @@ public class BunchOfLinesSorter //: IAsyncObserver<SortingPhasePackage>
     private async ValueTask Log(string message)
     {
         //in the real projects it will be structured logs
-        string prefix = $"Class: {GetType()}, at: {DateTime.UtcNow:hh:mm:ss-fff} ";
+        string prefix = $"{GetType()}, at: {DateTime.UtcNow:hh:mm:ss-fff} ";
         await _logger.LogAsync(prefix + message);
     }
 }

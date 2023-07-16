@@ -139,5 +139,16 @@ namespace ReaderTests
 
          Assert.Equal(result[4], 4);
       }
+
+      [Fact]
+      public void IOTest()
+      {
+         string FilePath = "test.data";
+         var userBuffer = new byte[16_000];
+         File.WriteAllBytes(FilePath, new byte[100_000]);
+         using FileStream fs = new FileStream(FilePath, FileMode.Open,
+            FileAccess.Read, FileShare.None, bufferSize: 4096, true);
+         var path = fs.Name;
+      }
    }
 }

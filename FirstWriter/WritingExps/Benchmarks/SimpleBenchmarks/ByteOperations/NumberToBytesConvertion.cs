@@ -21,6 +21,7 @@ public class NumberToBytesConversion
         }
     }
 
+    [GcServer(true)]
     [Benchmark]
     public int ConvertNumbersAcquiringArray()
     {
@@ -34,6 +35,7 @@ public class NumberToBytesConversion
         return s;
     }
 
+    [GcServer(true)]
     [Benchmark]
     public int ConvertNumbersFillingBuffer()
     {
