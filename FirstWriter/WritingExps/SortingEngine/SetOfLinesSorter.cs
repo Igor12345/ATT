@@ -11,14 +11,14 @@ using SortingEngine.Sorting;
 
 namespace SortingEngine;
 
-public class BunchOfLinesSorter //: IAsyncObserver<SortingPhasePackage>
+public class SetOfLinesSorter //: IAsyncObserver<SortingPhasePackage>
 {
     private readonly ILogger _logger;
 
     // private readonly SimpleAsyncSubject<AfterSortingPhasePackage> _sortingCompletedSubject =
     //     new SequentialSimpleAsyncSubject<AfterSortingPhasePackage>();
 
-    public BunchOfLinesSorter(ILogger logger)
+    public SetOfLinesSorter(ILogger logger)
     {
         _logger = Guard.NotNull(logger);
     }

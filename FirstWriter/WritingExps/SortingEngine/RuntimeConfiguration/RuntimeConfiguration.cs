@@ -13,11 +13,14 @@ public class RuntimeConfiguration : IConfig
    public int SortingPhaseConcurrency { get; private set; } = 4;
    public int InputBufferLength { get; private set; }
    public string TemporaryFolder { get; private set; }
+   public string InputFile { get; private set; }
    public int MergeBufferLength { get; private set; }
    public int OutputBufferLength { get; private set; }
    public Encoding Encoding { get; private set; } = Encoding.UTF8;
    public int RecordsBufferLength { get; private set; }
    public string? Output { get; private set; }
+
+   public bool UseOneWay { get; private set; }
 
    public static IConfig Create(Action<IConfigBuilder> buildConfig)
    {
@@ -41,7 +44,7 @@ public class RuntimeConfiguration : IConfig
          return this;
       }
 
-      public IConfigBuilder UseFolder(string sourceFile, string folderForChunks)
+      public IConfigBuilder UseFileAndFolder(string sourceFile, string folderForChunks)
       {
          if (string.IsNullOrEmpty(folderForChunks))
          {
@@ -64,6 +67,7 @@ public class RuntimeConfiguration : IConfig
          }
 
          _configuration.TemporaryFolder = folderForChunks;
+         _configuration.InputFile = sourceFile;
          return this;
       }
 
@@ -102,5 +106,12 @@ public class RuntimeConfiguration : IConfig
          _configuration.Output = outputPath;
          return this;
       }
+
+      public IConfigBuilder UseOneWay(bool useOneStepSorting)
+      {
+         _configuration.UseOneWay = useOneStepSorting;
+         return this;
+      }
    }
+
 }

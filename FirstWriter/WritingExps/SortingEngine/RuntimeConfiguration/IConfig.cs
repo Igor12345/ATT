@@ -11,8 +11,11 @@ namespace SortingEngine.RuntimeConfiguration
       int RecordsBufferLength { get; }
       string Output { get; }
       string TemporaryFolder { get; }
+      string InputFile { get; }
       Encoding Encoding { get; }
+      bool UseOneWay { get; }
 
       // static abstract IConfig Create(Action<IConfigBuilder> buildConfig);
+      
    }
 }

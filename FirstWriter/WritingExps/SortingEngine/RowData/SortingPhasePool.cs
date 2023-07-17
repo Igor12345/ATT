@@ -61,7 +61,9 @@ public class SortingPhasePool : IDisposable
             {
                 //The semaphore ensures that we don't exceed the allowed number of existing buffers.
                 //It is safe a new buffer here
-                buffer = ArrayPool<byte>.Shared.Rent(_inputBuffersLength);
+                buffer = new byte[_inputBuffersLength];
+                //Array pool holds memory and refuses to free it
+                // buffer = ArrayPool<byte>.Shared.Rent(_inputBuffersLength);
             }
             ExpandingStorage<LineMemory> linesStorage = RentLinesStorage();
 
@@ -113,8 +115,8 @@ public class SortingPhasePool : IDisposable
     {
         while (_buffers.TryPop(out var buffer))
         {
-            if (buffer != null)
-                ArrayPool<byte>.Shared.Return(buffer);
+            // if (buffer != null)
+            //     ArrayPool<byte>.Shared.Return(buffer);
         }
 
         while (_lineStorages.TryPop(out var storage))

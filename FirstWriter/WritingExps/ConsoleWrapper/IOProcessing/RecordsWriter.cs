@@ -77,7 +77,7 @@ public class RecordsWriter : ILinesWriter, IAsyncDisposable
    public Result WriteRecords(LineMemory[] lines, int linesNumber, ReadOnlyMemory<byte> source)
    {
       _syncFileStream ??= new FileStream(_filePath, FileMode.Create, FileAccess.Write, FileShare.None,
-         bufferSize: 1, false);
+         bufferSize: 64_000, false);
 
       // Console.WriteLine(
       //    $"Enter buffer file {_syncFileStream.Name}, position: {_syncFileStream.Position}, length: {_syncFileStream.Length}");
@@ -90,7 +90,7 @@ public class RecordsWriter : ILinesWriter, IAsyncDisposable
             ? stackalloc byte[requiredLength]
             : rented = ArrayPool<byte>.Shared.Rent(requiredLength);
          
-         buffer.Clear();
+         // buffer.Clear();
          
          //todo increase output buffer size (benchmark!)
          for (int i = 0; i < linesNumber; i++)
@@ -101,6 +101,7 @@ public class RecordsWriter : ILinesWriter, IAsyncDisposable
             int fullLength = length + lines[i].To - lines[i].From;
             _syncFileStream.Write(buffer[..fullLength]);
          }
+         //todo
          // _syncFileStream.Flush();
          
          // Console.WriteLine($"----> Saved {linesNumber} lines, from {initPosition} to {_syncFileStream.Position}");

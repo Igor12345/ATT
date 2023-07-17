@@ -66,18 +66,22 @@ internal class FileSortingService : IHostedService
       //only for demonstration, use NLog, Serilog, ... in real projects
       // https://learn.microsoft.com/en-us/dotnet/core/extensions/high-performance-logging
       // https://learn.microsoft.com/en-us/dotnet/core/extensions/logger-message-generator
-      ILogger logger = Logger.Create(cancellationToken);
-      // ILogger logger = Logger.CreateEmpty(cancellationToken);
+      // ILogger logger = Logger.Create(cancellationToken);
+      ILogger logger = Logger.CreateEmpty(cancellationToken);
 
       // await logger.LogAsync($"Started at {DateTime.UtcNow:s}");
 
       SemaphoreSlim semaphore = new SemaphoreSlim(0, 1);
 
-      await SortingPhase(cancellationToken, configuration, validInput, semaphore, logger);
+      //todo return result
+      await SortingPhase(configuration, validInput, semaphore, logger, cancellationToken);
 
       Console.WriteLine("After sorting phase");
 
-      Result result = await MergingPhase(cancellationToken, configuration, logger);
+
+      Result result = configuration.UseOneWay
+         ? Result.Ok
+         : await MergingPhase(cancellationToken, configuration, logger);
       
       Console.WriteLine("******* Final ********");
 
@@ -95,8 +99,8 @@ internal class FileSortingService : IHostedService
       return result;
    }
 
-   private async Task SortingPhase(CancellationToken cancellationToken, IConfig configuration,
-      ValidatedInputParameters validInput, SemaphoreSlim semaphore, ILogger logger)
+   private async Task SortingPhase(IConfig configuration,
+      ValidatedInputParameters validInput, SemaphoreSlim semaphore, ILogger logger, CancellationToken cancellationToken)
    {
       ObservableRecordsExtractor extractor = new ObservableRecordsExtractor(
          configuration.Encoding.GetBytes(Environment.NewLine),
@@ -105,11 +109,9 @@ internal class FileSortingService : IHostedService
       IntermediateResultsDirector chunksDirector =
          IntermediateResultsDirector.Create(configuration, logger, cancellationToken);
 
-      //todo!!!
-      // await using 
       await using IBytesProducer bytesReader =
          new LongFileReader(validInput.File, configuration.Encoding, logger, cancellationToken);
-      BunchOfLinesSorter sorter = new BunchOfLinesSorter(logger);
+      SetOfLinesSorter sorter = new SetOfLinesSorter(logger);
 
       using SortingPhasePool sortingPhasePool = new SortingPhasePool(configuration.SortingPhaseConcurrency,
          configuration.InputBufferLength,
@@ -158,7 +160,7 @@ internal class FileSortingService : IHostedService
             () =>
             {
                Console.WriteLine("--->  Before GC");
-               
+               Console.ReadLine();
                MemoryCleaner.CleanMemory();
                Console.WriteLine("<---  After GC");
 

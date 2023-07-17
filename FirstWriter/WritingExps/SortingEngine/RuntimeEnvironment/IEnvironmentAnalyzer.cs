@@ -31,6 +31,9 @@ namespace SortingEngine.RuntimeEnvironment
          int outputBufferLength = SetBufferLength(_baseConfiguration.OutputBufferLength, 1_000);
 
          string outputPath = GetOutputPath(path);
+
+         bool useOneStepSorting = CheckForOneStep(path, inputBufferLength);
+         
          //can be implemented more elegantly and concisely with using reflection or dynamic
          var config = RuntimeConfiguration.RuntimeConfiguration.Create(conf => conf
             .UseInputBuffer(inputBufferLength)
@@ -39,10 +42,18 @@ namespace SortingEngine.RuntimeEnvironment
             .SortingPhaseConcurrency(_baseConfiguration.SortingPhaseConcurrency)
             .UseOutputBuffer(outputBufferLength)
             .UseOutputPath(outputPath)
-            .UseFolder(path, "")
+            .UseFileAndFolder(path, "")
             //todo merge with the preset config
-            .UseEncoding(encoding));
+            .UseEncoding(encoding)
+            .UseOneWay(useOneStepSorting));
          return config;
+      }
+
+      private bool CheckForOneStep(string filePath, int inputBufferLength)
+      {
+         FileInfo fileInfo = new FileInfo(filePath);
+         long size = fileInfo.Length;
+         return size < inputBufferLength;
       }
 
       private int SetBufferLength(int configurationLength, int defaultLength)

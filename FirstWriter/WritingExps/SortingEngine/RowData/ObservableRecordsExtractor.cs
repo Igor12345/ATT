@@ -90,11 +90,11 @@ public sealed class ObservableRecordsExtractor //: IAsyncObserver<ReadingPhasePa
             $"bytes: {nextPackage.RowData.Length}, bufferId: {id}, linesBuffer: {nextPackage.ParsedRecords.CurrentCapacity}, " +
             $"used bytes: {nextPackage.OccupiedLength}, thread: {Thread.CurrentThread.ManagedThreadId}");
         
-        if (package.IsLastPackage)
-        {
-            Console.WriteLine($"<**> From Extractor last package {package.PackageNumber}, !!! NOT closing ReadyForNextChunk");
-            // await _readyForNextChunkSubject.OnCompletedAsync();
-        }
+        // if (package.IsLastPackage)
+        // {
+        //     Console.WriteLine($"<**> From Extractor last package {package.PackageNumber}, !!! NOT closing ReadyForNextChunk");
+        //     // await _readyForNextChunkSubject.OnCompletedAsync();
+        // }
         // else
         // {
         //     await _readyForNextChunkSubject.OnNextAsync(new PreReadPackage(remainedBytes,

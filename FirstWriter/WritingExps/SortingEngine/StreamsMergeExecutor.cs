@@ -98,7 +98,7 @@ public sealed class StreamsMergeExecutor
                return writingResult;
             // OnOutputBufferFull(new SortingCompletedEventArgs(_outputBuffer, _outputBuffer.Length, _inputBuffer));
             _lastLine = 0;
-            Array.Clear(_outputBuffer);
+            // Array.Clear(_outputBuffer);
          }
       }
 

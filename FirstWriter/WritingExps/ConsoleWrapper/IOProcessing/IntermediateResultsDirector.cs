@@ -13,6 +13,7 @@ internal class IntermediateResultsDirector //: IAsyncObserver<AfterSortingPhaseP
    private readonly ILogger _logger;
    private volatile int _lastFileNumber;
    private readonly string _path;
+   private readonly string _filePath;
    private readonly CancellationToken _token;
    private readonly object _lock = new();
    private readonly HashSet<int> _processedPackages = new();
@@ -24,32 +25,24 @@ internal class IntermediateResultsDirector //: IAsyncObserver<AfterSortingPhaseP
       _path = Guard.NotNullOrEmpty(configuration.TemporaryFolder);
       _logger = Guard.NotNull(logger);
       _token = Guard.NotNull(token);
+      //use strategy
+      if (_configuration.UseOneWay)
+         _filePath = _configuration.Output;
    }
 
    public static IntermediateResultsDirector Create(IConfig configuration, ILogger logger, CancellationToken token = default)
    {
       IntermediateResultsDirector instance = new IntermediateResultsDirector(configuration, logger, token);
-      instance.Init(configuration.TemporaryFolder);
+      if (!configuration.UseOneWay)
+         instance.InitTemporaryFolder(configuration.TemporaryFolder);
       return instance;
    }
 
-   private void Init(string path)
+   private void InitTemporaryFolder(string path)
    {
       if (!Directory.Exists(_path))
          Directory.CreateDirectory(_path);
    }
-
-   // public Result WriteRecords(SortingCompletedEventArgs eventArgs)
-   // {
-   //    var records = eventArgs.Sorted;
-   //    var sourceBytes = eventArgs.Source;
-   //
-   //    string fileName = GetNextFileName();
-   //    var fullFileName = Path.Combine(_path, fileName);
-   //
-   //    using RecordsWriter writer = RecordsWriter.Create(fullFileName, _configuration.Encoding.GetBytes(".").Length, _logger);
-   //    return writer.WriteRecords(records, eventArgs.LinesNumber, sourceBytes);
-   // }
 
    private Result WriteRecords(AfterSortingPhasePackage package)
    {
@@ -57,8 +50,9 @@ internal class IntermediateResultsDirector //: IAsyncObserver<AfterSortingPhaseP
          return Result.Ok;
 
       string fileName = GetNextFileName();
-      string fullFileName = Path.Combine(_path, fileName);
+      string fullFileName = _configuration.UseOneWay ? _filePath : Path.Combine(_path, fileName);
 
+      //todo
       //use synchronous version to prevent from holding the variable by async state machine
       //it looks like something wrong this this version of async code
       using RecordsWriter writer =
@@ -74,6 +68,7 @@ internal class IntermediateResultsDirector //: IAsyncObserver<AfterSortingPhaseP
 
    private readonly IAsyncSubject<AfterSortingPhasePackage> _sortedLinesSavedSubject =
       new ConcurrentSimpleAsyncSubject<AfterSortingPhasePackage>();
+
 
    public IAsyncObservable<AfterSortingPhasePackage> SortedLinesSaved => _sortedLinesSavedSubject;
 
