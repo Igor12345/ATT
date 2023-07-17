@@ -40,6 +40,7 @@ public sealed class StreamsMergeExecutor
       var mergeResult = await ExecuteMerge();
       if (!mergeResult.Success)
       {
+         //todo
          Console.WriteLine($"ERROR: {mergeResult.Message}");
       }
 

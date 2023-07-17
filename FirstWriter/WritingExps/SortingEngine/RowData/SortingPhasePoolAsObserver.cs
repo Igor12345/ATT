@@ -39,9 +39,9 @@ public class SortingPhasePoolAsObserver : IDisposable
 
         public async ValueTask OnNextAsync(PreReadPackage package)
         {
-            Console.WriteLine(
-                $"--> In SortingPhasePoolAsObserver OnNextAsync PreReadPackage for {package.PackageNumber}, " +
-                $"is last: {package.IsLastPackage}, contains bytes: {package.RemainedBytesLength}");
+            // Console.WriteLine(
+            //     $"--> In SortingPhasePoolAsObserver OnNextAsync PreReadPackage for {package.PackageNumber}, " +
+            //     $"is last: {package.IsLastPackage}, contains bytes: {package.RemainedBytesLength}");
 
             if (package.IsLastPackage)
             {
@@ -64,28 +64,19 @@ public class SortingPhasePoolAsObserver : IDisposable
             if (package.RemainedBytes.Length > 0)
                 ArrayPool<byte>.Shared.Return(package.RemainedBytes);
 
-            Console.WriteLine(
-                $"--> In SortingPhasePoolManager before _loadNextChunkSubject.OnNextAsync for {nextPackage.PackageNumber}, is last: {nextPackage.IsLastPackage}");
-
             await _writer.WriteAsync(nextPackage);
         }
 
-        public ValueTask OnErrorAsync(Exception error)
+        public ValueTask OnErrorAsync(Exception ex)
         {
-            var color = Console.ForegroundColor;
-            Console.ForegroundColor = ConsoleColor.DarkRed;
-            Console.WriteLine($"!!!!!!!!! Error {error}");
-            Console.ForegroundColor = color;
-            //todo write special error package
-            // return _poolAsObserver._loadNextChunkSubject.OnCompletedAsync();
-            _writer.Complete();
-            return default;
+            throw ex;
         }
 
         public ValueTask OnCompletedAsync()
         {
-            Console.WriteLine(
-                $"<---->! In SortingPhasePoolManager OOnCompletedAsync thread: {Thread.CurrentThread.ManagedThreadId}");
+            //todo
+            // Console.WriteLine(
+            //     $"<---->! In SortingPhasePoolManager OOnCompletedAsync thread: {Thread.CurrentThread.ManagedThreadId}");
 
             return ValueTask.CompletedTask;
         }
@@ -104,20 +95,21 @@ public class SortingPhasePoolAsObserver : IDisposable
 
         public async ValueTask OnNextAsync(AfterSortingPhasePackage package)
         {
-            int bufferId = package.RowData.GetHashCode();
-            int num = package.PackageNumber;
-            Console.WriteLine(
-                $"-->! In SortingPhasePoolManager OnNextAsync AfterSortingPhasePackage for {package.PackageNumber}, is last: {package.IsLastPackage}, bufferId: {bufferId}");
-            await _poolAsObserver.Log(
-                $"Incoming AfterSortingPhasePackage {package.PackageNumber}, is last package: {package.IsLastPackage}");
+            //todo
+            // int bufferId = package.RowData.GetHashCode();
+            // int num = package.PackageNumber;
+            // Console.WriteLine(
+            //     $"-->! In SortingPhasePoolManager OnNextAsync AfterSortingPhasePackage for {package.PackageNumber}, is last: {package.IsLastPackage}, bufferId: {bufferId}");
+            // await _poolAsObserver.Log(
+            //     $"Incoming AfterSortingPhasePackage {package.PackageNumber}, is last package: {package.IsLastPackage}");
 
             ReleaseTakenStorages(package);
 
             if (package.IsLastPackage)
             {
                 //todo
-                Console.WriteLine(
-                    $"--> !!! In SortingPhasePoolManager before _loadNextChunkSubject.OnCompletedAsync for {package.PackageNumber}, is last: {package.IsLastPackage}");
+                // Console.WriteLine(
+                //     $"--> !!! In SortingPhasePoolManager before _loadNextChunkSubject.OnCompletedAsync for {package.PackageNumber}, is last: {package.IsLastPackage}");
                 
                 _writer.Complete();
             }
@@ -130,21 +122,16 @@ public class SortingPhasePoolAsObserver : IDisposable
             ArrayPool<LineMemory>.Shared.Return(package.SortedLines);
         }
 
-        public ValueTask OnErrorAsync(Exception error)
+        public ValueTask OnErrorAsync(Exception ex)
         {
-            //todo
-            var color = Console.ForegroundColor;
-            Console.ForegroundColor = ConsoleColor.DarkRed;
-            Console.WriteLine($"!!!!!!!!! Error {error}");
-            Console.ForegroundColor = color;
-            _writer.Complete();
-            return default;
+            //Here can be some smart handler
+            throw ex;
         }
 
         public ValueTask OnCompletedAsync()
         {
-            Console.WriteLine(
-                $"<---->! In SortingPhasePoolManager OOnCompletedAsync thread: {Thread.CurrentThread.ManagedThreadId}");
+            // Console.WriteLine(
+            //     $"<---->! In SortingPhasePoolManager OOnCompletedAsync thread: {Thread.CurrentThread.ManagedThreadId}");
 
             return ValueTask.CompletedTask;
         }
@@ -169,7 +156,6 @@ public class SortingPhasePoolAsObserver : IDisposable
     private async ValueTask<IAsyncDisposable> EndlessReading(IAsyncObserver<ReadingPhasePackage> asyncObserver,
         CancellationToken token)
     {
-        Console.WriteLine($"Enter EndlessReading");
         ChannelReader<ReadingPhasePackage> reader = _packagesQueue.Reader;
 
         await Task.Factory.StartNew<Task<bool>>(static async (state) =>
@@ -180,14 +166,11 @@ public class SortingPhasePoolAsObserver : IDisposable
                     (Tuple<IAsyncObserver<ReadingPhasePackage>, ChannelReader<ReadingPhasePackage>, CancellationToken>)
                     checkedState;
 
-                Console.WriteLine($"Enter EndlessReading before loop");
                 while (await reader.WaitToReadAsync(token))
                 {
                     ReadingPhasePackage package = await reader.ReadAsync(token);
                     int id = package.RowData.GetHashCode();
                     
-                    Console.WriteLine($"EndlessReading next package: {package.PackageNumber}, " +
-                                      $"last: {package.IsLastPackage}, buffer Id: {id}");
                     if (package.IsLastPackage)
                     {
                         await observer.OnCompletedAsync();
@@ -197,7 +180,6 @@ public class SortingPhasePoolAsObserver : IDisposable
                     await observer.OnNextAsync(package);
                 }
 
-                Console.WriteLine($" EndlessReading after loop ------------------>");
                 return true;
             },
             new Tuple<IAsyncObserver<ReadingPhasePackage>, ChannelReader<ReadingPhasePackage>, CancellationToken>(
@@ -210,8 +192,9 @@ public class SortingPhasePoolAsObserver : IDisposable
     public async ValueTask LetsStart()
     {
         ReadingPhasePackage package = await _pool.TryAcquireNextAsync();
-        Console.WriteLine(
-            $"-> In SortingPhasePoolManager LetsStart before _loadNextChunkSubject.OnNextAsync for {package.PackageNumber}, is last: {package.IsLastPackage}");
+        //todo
+        // Console.WriteLine(
+        //     $"-> In SortingPhasePoolManager LetsStart before _loadNextChunkSubject.OnNextAsync for {package.PackageNumber}, is last: {package.IsLastPackage}");
         await _packagesQueue.Writer.WriteAsync(package);
     }
 

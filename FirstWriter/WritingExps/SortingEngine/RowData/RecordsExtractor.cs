@@ -75,29 +75,6 @@ namespace SortingEngine.RowData
                bool success = ulong.TryParse(numberChars, out var number);
                if (!success)
                   return Result<LineMemory>.Error($"wrong line: {ByteToStringConverter.Convert(lineSpan)}");
-
-               //todo delete!!!
-               if (number == 8142009861372843997 || number == 4113901189282468735 || number == 8331134947556831535||
-                   number == 440665050649839176 || number == 782484495544139447 || number == 3206653174587164213)
-               {
-                  var color = Console.ForegroundColor;
-                  Console.ForegroundColor = ConsoleColor.DarkBlue;
-                  Console.WriteLine();
-                  Console.WriteLine($"###-- {number} : {ByteToStringConverter.Convert(lineSpan)}");
-                  Console.WriteLine();
-                  Console.ForegroundColor = color;
-                  
-                  
-/*
- Lost in 5 package
- wrQSqunrsNo]iwstmuhPw\eIQXtdCDOReU[\^iKgg
-440665050649839176. HNtdPkythjhqiL\NHCYBJpp|]vU]XWEkAfpNnbAkxmXWd_yI}OVfof^V\vGXV]]Rf{pDZN]cC
-  
-  
-  after
-  8331134947556831535
- */
-               }
                
                //text will include ". " and eol
                return Result<LineMemory>.Ok(new LineMemory(number, startIndex + i, startIndex + lineSpan.Length));

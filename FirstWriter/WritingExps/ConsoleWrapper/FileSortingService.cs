@@ -77,11 +77,7 @@ internal class FileSortingService : IHostedService
 
       Console.WriteLine("After sorting phase");
 
-
-      Console.WriteLine($"----->  Awaiting semaphore, thread {Thread.CurrentThread.ManagedThreadId}");
-      // await semaphore.WaitAsync(cancellationToken);
-      Console.WriteLine($"<----- Semaphore passed thread {Thread.CurrentThread.ManagedThreadId}");
-      var result = await MergingPhase(cancellationToken, configuration, logger);
+      Result result = await MergingPhase(cancellationToken, configuration, logger);
       
       Console.WriteLine("******* Final ********");
 
@@ -91,14 +87,11 @@ internal class FileSortingService : IHostedService
    private static async Task<Result> MergingPhase(CancellationToken cancellationToken, IConfig configuration,
       ILogger logger)
    {
-      // Console.WriteLine("_____ Before merging");
       using ILinesWriter resultWriter =
-         RecordsWriter.Create(configuration.Output, configuration.Encoding.GetBytes(".").Length, logger, true);
+         RecordsWriter.Create(configuration.Output, configuration.Encoding.GetBytes(".").Length, logger);
       StreamsMergeExecutor merger = new StreamsMergeExecutor(configuration, resultWriter);
 
       var result = await merger.MergeWithOrder();
-
-      // Console.WriteLine("--- After merging");
       return result;
    }
 
@@ -127,20 +120,18 @@ internal class FileSortingService : IHostedService
       // await using var s1 = await sortingPhasePoolManager.LoadNextChunk.SubscribeAsync(bytesReader);
       
       // await using var s4 = await extractor.ReadyForNextChunk.SubscribeAsync(sortingPhasePoolManager);
-      await using var s6 = await chunksDirector.SortedLinesSaved.SubscribeAsync(sortingPhasePoolAsObserver.ReleaseBuffers);
+      await using var s6 =
+         await chunksDirector.SortedLinesSaved.SubscribeAsync(sortingPhasePoolAsObserver.ReleaseBuffers);
 
-       var published = sortingPhasePoolAsObserver.StreamLinesByBatches(cancellationToken)
-         .Do(p=> Console.WriteLine($"<<-->> LoadNextChunk sequence for {p.PackageNumber}, step 1, last: {p.IsLastPackage}, bufferId: {p.RowData.GetHashCode()}"))
-         .Select(async p =>
-         {
-            Console.WriteLine($"<<-->> before bytesReader.ProcessPackage {p.PackageNumber}");
-            return await bytesReader.ProcessPackage(p);
-         })
-         .Do(p=> Console.WriteLine($"<<-->> LoadNextChunk sequence for {p.PackageNumber}, step 2, last: {p.IsLastPackage}, bufferId: {p.RowData.GetHashCode()}"))
+      var published = sortingPhasePoolAsObserver.StreamLinesByBatches(cancellationToken)
+         // .Do(p => Console.WriteLine(
+         //    $"<<-->> LoadNextChunk sequence for {p.PackageNumber}, step 1, last: {p.IsLastPackage}, bufferId: {p.RowData.GetHashCode()}"))
+         .Select(async p => await bytesReader.ProcessPackage(p))
+         // .Do(p=> Console.WriteLine($"<<-->> LoadNextChunk sequence for {p.PackageNumber}, step 2, last: {p.IsLastPackage}, bufferId: {p.RowData.GetHashCode()}"))
          .Select(async p => await extractor.ExtractNext(p))
-         
-         .Do(p=> Console.WriteLine($"<<-->> LoadNextChunk sequence for {p.Item1.PackageNumber}, step 3.1 forward to sorting, last: {p.Item1.IsLastPackage}, bufferId: {p.Item1.RowData.GetHashCode()}"))
-         .Do(p=> Console.WriteLine($"<<-->> LoadNextChunk sequence for {p.Item2.PackageNumber}, step 3.2 Back loop, last: {p.Item2.IsLastPackage}"))
+
+         // .Do(p=> Console.WriteLine($"<<-->> LoadNextChunk sequence for {p.Item1.PackageNumber}, step 3.1 forward to sorting, last: {p.Item1.IsLastPackage}, bufferId: {p.Item1.RowData.GetHashCode()}"))
+         // .Do(p=> Console.WriteLine($"<<-->> LoadNextChunk sequence for {p.Item2.PackageNumber}, step 3.2 Back loop, last: {p.Item2.IsLastPackage}"))
          .Publish();
 
       await using var backSeq = await published.Select(pp => pp.Item2)
@@ -150,69 +141,36 @@ internal class FileSortingService : IHostedService
          .Select(pp => pp.Item1)
          .Select(p => AsyncObservable.FromAsync(async () => await sorter.ProcessPackage(p)))
          .Merge()
-         .Do(p=> Console.WriteLine($"<<++>> Sorting sequence for {p.PackageNumber}, step 1, last: {p.IsLastPackage}, bufferId: {p.RowData.GetHashCode()}, sorted: {p.LinesNumber}"))
+         // .Do(p=> Console.WriteLine($"<<++>> Sorting sequence for {p.PackageNumber}, step 1, last: {p.IsLastPackage}, bufferId: {p.RowData.GetHashCode()}, sorted: {p.LinesNumber}"))
          .Select(async p => await chunksDirector.ProcessPackage(p))
-         .Do(p=> Console.WriteLine($"<<++>> Sorting sequence for {p.PackageNumber}, step 2, last: {p.IsLastPackage}, bufferId: {p.RowData.GetHashCode()}, saved: {p.LinesNumber}"))
+         // .Do(p=> Console.WriteLine($"<<++>> Sorting sequence for {p.PackageNumber}, step 2, last: {p.IsLastPackage}, bufferId: {p.RowData.GetHashCode()}, saved: {p.LinesNumber}"))
          .SubscribeAsync(
             p =>
             {
-               Console.WriteLine($"Final subscription!!! sortingPhasePoolManager.LoadNextChunk processed package: {p.PackageNumber}");
+               // Console.WriteLine($"Final subscription!!! sortingPhasePoolManager.LoadNextChunk processed package: {p.PackageNumber}");
             },
             ex =>
             {
-               var color = Console.ForegroundColor;
-               Console.ForegroundColor = ConsoleColor.DarkRed;
-               Console.WriteLine($"!!!!!!!!! Error {ex}");
-               Console.ForegroundColor = color;
-               semaphore.Release();
+               //Here can be some smarter handler
+               HandleError(ex);
+               throw ex;
             },
             () =>
             {
-               Console.WriteLine($"sortingPhasePoolManager.LoadNextChunk completed");
-
                Console.WriteLine("--->  Before GC");
+               
                MemoryCleaner.CleanMemory();
                Console.WriteLine("<---  After GC");
 
-               Console.WriteLine("Releasing semaphore");
                semaphore.Release();
-               Console.WriteLine("Semaphore released");
-               StartMerge();
             }
          );
 
       await published.ConnectAsync();
 
-      Console.WriteLine("All subscriptions ready");
       await sortingPhasePoolAsObserver.LetsStart();
          
-      Console.WriteLine($"----->  Awaiting semaphore, thread {Thread.CurrentThread.ManagedThreadId}");
       await semaphore.WaitAsync(cancellationToken);
-      Console.WriteLine($"<----- Semaphore passed thread {Thread.CurrentThread.ManagedThreadId}");
-      // await using var s2 = await bytesReader.NextChunkPrepared.SubscribeAsync(extractor);
-      // await using var s3 = await extractor.ReadyForSorting.SubscribeAsync(sorter);
-      // await using var s5 = await sorter.SortingCompleted.SubscribeAsync(chunksDirector);
-
-      // await using var s7 = await chunksDirector.SortedLinesSaved.SubscribeAsync(
-      //    p =>
-      //    {
-      //       Console.WriteLine(
-      //          $"--> Process package {p.PackageNumber} on thread: {Thread.CurrentThread.ManagedThreadId} ");
-      //    },
-      //    e => HandleError(e),
-      //    () =>
-      //    {
-      //       Console.WriteLine("--->  Before GC");
-      //       MemoryCleaner.CleanMemory();
-      //       Console.WriteLine("<---  After GC");
-      //       
-      //       Console.WriteLine("Releasing semaphore");
-      //       semaphore.Release();
-      //       Console.WriteLine("Semaphore released");
-      //       StartMerge();
-      //    }
-      // );
-
    }
 
    private void HandleError(Exception exception)
@@ -221,20 +179,12 @@ internal class FileSortingService : IHostedService
       try
       {
          Console.ForegroundColor = ConsoleColor.DarkRed;
-         Console.WriteLine(exception.Message);
-         Console.WriteLine(exception.ToString());
-         Console.WriteLine(exception.StackTrace);
+         Console.WriteLine(exception);
       }
       finally
       {
          Console.ForegroundColor = color;
       }
-      
-   }
-
-   private void StartMerge()
-   {
-      Console.WriteLine("---> Ready for merge! <---");
    }
 
    private async Task FirstHardCodedApproach(CancellationToken cancellationToken)
