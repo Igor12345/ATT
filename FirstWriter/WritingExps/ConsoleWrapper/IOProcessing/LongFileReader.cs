@@ -1,6 +1,7 @@
 ﻿
 using System.Reactive.Subjects;
 using System.Text;
+using Infrastructure.ByteOperations;
 using Infrastructure.Concurrency;
 using Infrastructure.Parameters;
 using LogsHub;
@@ -51,7 +52,7 @@ internal class LongFileReader : IBytesProducer, IAsyncDisposable
       if (!readingResult.Success)
          return readingResult;
 
-      _lastPosition += readingResult.Size;
+      _lastPosition += readingResult.Size-offset;
       return readingResult;
    }
 
@@ -105,9 +106,14 @@ internal class LongFileReader : IBytesProducer, IAsyncDisposable
    public async Task<ReadingPhasePackage> ProcessPackage(ReadingPhasePackage inputPackage)
    {
       await Task.Yield();
+         //todo
+         int num = inputPackage.PackageNumber;
+         int wl = inputPackage.WrittenBytesLength;
+         int pb = inputPackage.PrePopulatedBytesLength;
       int id = inputPackage.RowData.GetHashCode();
       await Log($"Processing package: {inputPackage.PackageNumber}, is last: {inputPackage.IsLastPackage}, " +
-                $"bufferId: {id}, contains bytes: {inputPackage.ReadBytesLength}, thread: {Thread.CurrentThread.ManagedThreadId}");
+                $"bufferId: {id}, contains bytes: {inputPackage.WrittenBytesLength}, " +
+                $"already populated: {inputPackage.PrePopulatedBytesLength}, thread: {Thread.CurrentThread.ManagedThreadId}");
       ReadingResult result;
 
       using (var _ = await _lock.LockAsync())
@@ -116,7 +122,15 @@ internal class LongFileReader : IBytesProducer, IAsyncDisposable
          
          if (inputPackage.PackageNumber != _lastProcessedPackage++)
             throw new InvalidOperationException("Wrong packages sequence.");
+         
+         Console.WriteLine($"Reading new package {inputPackage.PackageNumber}, tail from last ({inputPackage.PrePopulatedBytesLength} byte): ");
+         Console.WriteLine($"Tail {ByteToStringConverter.Convert(inputPackage.RowData.AsSpan()[..inputPackage.PrePopulatedBytesLength])}");
+         Console.WriteLine($"Package {inputPackage.PackageNumber}, rowData length: {inputPackage.RowData.Length}");
+         Console.WriteLine("Reading ----- ");
+         
          result = await ReadBytesAsync(inputPackage.RowData, inputPackage.PrePopulatedBytesLength, _cancellationToken);
+         
+         Console.WriteLine($"Tail+next ({inputPackage.PackageNumber}-{inputPackage.PrePopulatedBytesLength}): {ByteToStringConverter.Convert(inputPackage.RowData.AsSpan()[..(2*inputPackage.PrePopulatedBytesLength)])}");
       }
 
       Console.WriteLine(
@@ -134,8 +148,8 @@ internal class LongFileReader : IBytesProducer, IAsyncDisposable
       }
 
       var nextPackage = result.Size == 0
-         ? inputPackage with { IsLastPackage = true, ReadBytesLength = 0 }
-         : inputPackage with { ReadBytesLength = result.Size };
+         ? inputPackage with { IsLastPackage = true, WrittenBytesLength = 0 }
+         : inputPackage with { WrittenBytesLength = result.Size };
       return nextPackage;
    }
 

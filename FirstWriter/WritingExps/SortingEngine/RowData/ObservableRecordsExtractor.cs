@@ -37,7 +37,7 @@ public sealed class ObservableRecordsExtractor //: IAsyncObserver<ReadingPhasePa
             $"Processing package: {package.PackageNumber}, is last: {package.IsLastPackage}, " +
             $"bytes: {package.RowData.Length}, pre populated: {package.PrePopulatedBytesLength}, buffer id: {id}, thread: {Thread.CurrentThread.ManagedThreadId}");
 
-        ExtractionResult result = _recordsExtractor.ExtractRecords(package.RowData.AsSpan()[..package.ReadBytesLength],
+        ExtractionResult result = _recordsExtractor.ExtractRecords(package.RowData.AsSpan()[..package.WrittenBytesLength],
             package.ParsedRecords);
         
         
@@ -47,12 +47,12 @@ public sealed class ObservableRecordsExtractor //: IAsyncObserver<ReadingPhasePa
             await _readyForNextChunkSubject.OnErrorAsync(new InvalidOperationException(result.Message));
         }
 
-        int remainingBytesLength = package.ReadBytesLength - result.StartRemainingBytes;
+        int remainingBytesLength = package.WrittenBytesLength - result.StartRemainingBytes;
         await Log($"Package: {package.PackageNumber} after extraction. Found {result.LinesNumber} lines, left {remainingBytesLength} bytes for the next chunk");
 
         //will be returned in SortingPhasePoolManager
         byte[] remainedBytes = ArrayPool<byte>.Shared.Rent(remainingBytesLength);
-        package.RowData.AsSpan()[result.StartRemainingBytes..package.ReadBytesLength].CopyTo(remainedBytes);
+        package.RowData.AsSpan()[result.StartRemainingBytes..package.WrittenBytesLength].CopyTo(remainedBytes);
 
         // if (package.PackageNumber == 3)
         // {
@@ -81,7 +81,7 @@ public sealed class ObservableRecordsExtractor //: IAsyncObserver<ReadingPhasePa
         // }
         
         //todo
-        SortingPhasePackage nextPackage = new SortingPhasePackage(package.RowData, package.ReadBytesLength,
+        SortingPhasePackage nextPackage = new SortingPhasePackage(package.RowData, package.WrittenBytesLength,
             package.ParsedRecords, result.LinesNumber, package.PackageNumber, package.IsLastPackage);
 
         id = nextPackage.RowData.GetHashCode();

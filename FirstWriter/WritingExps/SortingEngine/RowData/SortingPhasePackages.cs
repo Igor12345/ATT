@@ -11,7 +11,7 @@ public record ReadingPhasePackage(byte[] RowData, ExpandingStorage<LineMemory> P
 
     public static ReadingPhasePackage Empty => _emptyPackage;
     public int PrePopulatedBytesLength { get; init; }
-    public int ReadBytesLength { get; init; }
+    public int WrittenBytesLength { get; init; }
 }
 
 public record PreReadPackage(
