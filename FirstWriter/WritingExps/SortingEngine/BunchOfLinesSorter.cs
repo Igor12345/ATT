@@ -60,54 +60,32 @@ public class BunchOfLinesSorter //: IAsyncObserver<SortingPhasePackage>
     
     public async Task<AfterSortingPhasePackage> ProcessPackage(SortingPhasePackage package)
     {
-        Console.WriteLine($"---> Inside Sorter for {package.PackageNumber}, is last: {package.IsLastPackage}");
+        int id = package.RowData.GetHashCode();
+        Console.WriteLine(
+            $"---> Inside Sorter for {package.PackageNumber}, is last: {package.IsLastPackage}, buffer Id: {id}, thread: {Thread.CurrentThread.ManagedThreadId}");
         await Log(
             $"Processing package: {package.PackageNumber}, lines: {package.LinesNumber}, " +
-            $"bytes: {package.RowData.Length},linesBuffer: {package.ParsedRecords.CurrentCapacity} ");
+            $"bytes: {package.OccupiedLength}, buffer Id: {id}, linesBuffer: {package.ParsedRecords.CurrentCapacity} ");
         ReadOnlyMemory<byte> inputBytes = package.RowData.AsMemory()[..package.OccupiedLength];
         LineMemory[] sorted = SortRecords(inputBytes, package.LinesNumber, package.ParsedRecords);
 
-        if (package.LinesNumber > 0)
-        {
-            string first = LinesUtils2.LineToString(sorted[0], package.RowData);
-            //todo remove
-            if (first.StartsWith("4542039177020542"))
-            {
-                var d = first;
-            }
+        //todo remove
+        // if (package.PackageNumber > 1)
+        // {
+        //     string first = LinesUtils2.LineToString(sorted[0], package.RowData);
+        //
+        //     var sortedStrings = sorted.Select(l => LinesUtils2.LineToString(l, package.RowData)).ToArray();
+        //     LineMemory[] result = ArrayPool<LineMemory>.Shared.Rent(package.LinesNumber);
+        //     package.ParsedRecords.CopyTo(result, package.LinesNumber);
+        //     
+        //     var originalStrings = result.Select(l => LinesUtils2.LineToString(l, package.RowData)).ToArray();
+        //
+        //     var t = originalStrings;
+        // }
 
-            var wrongLine = sorted.FirstOrDefault(l => l.Number == 6748015574496075763||l.Number == 2415040422824707043||l.Number == 8633638752424593355);
-            var cnt = sorted.Count(l => l.Number == 6748015574496075763||l.Number == 2415040422824707043||l.Number == 8633638752424593355);
-            if (cnt == 1)
-            {
-                var c = cnt;
-            }
-
-            if (wrongLine.Number != 0 || cnt > 0)
-            {
-                string wrongStr = LinesUtils2.LineToString(wrongLine, package.RowData);
-                Console.WriteLine();
-                Console.WriteLine(
-                    $"!!!Wrong line {wrongStr}, in package {package.PackageNumber}, from: {wrongLine.From}.. to {wrongLine.To}");
-                string bytes = string.Join(", ",
-                    package.RowData.Take(wrongLine.From..wrongLine.To).Select(b => (char)b));
-                Console.WriteLine($"Bytes: {bytes}");
-                Console.WriteLine();
-            }
-            else
-            {
-                if (package.PackageNumber == 3)
-                {
-                    var b = package.LinesNumber;
-                    string l0 = LinesUtils2.LineToString(sorted[0], package.RowData);
-                    string l1 = LinesUtils2.LineToString(sorted[1], package.RowData);
-                    string l2 = LinesUtils2.LineToString(sorted[2], package.RowData);
-                    string l3 = LinesUtils2.LineToString(sorted[3], package.RowData);
-                }
-            }
-        }
-
-        await Log($"Sorted {sorted.Length} lines for the package: {package.PackageNumber}");
+        await Log(
+            $"Sorted {sorted.Length} (in fact: {package.LinesNumber}) " +
+            $"lines for the package: {package.PackageNumber}, sending AfterSortingPhasePackage, thread: {Thread.CurrentThread.ManagedThreadId}");
         return new AfterSortingPhasePackage(sorted, package.RowData,
             package.ParsedRecords, package.LinesNumber, package.PackageNumber, package.IsLastPackage);
     }

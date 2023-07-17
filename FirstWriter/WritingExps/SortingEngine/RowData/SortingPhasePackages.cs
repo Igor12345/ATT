@@ -4,10 +4,10 @@ using SortingEngine.Entities;
 namespace SortingEngine.RowData;
 
 public record ReadingPhasePackage(byte[] RowData, ExpandingStorage<LineMemory> ParsedRecords, int PackageNumber,
-    bool IsLastPackage = false)
+    bool IsLastPackage)
 {
     private static readonly ReadingPhasePackage _emptyPackage =
-        new(Array.Empty<byte>(), new ExpandingStorage<LineMemory>(0), -1);
+        new(Array.Empty<byte>(), new ExpandingStorage<LineMemory>(0), -1, false);
 
     public static ReadingPhasePackage Empty => _emptyPackage;
     public int PrePopulatedBytesLength { get; init; }

@@ -54,6 +54,33 @@ public class AsyncRxTests
     }
 
     [Fact]
+    public async Task TryCreateAsync()
+    {
+        SemaphoreSlim semaphore = new SemaphoreSlim(0, 1);
+
+        CancellationTokenSource cts = new CancellationTokenSource();
+        SynchronizationContext context = new MaxConcurrencySyncContext(2);
+        var t1 = await CreateSequences.CreateEndless(cts.Token)
+            // .ObserveOn(new SynchronizationContextAsyncScheduler(context))
+            .Select(i => AsyncObservable.FromAsync(async () => await LongWork2(i, 22)))
+            // .ObserveOn(new SynchronizationContextAsyncScheduler())
+            .Merge()
+            // .Do(v => AnotherWork2(v))
+            .Select(v => AnotherSyncWork(v))
+            .Select(v => AnotherWork(v))
+            .SubscribeAsync(o=>
+            {
+                if(o>3)
+                    cts.Cancel();
+                Extensions.Print<int>("first", _testOutputHelper, semaphore);
+            });
+        
+        
+        
+        Assert.Equal(2,3);
+    }
+
+    [Fact]
     public async Task TrySeveralWorkersAsync()
     {
         SemaphoreSlim semaphore = new SemaphoreSlim(0, 1);
@@ -69,7 +96,7 @@ public class AsyncRxTests
         SynchronizationContext context = new MaxConcurrencySyncContext(2);
         var t1 = await AsyncObservable.Range(0, 10)
             // .ObserveOn(new SynchronizationContextAsyncScheduler(context))
-            .Select(i => AsyncObservable.FromAsync(async () => await LongWork(i, 22)))
+            .Select(i => AsyncObservable.FromAsync(async () => await LongWork2(i, 22)))
             // .ObserveOn(new SynchronizationContextAsyncScheduler())
             .Merge()
             // .Do(v => AnotherWork2(v))
@@ -122,7 +149,7 @@ public class AsyncRxTests
         // var t = await AsyncObservable.Range(0, 10)
         //     .Select(i=> LongWork(i, 12)).SubscribeAsync(Extensions.PrintAsync<int>("first"));
         var t3 = Observable.Range(0, 10)
-            .Select(i => Observable.FromAsync(async ()=>await LongWork(i, 22)))
+            .Select(i => Observable.FromAsync(async ()=>await LongWork2(i, 22)))
             .Merge(4)
             // .Concat()
             // .Do(async v =>await AnotherWork2(v))
@@ -147,6 +174,9 @@ public class AsyncRxTests
 
         // var b = t;
     }
+    
+    
+    
     public IObserver<T> PrintSync<T>(string name, SemaphoreSlim semaphore)
     {
         return Observer.Create<T>(
@@ -219,7 +249,7 @@ public class AsyncRxTests
         return ValueTask.FromResult((value, Thread.CurrentThread.ManagedThreadId));
     }
 
-    private async ValueTask<(T,int)> LongWork<T>(T value, int maxDelay)
+    private async ValueTask<(T,int)> LongWork2<T>(T value, int maxDelay)
     {
         await Task.Yield();
         _testOutputHelper.WriteLine($"LongWork Processing {value} in ({Thread.CurrentThread.ManagedThreadId})");
@@ -229,5 +259,17 @@ public class AsyncRxTests
         _testOutputHelper.WriteLine($"Value {value} was processed in ({Thread.CurrentThread.ManagedThreadId})");
         Console.WriteLine($"Value {value} was processed in ({Thread.CurrentThread.ManagedThreadId})");
         return (value, Thread.CurrentThread.ManagedThreadId);
+    }
+
+    private async ValueTask<T> LongWork<T>(T value, int maxDelay)
+    {
+        await Task.Yield();
+        _testOutputHelper.WriteLine($"LongWork Processing {value} in ({Thread.CurrentThread.ManagedThreadId})");
+        Console.WriteLine($"LongWork Processing {value} in ({Thread.CurrentThread.ManagedThreadId})");
+        int delay = Random.Shared.Next(0, maxDelay);
+        await Task.Delay(delay);
+        _testOutputHelper.WriteLine($"Value {value} was processed in ({Thread.CurrentThread.ManagedThreadId})");
+        Console.WriteLine($"Value {value} was processed in ({Thread.CurrentThread.ManagedThreadId})");
+        return value;
     }
 }

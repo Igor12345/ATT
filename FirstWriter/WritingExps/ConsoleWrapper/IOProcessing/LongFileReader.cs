@@ -105,30 +105,36 @@ internal class LongFileReader : IBytesProducer, IAsyncDisposable
    public async Task<ReadingPhasePackage> ProcessPackage(ReadingPhasePackage inputPackage)
    {
       await Task.Yield();
-      await Log($"Processing package: {inputPackage.PackageNumber}");
+      int id = inputPackage.RowData.GetHashCode();
+      await Log($"Processing package: {inputPackage.PackageNumber}, is last: {inputPackage.IsLastPackage}, " +
+                $"bufferId: {id}, contains bytes: {inputPackage.ReadBytesLength}, thread: {Thread.CurrentThread.ManagedThreadId}");
       ReadingResult result;
 
       using (var _ = await _lock.LockAsync())
       {
-         //todo
-         int num = inputPackage.PackageNumber;
-
+         Console.WriteLine($"LongFileReader.ProcessPackage; lock passed package: {inputPackage.PackageNumber}, thread: {Thread.CurrentThread.ManagedThreadId} ");
+         
          if (inputPackage.PackageNumber != _lastProcessedPackage++)
             throw new InvalidOperationException("Wrong packages sequence.");
          result = await ReadBytesAsync(inputPackage.RowData, inputPackage.PrePopulatedBytesLength, _cancellationToken);
       }
 
-      //todo log
+      Console.WriteLine(
+         $"LongFileReader.ProcessPackage; After  package: {inputPackage.PackageNumber}, " +
+         $"thread: {Thread.CurrentThread.ManagedThreadId}, reading result: {result.Success}, read bytes: {result.Size} ");
+      //todo handle in railway style 
       if (!result.Success)
          throw new InvalidOperationException(result.Message);
 
       if (result.Size == 0)
       {
-         await Log($"Sending the last package: {inputPackage.PackageNumber} !!!");
+         id = inputPackage.RowData.GetHashCode();
+         await Log($"Sending the last package: {inputPackage.PackageNumber} !!! " +
+                   $"bufferId: {id}, contains bytes: {result.Size}, thread: {Thread.CurrentThread.ManagedThreadId}");
       }
 
       var nextPackage = result.Size == 0
-         ? inputPackage with { IsLastPackage = true }
+         ? inputPackage with { IsLastPackage = true, ReadBytesLength = 0 }
          : inputPackage with { ReadBytesLength = result.Size };
       return nextPackage;
    }

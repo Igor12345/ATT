@@ -4,15 +4,17 @@ using Infrastructure.Parameters;
 
 namespace SortingEngine.DataStructures
 {
-   //todo test
+   //not thread safe!
    public class ExpandingStorage<T> : IDisposable
    {
       private int _chunkSize;
       private readonly int _minChunkSize;
-      //todo either use lock or remove volatile
-      private volatile int _lastBuffer = -1;
+      private int _lastBuffer = -1;
       private long _currentIndex;
       private readonly List<T[]> _buffers;
+
+      //todo implement null object
+      public static ExpandingStorage<T> Empty => new(1);
 
       public ExpandingStorage(int chunkSize)
       {
@@ -75,10 +77,9 @@ namespace SortingEngine.DataStructures
       {
          foreach (var buffer in _buffers)
          {
-            if (buffer != null)
-               ArrayPool<T>.Shared.Return(buffer);
+            ArrayPool<T>.Shared.Return(buffer);
          }
-
+         _buffers.Clear();
          _lastBuffer = -1;
          _currentIndex = 0;
       }

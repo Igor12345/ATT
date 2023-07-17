@@ -64,6 +64,8 @@ internal class FileSortingService : IHostedService
       IConfig configuration = analyzer.SuggestConfig(validInput);
 
       //only for demonstration, use NLog, Serilog, ... in real projects
+      // https://learn.microsoft.com/en-us/dotnet/core/extensions/high-performance-logging
+      // https://learn.microsoft.com/en-us/dotnet/core/extensions/logger-message-generator
       ILogger logger = Logger.Create(cancellationToken);
       // ILogger logger = Logger.CreateEmpty(cancellationToken);
 
@@ -77,8 +79,8 @@ internal class FileSortingService : IHostedService
 
 
       Console.WriteLine($"----->  Awaiting semaphore, thread {Thread.CurrentThread.ManagedThreadId}");
-      await semaphore.WaitAsync(cancellationToken);
-      Console.WriteLine($"<---- Semaphore passed thread {Thread.CurrentThread.ManagedThreadId}");
+      // await semaphore.WaitAsync(cancellationToken);
+      Console.WriteLine($"<----- Semaphore passed thread {Thread.CurrentThread.ManagedThreadId}");
       var result = await MergingPhase(cancellationToken, configuration, logger);
       
       Console.WriteLine("******* Final ********");
@@ -91,7 +93,7 @@ internal class FileSortingService : IHostedService
    {
       // Console.WriteLine("_____ Before merging");
       using ILinesWriter resultWriter =
-         RecordsWriter.Create(configuration.Output, configuration.Encoding.GetBytes(".").Length, logger);
+         RecordsWriter.Create(configuration.Output, configuration.Encoding.GetBytes(".").Length, logger, true);
       StreamsMergeExecutor merger = new StreamsMergeExecutor(configuration, resultWriter);
 
       var result = await merger.MergeWithOrder();
@@ -112,7 +114,7 @@ internal class FileSortingService : IHostedService
 
       //todo!!!
       // await using 
-         IBytesProducer bytesReader =
+      await using IBytesProducer bytesReader =
          new LongFileReader(validInput.File, configuration.Encoding, logger, cancellationToken);
       BunchOfLinesSorter sorter = new BunchOfLinesSorter(logger);
 
@@ -125,44 +127,43 @@ internal class FileSortingService : IHostedService
       // await using var s1 = await sortingPhasePoolManager.LoadNextChunk.SubscribeAsync(bytesReader);
       
       // await using var s4 = await extractor.ReadyForNextChunk.SubscribeAsync(sortingPhasePoolManager);
-      await using var s6 = await chunksDirector.SortedLinesSaved.SubscribeAsync(sortingPhasePoolAsObserver);
+      await using var s6 = await chunksDirector.SortedLinesSaved.SubscribeAsync(sortingPhasePoolAsObserver.ReleaseBuffers);
 
-      var published = sortingPhasePoolAsObserver.LoadNextChunk
+       var published = sortingPhasePoolAsObserver.StreamLinesByBatches(cancellationToken)
+         .Do(p=> Console.WriteLine($"<<-->> LoadNextChunk sequence for {p.PackageNumber}, step 1, last: {p.IsLastPackage}, bufferId: {p.RowData.GetHashCode()}"))
          .Select(async p =>
          {
             Console.WriteLine($"<<-->> before bytesReader.ProcessPackage {p.PackageNumber}");
             return await bytesReader.ProcessPackage(p);
          })
+         .Do(p=> Console.WriteLine($"<<-->> LoadNextChunk sequence for {p.PackageNumber}, step 2, last: {p.IsLastPackage}, bufferId: {p.RowData.GetHashCode()}"))
          .Select(async p => await extractor.ExtractNext(p))
+         
+         .Do(p=> Console.WriteLine($"<<-->> LoadNextChunk sequence for {p.Item1.PackageNumber}, step 3.1 forward to sorting, last: {p.Item1.IsLastPackage}, bufferId: {p.Item1.RowData.GetHashCode()}"))
+         .Do(p=> Console.WriteLine($"<<-->> LoadNextChunk sequence for {p.Item2.PackageNumber}, step 3.2 Back loop, last: {p.Item2.IsLastPackage}"))
          .Publish();
 
-      var backSeq = await published.Select(pp => pp.Item2)
-         .Select(async p => await sortingPhasePoolAsObserver.OnNextAsync(p))
-         .SubscribeAsync(
-            (p) =>
-            {
-               Console.WriteLine($"OnNext in subscription ReadyForNextChunk");
-            },
-            ex =>
-            {
-               //todo
-            },
-            () => { 
-               Console.WriteLine($"OnCompleted in subscription ReadyForNextChunk");}
-         );
+      await using var backSeq = await published.Select(pp => pp.Item2)
+         .SubscribeAsync(sortingPhasePoolAsObserver.ReadyProcessingNextChunk);
 
-      var sortingSeq = await published
+      await using var sortingSeq = await published
          .Select(pp => pp.Item1)
          .Select(p => AsyncObservable.FromAsync(async () => await sorter.ProcessPackage(p)))
          .Merge()
+         .Do(p=> Console.WriteLine($"<<++>> Sorting sequence for {p.PackageNumber}, step 1, last: {p.IsLastPackage}, bufferId: {p.RowData.GetHashCode()}, sorted: {p.LinesNumber}"))
          .Select(async p => await chunksDirector.ProcessPackage(p))
+         .Do(p=> Console.WriteLine($"<<++>> Sorting sequence for {p.PackageNumber}, step 2, last: {p.IsLastPackage}, bufferId: {p.RowData.GetHashCode()}, saved: {p.LinesNumber}"))
          .SubscribeAsync(
             p =>
             {
-               Console.WriteLine($"sortingPhasePoolManager.LoadNextChunk processed package: {p.PackageNumber}");
+               Console.WriteLine($"Final subscription!!! sortingPhasePoolManager.LoadNextChunk processed package: {p.PackageNumber}");
             },
             ex =>
             {
+               var color = Console.ForegroundColor;
+               Console.ForegroundColor = ConsoleColor.DarkRed;
+               Console.WriteLine($"!!!!!!!!! Error {ex}");
+               Console.ForegroundColor = color;
                semaphore.Release();
             },
             () =>
@@ -185,6 +186,9 @@ internal class FileSortingService : IHostedService
       Console.WriteLine("All subscriptions ready");
       await sortingPhasePoolAsObserver.LetsStart();
          
+      Console.WriteLine($"----->  Awaiting semaphore, thread {Thread.CurrentThread.ManagedThreadId}");
+      await semaphore.WaitAsync(cancellationToken);
+      Console.WriteLine($"<----- Semaphore passed thread {Thread.CurrentThread.ManagedThreadId}");
       // await using var s2 = await bytesReader.NextChunkPrepared.SubscribeAsync(extractor);
       // await using var s3 = await extractor.ReadyForSorting.SubscribeAsync(sorter);
       // await using var s5 = await sorter.SortingCompleted.SubscribeAsync(chunksDirector);
@@ -265,17 +269,17 @@ internal class FileSortingService : IHostedService
                    new LongFileReader(validInput.File, validInput.Encoding, logger, cancellationToken))
       {
          RecordsSetSorter sorter = new RecordsSetSorter(configuration);
-         sorter.SortingCompleted += (o, eventArgs) =>
-         {
-            Console.WriteLine("Writing chunk");
-            chunksDirector.WriteRecords(eventArgs);
-         };
-         sorter.CheckPoint += (o, eventArgs) =>
-         {
-            Console.WriteLine($"--->  {eventArgs.Name} check point");
-            Console.ReadLine();
-            Console.WriteLine(" <---");
-         };
+         // sorter.SortingCompleted += (o, eventArgs) =>
+         // {
+         //    Console.WriteLine("Writing chunk");
+         //    chunksDirector.WriteRecords(eventArgs);
+         // };
+         // sorter.CheckPoint += (o, eventArgs) =>
+         // {
+         //    Console.WriteLine($"--->  {eventArgs.Name} check point");
+         //    Console.ReadLine();
+         //    Console.WriteLine(" <---");
+         // };
 
          Console.WriteLine("Before starting");
 

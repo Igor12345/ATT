@@ -7,7 +7,7 @@ using SortingEngine.RuntimeConfiguration;
 
 namespace ConsoleWrapper.IOProcessing;
 
-internal class IntermediateResultsDirector: IAsyncObserver<AfterSortingPhasePackage>
+internal class IntermediateResultsDirector //: IAsyncObserver<AfterSortingPhasePackage>
 {
    private readonly IConfig _configuration;
    private readonly ILogger _logger;
@@ -39,29 +39,30 @@ internal class IntermediateResultsDirector: IAsyncObserver<AfterSortingPhasePack
          Directory.CreateDirectory(_path);
    }
 
-   public Result WriteRecords(SortingCompletedEventArgs eventArgs)
-   {
-      var records = eventArgs.Sorted;
-      var sourceBytes = eventArgs.Source;
+   // public Result WriteRecords(SortingCompletedEventArgs eventArgs)
+   // {
+   //    var records = eventArgs.Sorted;
+   //    var sourceBytes = eventArgs.Source;
+   //
+   //    string fileName = GetNextFileName();
+   //    var fullFileName = Path.Combine(_path, fileName);
+   //
+   //    using RecordsWriter writer = RecordsWriter.Create(fullFileName, _configuration.Encoding.GetBytes(".").Length, _logger);
+   //    return writer.WriteRecords(records, eventArgs.LinesNumber, sourceBytes);
+   // }
 
-      string fileName = GetNextFileName();
-      var fullFileName = Path.Combine(_path, fileName);
-
-      using RecordsWriter writer = RecordsWriter.Create(fullFileName, _configuration.Encoding.GetBytes(".").Length, _logger);
-      return writer.WriteRecords(records, eventArgs.LinesNumber, sourceBytes);
-   }
-   
    private Result WriteRecords(AfterSortingPhasePackage package)
    {
-      if(package.LinesNumber==0)
+      if (package.LinesNumber == 0)
          return Result.Ok;
-      
+
       string fileName = GetNextFileName();
       string fullFileName = Path.Combine(_path, fileName);
 
       //use synchronous version to prevent from holding the variable by async state machine
       //it looks like something wrong this this version of async code
-      using RecordsWriter writer = RecordsWriter.Create(fullFileName, _configuration.Encoding.GetBytes(".").Length, _logger);
+      using RecordsWriter writer =
+         RecordsWriter.Create(fullFileName, _configuration.Encoding.GetBytes("1").Length, _logger);
       return writer.WriteRecords(package.SortedLines, package.LinesNumber, package.RowData);
    }
 
@@ -78,9 +79,10 @@ internal class IntermediateResultsDirector: IAsyncObserver<AfterSortingPhasePack
 
    public async ValueTask<AfterSortingPhasePackage> ProcessPackage(AfterSortingPhasePackage package)
    {
+      int id = package.RowData.GetHashCode();
       await Log(
          $"Processing package: {package.PackageNumber}(last - {package.IsLastPackage}), " +
-         $"Lines: {package.LinesNumber}, bytes: {package.RowData.Length},AllLines: {package.SortedLines} ");
+         $"Before write this chunk on Disk: Lines: {package.LinesNumber}, bytes: {package.RowData.Length}, buffer Id: {id}, AllLines: {package.SortedLines}, thread: {Thread.CurrentThread.ManagedThreadId}  ");
 
       Result result = WriteRecords(package);
       if (!result.Success)
@@ -88,6 +90,8 @@ internal class IntermediateResultsDirector: IAsyncObserver<AfterSortingPhasePack
 
       await Log($"Processed package: {package.PackageNumber}, all lines saved: {result.Success}");
 
+      id = package.RowData.GetHashCode();
+      Console.WriteLine($"Sending IntermediateResultsDirector.SortedLinesSaved.OnNextAsync {package.PackageNumber}, is last: {package.IsLastPackage}, buffer Id: {id}");
       await _sortedLinesSavedSubject.OnNextAsync(package);
 
       bool allProcessed = await CheckIfAllProcessed(package);
@@ -95,44 +99,44 @@ internal class IntermediateResultsDirector: IAsyncObserver<AfterSortingPhasePack
       if (allProcessed)
       {
          Console.WriteLine(
-            $"<__________> All packages processed after {package.PackageNumber}, closing SortedLinesSaved !!!, thread {Thread.CurrentThread.ManagedThreadId}");
+            $"<____!!!_____> All packages processed after {package.PackageNumber}, closing SortedLinesSaved !!!, thread {Thread.CurrentThread.ManagedThreadId}");
          await _sortedLinesSavedSubject.OnCompletedAsync();
       }
 
       return package;
    }
 
-   public async ValueTask OnNextAsync(AfterSortingPhasePackage inputPackage)
-   {
-      await Log(
-         $"Processing package: {inputPackage.PackageNumber}(last - {inputPackage.IsLastPackage}), " +
-         $"Lines: {inputPackage.LinesNumber}, bytes: {inputPackage.RowData.Length},AllLines: {inputPackage.SortedLines} ");
-
-      await Task.Factory.StartNew<Task<bool>>(async (state) =>
-         {
-            if (state == null) throw new ArgumentNullException(nameof(state));
-            AfterSortingPhasePackage package = (AfterSortingPhasePackage)state;
-
-            Result result = WriteRecords(package);
-            if (!result.Success)
-               await _sortedLinesSavedSubject.OnErrorAsync(new InvalidOperationException(result.Message));
-
-            await Log($"Processed package: {package.PackageNumber}, all lines saved: {result.Success}");
-
-            await _sortedLinesSavedSubject.OnNextAsync(package);
-
-            bool allProcessed = await CheckIfAllProcessed(package);
-
-            if (allProcessed)
-            {
-               Console.WriteLine($"All packages processed after {package.PackageNumber}, thread {Thread.CurrentThread.ManagedThreadId}");
-               await _sortedLinesSavedSubject.OnCompletedAsync();
-            }
-
-            return true;
-         }, inputPackage, _token,
-         TaskCreationOptions.LongRunning | TaskCreationOptions.PreferFairness, TaskScheduler.Default);
-   }
+   // public async ValueTask OnNextAsync(AfterSortingPhasePackage inputPackage)
+   // {
+   //    await Log(
+   //       $"Processing package: {inputPackage.PackageNumber}(last - {inputPackage.IsLastPackage}), " +
+   //       $"Lines: {inputPackage.LinesNumber}, bytes: {inputPackage.RowData.Length},AllLines: {inputPackage.SortedLines} ");
+   //
+   //    await Task.Factory.StartNew<Task<bool>>(async (state) =>
+   //       {
+   //          if (state == null) throw new ArgumentNullException(nameof(state));
+   //          AfterSortingPhasePackage package = (AfterSortingPhasePackage)state;
+   //
+   //          Result result = WriteRecords(package);
+   //          if (!result.Success)
+   //             await _sortedLinesSavedSubject.OnErrorAsync(new InvalidOperationException(result.Message));
+   //
+   //          await Log($"Processed package: {package.PackageNumber}, all lines saved: {result.Success}");
+   //
+   //          await _sortedLinesSavedSubject.OnNextAsync(package);
+   //
+   //          bool allProcessed = await CheckIfAllProcessed(package);
+   //
+   //          if (allProcessed)
+   //          {
+   //             Console.WriteLine($"All packages processed after {package.PackageNumber}, thread {Thread.CurrentThread.ManagedThreadId}");
+   //             await _sortedLinesSavedSubject.OnCompletedAsync();
+   //          }
+   //
+   //          return true;
+   //       }, inputPackage, _token,
+   //       TaskCreationOptions.LongRunning | TaskCreationOptions.PreferFairness, TaskScheduler.Default);
+   // }
 
    private async Task<bool> CheckIfAllProcessed(AfterSortingPhasePackage package)
    {
@@ -157,15 +161,15 @@ internal class IntermediateResultsDirector: IAsyncObserver<AfterSortingPhasePack
       return allProcessed;
    }
 
-   public async ValueTask OnErrorAsync(Exception error)
-   {
-      await _sortedLinesSavedSubject.OnCompletedAsync();
-   }
-
-   public ValueTask OnCompletedAsync()
-   {
-      return ValueTask.CompletedTask;
-   }
+   // public async ValueTask OnErrorAsync(Exception error)
+   // {
+   //    await _sortedLinesSavedSubject.OnCompletedAsync();
+   // }
+   //
+   // public ValueTask OnCompletedAsync()
+   // {
+   //    return ValueTask.CompletedTask;
+   // }
    
    private async ValueTask Log(string message)
    {

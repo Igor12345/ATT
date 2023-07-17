@@ -15,18 +15,22 @@ public class RecordsWriter : ILinesWriter, IAsyncDisposable
    private readonly string _filePath;
    private FileStream? _fileStream;
    private FileStream? _syncFileStream;
+   private FileStream? _onlyNumbersStream;
+   private StreamWriter? _numbersWriter;
 
-   private RecordsWriter(string filePath, int charLength, ILogger logger)
+   private RecordsWriter(string filePath, int charLength, ILogger logger, bool writeNumbers)
    {
+      _writeNumbers = false;//writeNumbers;
       _charLength = Guard.Positive(charLength);
       _filePath = Guard.NotNullOrEmpty(filePath);
       _logger = Guard.NotNull(logger);
    }
 
-   public static RecordsWriter Create(string filePath, int charLength, ILogger logger)
+   //todo delete b
+   public static RecordsWriter Create(string filePath, int charLength, ILogger logger, bool b = false)
    {
       CheckFilePath(filePath);
-      RecordsWriter instance = new RecordsWriter(filePath, charLength, logger);
+      RecordsWriter instance = new RecordsWriter(filePath, charLength, logger, b);
       return instance;
    }
 
@@ -75,9 +79,16 @@ public class RecordsWriter : ILinesWriter, IAsyncDisposable
 
    public Result WriteRecords(LineMemory[] lines, int linesNumber, ReadOnlyMemory<byte> source)
    {
-      _syncFileStream ??= new FileStream(_filePath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None,
-         bufferSize: 4096, false);
+      _syncFileStream ??= new FileStream(_filePath, FileMode.Create, FileAccess.Write, FileShare.None,
+         bufferSize: 1, false);
 
+      if (_writeNumbers)
+         _numbersWriter ??= new StreamWriter(_filePath + "numbers");
+
+      Console.WriteLine(
+         $"Enter buffer file {_syncFileStream.Name}, position: {_syncFileStream.Position}, length: {_syncFileStream.Length}");
+
+      
       byte[]? rented = null;
       try
       {
@@ -88,25 +99,54 @@ public class RecordsWriter : ILinesWriter, IAsyncDisposable
             ? stackalloc byte[requiredLength]
             : rented = ArrayPool<byte>.Shared.Rent(requiredLength);
          
+         buffer.Clear();
+         
          //todo increase output buffer size (benchmark!)
          for (int i = 0; i < linesNumber; i++)
          {
             //todo
-            if (lines[i].Number == 6748015574496075763 || lines[i].Number == 2415040422824707043 || lines[i].Number == 8633638752424593355)
+            if (lines[i].Number == 4307412542716114199 )
             {
-               var l = lines[i];
+               LineMemory next = default;
+               LineMemory prev = default;
+               if (i+1 < linesNumber)
+               {
+                  next = lines[i + 1];
+               }
+
+               if (i > 0)
+               {
+                  prev = lines[i - 1];
+               }
+
+               Console.WriteLine(
+                  $"-------->>>> Line 4307412542716114199 at i={i} in buffer {bufNum++}, next: {next.Number}, prev: {prev.Number}");
             }
             
             int length = LongToBytesConverter.WriteULongToBytes(lines[i].Number, buffer);
-            source.Span[lines[i].From..lines[i].To].CopyTo(buffer[length..]);
-            int fullLength = length + lines[i].To - lines[i].From;
-            _syncFileStream.Write(buffer[..fullLength]);
+
+            if (_writeNumbers)
+            {
+               _syncFileStream.Write(buffer[..length]);
+               _numbersWriter.WriteLine(lines[i].Number);
+            }
+            else
+            {
+               source.Span[lines[i].From..lines[i].To].CopyTo(buffer[length..]);
+               int fullLength = length + lines[i].To - lines[i].From;
+               _syncFileStream.Write(buffer[..fullLength]);
+            }
          }
-         _syncFileStream.Flush();
+         // _syncFileStream.Flush();
          
          // Console.WriteLine($"----> Saved {linesNumber} lines, from {initPosition} to {_syncFileStream.Position}");
          if (rented != null)
             ArrayPool<byte>.Shared.Return(rented);
+         
+         Console.WriteLine(
+            $"Next buffer file {_syncFileStream.Name}, position: {_syncFileStream.Position}, length: {_syncFileStream.Length}");
+
+         
          return Result.Ok;
       }
       catch (Exception e)
@@ -114,6 +154,10 @@ public class RecordsWriter : ILinesWriter, IAsyncDisposable
          return Result.Error(e.Message);
       }
    }
+   
+   //todo del
+   private int bufNum = 0;
+   private bool _writeNumbers;
 
    public async ValueTask DisposeAsync()
    {
@@ -122,6 +166,10 @@ public class RecordsWriter : ILinesWriter, IAsyncDisposable
 
    public void Dispose()
    {
+      if (_syncFileStream != null)
+         Console.WriteLine(
+            $"Dispose file {_syncFileStream.Name}, position: {_syncFileStream.Position}, is async: {_syncFileStream.IsAsync}, length: {_syncFileStream.Length}");
       _syncFileStream?.Dispose();
+      _numbersWriter?.Dispose();
    }
 }

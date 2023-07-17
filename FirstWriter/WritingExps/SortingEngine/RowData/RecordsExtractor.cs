@@ -1,4 +1,5 @@
-﻿using Infrastructure.ByteOperations;
+﻿using System.Text;
+using Infrastructure.ByteOperations;
 using Infrastructure.Parameters;
 using SortingEngine.DataStructures;
 using SortingEngine.Entities;
@@ -41,6 +42,12 @@ namespace SortingEngine.RowData
 
                if (!result.Success)
                   return ExtractionResult.Error(result.Message);
+
+               if (result.Value.Number == 8331134947556831535)
+               {
+                  string str = Encoding.UTF8.GetString(input[startLine..endLine]);
+                  var t = str;
+               }
                
                records.Add(result.Value);
                lineIndex++;
@@ -70,10 +77,11 @@ namespace SortingEngine.RowData
                   return Result<LineMemory>.Error($"wrong line: {ByteToStringConverter.Convert(lineSpan)}");
 
                //todo delete!!!
-               if (number == 6748015574496075763 || number == 8008584279310375288 || number == 4429398608499600645)
+               if (number == 8142009861372843997 || number == 4113901189282468735 || number == 8331134947556831535||
+                   number == 440665050649839176 || number == 782484495544139447 || number == 3206653174587164213)
                {
                   var color = Console.ForegroundColor;
-                  Console.ForegroundColor = ConsoleColor.DarkRed;
+                  Console.ForegroundColor = ConsoleColor.DarkBlue;
                   Console.WriteLine();
                   Console.WriteLine($"###-- {number} : {ByteToStringConverter.Convert(lineSpan)}");
                   Console.WriteLine();

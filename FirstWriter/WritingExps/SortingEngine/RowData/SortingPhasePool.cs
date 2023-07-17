@@ -46,8 +46,11 @@ public class SortingPhasePool : IDisposable
     public async Task<ReadingPhasePackage> TryAcquireNextAsync()
     {
         //todo remove semaphore
-        await Log($"Trying acquire new bytes buffer, last package was {_packageNumber}, semaphore: {_semaphore.CurrentCount}");
+        await Log(
+            $"Trying acquire new bytes buffer, last package was {_packageNumber}, semaphore: {_semaphore.CurrentCount}, thread: {Thread.CurrentThread.ManagedThreadId}");
         await _semaphore.WaitAsync();
+        await Log(
+            $"Semaphore passed, last package was {_packageNumber}, semaphore: {_semaphore.CurrentCount}, thread: {Thread.CurrentThread.ManagedThreadId}");
         
         bool lockTaken = false;
         try
@@ -62,8 +65,10 @@ public class SortingPhasePool : IDisposable
             }
             ExpandingStorage<LineMemory> linesStorage = RentLinesStorage();
 
-            await Log($"New bytes buffer has been rented, this package is {_packageNumber + 1}");
-            return new ReadingPhasePackage(buffer!, linesStorage, Interlocked.Increment(ref _packageNumber));
+            //todo
+            int bufferId = buffer.GetHashCode();
+            await Log($"New bytes buffer has been rented, this package is {_packageNumber + 1}. This is reused buffer: {bufferExists}, Id: {bufferId}");
+            return new ReadingPhasePackage(buffer, linesStorage, Interlocked.Increment(ref _packageNumber), false);
         }
         finally
         {
@@ -79,6 +84,7 @@ public class SortingPhasePool : IDisposable
             _lineStorages.Push(new ExpandingStorage<LineMemory>(_recordChunksLength));
         }
 
+        storage.Clear();
         return storage;
     }
 
