@@ -4,7 +4,7 @@ using BenchmarkDotNet.Toolchains.InProcess.NoEmit;
 namespace SimpleBenchmarks.IOOperations;
 
 // [SimpleJob(RunStrategy.Monitoring, launchCount: 1, warmupCount: 2)]
-[Config(typeof(InProcessNoEmitConfig))]
+// [Config(typeof(InProcessNoEmitConfig))]
 public class SyncVsAsyncOperations
 {
     private const string FilePathSync1 = "testSync1.data";
@@ -34,23 +34,25 @@ public class SyncVsAsyncOperations
     [Benchmark]
     public async Task ReadAsyncModeDefaultBuffer()
     {
-        using FileStream fs = new FileStream(FilePathSync1, FileMode.Open,
+        await using FileStream fs = new FileStream(FilePathSync1, FileMode.Open,
             FileAccess.Read, FileShare.None, bufferSize: 4096, true);
         while (await fs.ReadAsync(_userBuffer) != 0) ;
     }
     
     [GcServer(true)]
+    [Benchmark]
     public async Task ReadAsyncModeNoBuffer()
     {
-        using FileStream fs = new FileStream(FilePathSync2, FileMode.Open,
+        await using FileStream fs = new FileStream(FilePathSync2, FileMode.Open,
             FileAccess.Read, FileShare.None, bufferSize: 1, true);
         while (await fs.ReadAsync(_userBuffer) != 0) ;
     }
     
     [GcServer(true)]
+    [Benchmark]
     public async Task ReadAsyncModeBiggerBuffer()
     {
-        using FileStream fs = new FileStream(FilePathSync3, FileMode.Open,
+        await using FileStream fs = new FileStream(FilePathSync3, FileMode.Open,
             FileAccess.Read, FileShare.None, bufferSize: 16_000, true);
         while (await fs.ReadAsync(_userBuffer) != 0) ;
     }
@@ -59,7 +61,7 @@ public class SyncVsAsyncOperations
     [Benchmark]
     public void ReadSyncModeDefaultBuffer()
     {
-        FileStream fs = new FileStream(FilePathSync1, FileMode.Open,
+        using FileStream fs = new FileStream(FilePathSync1, FileMode.Open,
             FileAccess.Read, FileShare.None, bufferSize: 4096, false);
         while (fs.Read(_userBuffer) != 0) ;
     }
@@ -68,7 +70,7 @@ public class SyncVsAsyncOperations
     [Benchmark]
     public void ReadSyncModeNoBuffer()
     {
-        FileStream fs = new FileStream(FilePathSync2, FileMode.Open,
+        using FileStream fs = new FileStream(FilePathSync2, FileMode.Open,
             FileAccess.Read, FileShare.None, bufferSize: 1, false);
         while (fs.Read(_userBuffer) != 0) ;
     }
@@ -77,7 +79,7 @@ public class SyncVsAsyncOperations
     [Benchmark(Baseline = true)]
     public void ReadSyncModeBiggerBuffer()
     {
-        FileStream fs = new FileStream(FilePathSync3, FileMode.Open,
+        using FileStream fs = new FileStream(FilePathSync3, FileMode.Open,
             FileAccess.Read, FileShare.None, bufferSize: 16_000, false);
         while (fs.Read(_userBuffer) != 0) ;
     }

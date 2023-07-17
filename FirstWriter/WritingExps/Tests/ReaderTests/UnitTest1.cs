@@ -150,5 +150,15 @@ namespace ReaderTests
             FileAccess.Read, FileShare.None, bufferSize: 4096, true);
          var path = fs.Name;
       }
+      
+      [Fact]
+      public void ReadSyncModeBiggerBuffer()
+      {
+         string FilePath = "test.data";
+         var userBuffer = new byte[16_000];
+         FileStream fs = new FileStream(FilePath, FileMode.Open,
+            FileAccess.Read, FileShare.None, bufferSize: 16_000, false);
+         while (fs.Read(userBuffer) != 0) ;
+      }
    }
 }
