@@ -64,7 +64,7 @@ namespace ConsoleWrapper
          var scope = host.Services.CreateScope();
          var config = scope.ServiceProvider.GetService<BaseConfiguration>();
 
-         host.Run();
+         await host.RunAsync();
 
          return;
 
