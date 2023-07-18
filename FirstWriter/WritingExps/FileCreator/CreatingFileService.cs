@@ -24,19 +24,22 @@ internal sealed class CreatingFileService : IHostedService
     {
         _logger.LogInformation("Started");
 
-        LineCreator lineCreator = new LineCreator(_config, _logger);
+        //yep, I know about .Net Cora and DI, but in this case, that does not worth it
+        ITextCreator basicTextCreator = new DefaultTextCreator(_config);
+        ITextCreator textCreatorWithDuplicates = new DuplicatesTextCreator(_config, basicTextCreator);
+        LineCreator lineCreator = new LineCreator(_config, textCreatorWithDuplicates);
         LinesGenerator generator = new LinesGenerator(lineCreator);
         await using LinesWriter linesWriter = LinesWriter.Create(_config, _logger);
 
         byte[] buffer = new byte[_config.MaxLineLength]; 
         foreach (int lineLength in generator.Generate(buffer.AsMemory()))
         {
-            _linesToLog++;
             if (_linesToLog >= _config.LogEveryThsLine)
             {
                 _linesToLog = 0;
-                _logger.LogInformation($"{_currentLength} lines");
+                _logger.LogInformation($"{_linesCount} lines - {_currentLength} bytes.");
             }
+            _linesToLog++;
             
             if(TimeToStop(lineLength, out int bytesToWrite))
                 break;
@@ -44,7 +47,7 @@ internal sealed class CreatingFileService : IHostedService
             _linesCount++;
         }
         //todo calculate to Gb, Mb, etc.
-        _logger.LogInformation($"All lines created {_linesCount} - {_currentLength} byte.");
+        _logger.LogInformation($"All lines created {_linesCount} - {_currentLength} bytes.");
     }
 
     private bool TimeToStop(int lineLength, out int bytesToWrite)

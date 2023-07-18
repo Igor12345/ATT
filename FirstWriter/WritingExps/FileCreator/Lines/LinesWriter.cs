@@ -2,7 +2,7 @@
 using Infrastructure.Parameters;
 using Microsoft.Extensions.Logging;
 
-namespace FileCreator;
+namespace FileCreator.Lines;
 
 public sealed class LinesWriter : IDisposable, IAsyncDisposable
 {
@@ -25,7 +25,7 @@ public sealed class LinesWriter : IDisposable, IAsyncDisposable
 
     private void Initialize()
     {
-        _fileStream = new FileStream(_config.FilePath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, false);
+        _fileStream = new FileStream(_config.FilePath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, false);
     }
 
     public void Write(Span<byte> buffer)

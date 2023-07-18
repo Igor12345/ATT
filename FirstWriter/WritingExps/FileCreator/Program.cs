@@ -25,7 +25,7 @@ class Program
             .WriteTo.Console()
             .CreateLogger();
 
-        IBaseConfiguration? baseConfiguration = configuration.GetRequiredSection("Config").Get<IBaseConfiguration>();
+        IBaseConfiguration? baseConfiguration = configuration.GetRequiredSection("Config").Get<BaseConfiguration>();
         Debug.Assert(baseConfiguration != null, nameof(baseConfiguration) + " != null");
         IRuntimeConfiguration runtimeConfiguration = baseConfiguration.ToRuntime();
 
