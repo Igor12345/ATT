@@ -8,7 +8,7 @@ using SortingEngine.RowData;
 
 namespace ConsoleWrapper.IOProcessing;
 
-public class RecordsWriter : ILinesWriter, IAsyncDisposable
+public class LinesWriter : ILinesWriter, IAsyncDisposable
 {
    private readonly int _charLength;
    private readonly ILogger _logger;
@@ -16,7 +16,7 @@ public class RecordsWriter : ILinesWriter, IAsyncDisposable
    private FileStream? _fileStream;
    private FileStream? _syncFileStream;
 
-   private RecordsWriter(string filePath, int charLength, ILogger logger)
+   private LinesWriter(string filePath, int charLength, ILogger logger)
    {
       _charLength = Guard.Positive(charLength);
       _filePath = Guard.NotNullOrEmpty(filePath);
@@ -24,10 +24,10 @@ public class RecordsWriter : ILinesWriter, IAsyncDisposable
    }
 
    //todo delete b
-   public static RecordsWriter Create(string filePath, int charLength, ILogger logger)
+   public static LinesWriter Create(string filePath, int charLength, ILogger logger)
    {
       CheckFilePath(filePath);
-      RecordsWriter instance = new RecordsWriter(filePath, charLength, logger);
+      LinesWriter instance = new LinesWriter(filePath, charLength, logger);
       return instance;
    }
 

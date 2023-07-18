@@ -5,7 +5,12 @@ using SortingEngine.Entities;
 
 namespace SortingEngine.Sorting;
 
-public sealed class LinesSorter
+public interface ILinesSorter
+{
+   LineMemory[] Sort(ExpandingStorage<LineMemory> recordsPool, int linesNumber);
+}
+
+public sealed class LinesSorter : ILinesSorter
 {
    private readonly ReadOnlyMemory<byte> _source;
 
@@ -22,6 +27,16 @@ public sealed class LinesSorter
       LineMemory[] result = ArrayPool<LineMemory>.Shared.Rent(linesNumber);
       recordsPool.CopyTo(result, linesNumber);
       Array.Sort(result, 0, linesNumber, new OnSiteLinesComparer(_source));
+      return result;
+   }
+}
+
+public class FakeSorter : ILinesSorter
+{
+   public LineMemory[] Sort(ExpandingStorage<LineMemory> recordsPool, int linesNumber)
+   {
+      LineMemory[] result = ArrayPool<LineMemory>.Shared.Rent(linesNumber);
+      recordsPool.CopyTo(result, linesNumber);
       return result;
    }
 }

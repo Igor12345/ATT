@@ -42,7 +42,7 @@ internal class LongFileReader : IBytesProducer, IAsyncDisposable
       if (_lastPosition > 0)
          stream.Seek(_lastPosition, SeekOrigin.Begin);
 
-      await using RecordsReader reader = new RecordsReader(stream);
+      await using LinesReader reader = new LinesReader(stream);
       var readingResult = await reader.ReadChunkAsync(buffer, offset, cancellationToken);
       if (!readingResult.Success)
          return readingResult;
@@ -57,7 +57,7 @@ internal class LongFileReader : IBytesProducer, IAsyncDisposable
       if (_lastPosition > 0)
          stream.Seek(_lastPosition, SeekOrigin.Begin);
 
-      using RecordsReader reader = new RecordsReader(stream);
+      using LinesReader reader = new LinesReader(stream);
       var readingResult = reader.ReadChunk(buffer, offset);
       if (!readingResult.Success)
          return readingResult;

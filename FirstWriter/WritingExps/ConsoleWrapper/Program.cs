@@ -1,5 +1,4 @@
-﻿using System.IO;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -13,7 +12,6 @@ namespace ConsoleWrapper
       static async Task Main(string[] args)
       {
          //todo!!! handle lack eol on the last line
-         //do not split small files
 
          IHostBuilder hostBuilder = Host.CreateDefaultBuilder(args);
 
