@@ -1,5 +1,4 @@
-﻿using System.Text;
-using Infrastructure.ByteOperations;
+﻿using Infrastructure.ByteOperations;
 using Infrastructure.Parameters;
 using SortingEngine.DataStructures;
 using SortingEngine.Entities;
@@ -24,7 +23,8 @@ namespace SortingEngine.RowData
          _lineDelimiter = Guard.NotNull(lineDelimiter);
       }
 
-      public ExtractionResult ExtractRecords(ReadOnlySpan<byte> input, ExpandingStorage<LineMemory> records)
+      public ExtractionResult ExtractRecords(ReadOnlySpan<byte> input, ExpandingStorage<LineMemory> records,
+         int offset = 0)
       {
          int lineIndex = 0;
          int endLine = 0;
@@ -43,17 +43,13 @@ namespace SortingEngine.RowData
                if (!result.Success)
                   return ExtractionResult.Error(result.Message);
 
-               if (result.Value.Number == 8331134947556831535)
-               {
-                  string str = Encoding.UTF8.GetString(input[startLine..endLine]);
-                  var t = str;
-               }
-               
-               records.Add(result.Value);
+               LineMemory line = result.Value with { From = result.Value.From + offset, To = result.Value.To + offset };
+               records.Add(line);
                lineIndex++;
                i++;
             }
          }
+
          return ExtractionResult.Ok(lineIndex, endOfLastLine + 1);
       }
 

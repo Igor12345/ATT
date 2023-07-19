@@ -30,13 +30,3 @@ public sealed class LinesSorter : ILinesSorter
       return result;
    }
 }
-
-public class FakeSorter : ILinesSorter
-{
-   public LineMemory[] Sort(ExpandingStorage<LineMemory> recordsPool, int linesNumber)
-   {
-      LineMemory[] result = ArrayPool<LineMemory>.Shared.Rent(linesNumber);
-      recordsPool.CopyTo(result, linesNumber);
-      return result;
-   }
-}

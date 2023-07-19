@@ -38,7 +38,7 @@ public class ConfigurationValidatorTests
 
         Mock<IBaseConfiguration> baseConfMock = new Mock<IBaseConfiguration>();
         baseConfMock.Setup(bc => bc.FileSize).Returns(strValue);
-        baseConfMock.Setup(bc => bc.Encoding).Returns("UTF-8");
+        baseConfMock.Setup(bc => bc.Encoding).Returns("us-ascii");
         baseConfMock.Setup(bc => bc.Delimiter).Returns(";");
 
         var conf = validator.ProvideConfiguration(baseConfMock.Object);

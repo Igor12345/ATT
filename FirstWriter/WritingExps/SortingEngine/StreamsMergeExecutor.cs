@@ -16,70 +16,37 @@ public sealed class StreamsMergeExecutor
    private LineMemory[] _outputBuffer = null!;
    private int _lastLine;
    private Memory<byte> _inputBuffer;
-   public event EventHandler<SortingCompletedEventArgs>? OutputBufferFull;
-
-   public StreamsMergeExecutor(IConfig config)
-   {
-      //todo static vs Guard
-      _config = config ?? throw new ArgumentNullException(nameof(config));
-   }
+   
    public StreamsMergeExecutor(IConfig config, ILinesWriter linesWriter)
    {
-      //todo static vs Guard
-      _config = config ?? throw new ArgumentNullException(nameof(config));
+      _config = Guard.NotNull(config);
       _linesWriter = Guard.NotNull(linesWriter);
    }
 
    //todo file system dependence
    public async Task<Result> MergeWithOrder()
    {
-      _files = Directory.GetFiles(_config.TemporaryFolder);
-
-      CreateBuffers();
-
-      var mergeResult = await ExecuteMerge();
-      if (!mergeResult.Success)
-      {
-         //todo
-         Console.WriteLine($"ERROR: {mergeResult.Message}");
-      }
-
-      return mergeResult;
+      Initialize();
+      return await ExecuteMerge();
    }
 
-   private void CreateBuffers()
+   private void Initialize()
    {
+      _files = Directory.GetFiles(_config.TemporaryFolder);
       _inputBuffer = new byte[_config.MergeBufferLength * _files.Length].AsMemory();
       _outputBuffer = new LineMemory[_config.OutputBufferLength];
    }
 
    private async Task<Result> ExecuteMerge()
    {
-      DataChunkManager[] managers = new DataChunkManager[_files.Length];
-      for (int i = 0; i < _files.Length; i++)
-      {
-         //todo configure LineMemory creation
-         int from = i * _config.MergeBufferLength;
-         int to = (i + 1) * _config.MergeBufferLength;
-         managers[i] = new DataChunkManager(_files[i], _inputBuffer[from..to], _config.Encoding,
-            _config.RecordsBufferLength);
-      }
+      DataChunkManager[] managers = CreateDataChunkManagers();
 
-      IComparer<LineMemory> comparer = new OnSiteLinesComparer(_inputBuffer);
-      IndexPriorityQueue<LineMemory, IComparer<LineMemory>> queue =
-         new IndexPriorityQueue<LineMemory, IComparer<LineMemory>>(_files.Length, comparer);
-
-      for (int i = 0; i < _files.Length; i++)
-      {
-         (ExtractionResult extractionResult, bool hasLine, LineMemory line) = await managers[i].TryGetNextLineAsync();
-         if(!extractionResult.Success)
-            return Result.Error(extractionResult.Message);
-         if (hasLine)
-         {
-            queue.Enqueue(line, i);
-         }
-      }
-
+      var queue = new IndexPriorityQueue<LineMemory, IComparer<LineMemory>>(_files.Length,
+            new OnSiteLinesComparer(_inputBuffer));
+      Result creatingQueueResult = await InitializeQueue(managers, queue);
+      if (!creatingQueueResult.Success)
+         return creatingQueueResult;
+      
       while (queue.Any())
       {
          var (line, streamIndex) = queue.Dequeue();
@@ -96,24 +63,50 @@ public sealed class StreamsMergeExecutor
             Result writingResult = WriteLinesFromBuffer(_outputBuffer, _outputBuffer.Length, _inputBuffer);
             if (!writingResult.Success)
                return writingResult;
-            // OnOutputBufferFull(new SortingCompletedEventArgs(_outputBuffer, _outputBuffer.Length, _inputBuffer));
             _lastLine = 0;
-            // Array.Clear(_outputBuffer);
+         }
+      }
+      //todo !!! add eol if necessary
+      return _lastLine == 0 ? Result.Ok : WriteLinesFromBuffer(_outputBuffer, _lastLine, _inputBuffer);
+   }
+
+   private DataChunkManager[] CreateDataChunkManagers()
+   {
+      DataChunkManager[] managers = new DataChunkManager[_files.Length];
+      for (int i = 0; i < _files.Length; i++)
+      {
+         //todo configure LineMemory creation
+         int from = i * _config.MergeBufferLength;
+         int to = (i + 1) * _config.MergeBufferLength;
+         managers[i] = new DataChunkManager(_files[i], _inputBuffer[from..to], _config.Encoding,
+            _config.RecordsBufferLength, from);
+      }
+
+      return managers;
+   }
+
+   private async Task<Result> InitializeQueue(DataChunkManager[] managers,
+      IndexPriorityQueue<LineMemory, IComparer<LineMemory>> queue)
+   {
+      for (int i = 0; i < _files.Length; i++)
+      {
+         (ExtractionResult extractionResult, bool hasLine, LineMemory line) = await managers[i].TryGetNextLineAsync();
+         if (!extractionResult.Success)
+         {
+            return Result.Error(extractionResult.Message);
+         }
+
+         if (hasLine)
+         {
+            queue.Enqueue(line, i);
          }
       }
 
-      // OnOutputBufferFull(new SortingCompletedEventArgs(_outputBuffer, _lastLine, _inputBuffer));
-      //todo
-      return _lastLine == 0 ? Result.Ok : WriteLinesFromBuffer(_outputBuffer, _lastLine, _inputBuffer);
+      return Result.Ok;
    }
 
    private Result WriteLinesFromBuffer(LineMemory[] lines, int linesNumber, ReadOnlyMemory<byte> source)
    {
       return _linesWriter.WriteRecords(lines, linesNumber, source);
-   }
-
-   private void OnOutputBufferFull(SortingCompletedEventArgs e)
-   {
-      OutputBufferFull?.Invoke(this, e);
    }
 }

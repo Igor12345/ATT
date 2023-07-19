@@ -5,36 +5,46 @@ namespace ConsoleWrapper;
 
 public class InputParametersValidator
 {
-
    public (bool, ValidatedInputParameters) CheckInputParameters(InputParameters input)
    {
-      string path = input.File ?? "";
+      if (!SelectFilePath(input, out string path)) 
+         return (false, ValidatedInputParameters.Empty);
+
+      if (!SelectEncoding(input, out Encoding encoding))
+         return (false, ValidatedInputParameters.Empty);
+      return (true, new ValidatedInputParameters(path, encoding));
+   }
+
+   private static bool SelectFilePath(InputParameters input, out string path)
+   {
+      path = input.File ?? "";
 
       while (true)
       {
          if (File.Exists(path))
-         {
             break;
-         }
-         //todo
-         Console.WriteLine("Hi, enter the full name of the file. Or 'X' to exit.");
+
+         Console.WriteLine("Enter the filePath. Or 'X' to exit.");
          //todo
          path = Console.ReadLine() ?? "";
-         if (path.ToUpper() == "X")
-            return (false, ValidatedInputParameters.Empty);
-         if (!string.IsNullOrEmpty(path))
-         {
-            if (File.Exists(path))
-            {
-               break;
-            }
+         if (path.Equals( "X", StringComparison.InvariantCultureIgnoreCase))
+            return false;
 
-            Console.WriteLine("File does not exist");
-         }
+         if (string.IsNullOrEmpty(path)) continue;
+         
+         if (File.Exists(path))
+            break;
+
+         Console.WriteLine("File does not exist.");
       }
 
-      Encoding encoding;
-      string encodingName = input.Encoding;
+      return true;
+   }
+
+   private static bool SelectEncoding(InputParameters input, out Encoding encoding)
+   {
+      encoding = Encoding.Default;
+      string? encodingName = input.Encoding;
       while (true)
       {
          if (TrySelectEncoding(encodingName, out encoding))
@@ -42,24 +52,25 @@ public class InputParametersValidator
             break;
          }
 
-         Console.WriteLine("Enter encoding or Y if ASCII or X to exit");
+         Console.WriteLine("Enter encoding or Y if ASCII or X to exit.");
          encodingName = Console.ReadLine() ?? "";
          if (encodingName.ToUpper() == "X")
-            return (false, ValidatedInputParameters.Empty);
+            return false;
+
          if (TrySelectEncoding(encodingName, out encoding))
-         {
             break;
-         }
 
          Console.WriteLine("Encoding does not exist");
       }
-      return (true, new ValidatedInputParameters(path, encoding));
+
+      return true;
    }
 
-   //todo another class
-   private static bool TrySelectEncoding(string encodingName, out Encoding encoding)
+   private static bool TrySelectEncoding(string? encodingName, out Encoding encoding)
    {
       if (string.Equals(encodingName, "ASCII", StringComparison.OrdinalIgnoreCase) ||
+          string.Equals(encodingName, "US-ASCII", StringComparison.OrdinalIgnoreCase) ||
+          string.Equals(encodingName, "UTF-8", StringComparison.OrdinalIgnoreCase) ||
           string.Equals(encodingName, "UTF8", StringComparison.OrdinalIgnoreCase) ||
           string.Equals(encodingName, "Y", StringComparison.OrdinalIgnoreCase))
       {
@@ -67,7 +78,15 @@ public class InputParametersValidator
          return true;
       }
 
-      if (string.Equals(encodingName, "UTF32", StringComparison.OrdinalIgnoreCase))
+      if (string.Equals(encodingName, "UTF-16", StringComparison.OrdinalIgnoreCase)||
+          string.Equals(encodingName, "UTF16", StringComparison.OrdinalIgnoreCase))
+      {
+         encoding = Encoding.UTF32;
+         return true;
+      }
+
+      if (string.Equals(encodingName, "UTF-32", StringComparison.OrdinalIgnoreCase)||
+          string.Equals(encodingName, "UTF32", StringComparison.OrdinalIgnoreCase))
       {
          encoding = Encoding.UTF32;
          return true;

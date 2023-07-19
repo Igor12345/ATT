@@ -62,7 +62,7 @@ internal class FileSortingService : IHostedService
       // ILogger logger = Logger.Create(cancellationToken);
       ILogger logger = Logger.CreateEmpty(cancellationToken);
 
-      Console.WriteLine($"Starting at: {DateTime.UtcNow:hh:mm:ss-fff}!");
+      Console.WriteLine($"Starting at: {DateTime.UtcNow:hh:mm:ss-fff}, sorting file: {validInput.File}.");
 
       SemaphoreSlim semaphore = new SemaphoreSlim(0, 1);
 
@@ -80,7 +80,7 @@ internal class FileSortingService : IHostedService
          ? Result.Ok
          : await MergingPhase(cancellationToken, configuration, logger);
       
-      Console.WriteLine($"Completed at: {DateTime.UtcNow:hh:mm:ss-fff}.");
+      Console.WriteLine($"Completed at: {DateTime.UtcNow:hh:mm:ss-fff}, the file: {configuration.Output}.");
 
       return result;
    }
@@ -98,10 +98,8 @@ internal class FileSortingService : IHostedService
       await using IBytesProducer bytesReader =
          new LongFileReader(validInput.File, configuration.Encoding, logger, cancellationToken);
       
-      //TODO Uncomment!!!
-      // SetOfLinesSorter sorter = new SetOfLinesSorter(logger, buffer => new LinesSorter(buffer));
-      SetOfLinesSorter sorter = new SetOfLinesSorter(logger, _ => new FakeSorter());
-
+      SetOfLinesSorter sorter = new SetOfLinesSorter(logger, buffer => new LinesSorter(buffer));
+      
       using SortingPhasePool sortingPhasePool = new SortingPhasePool(configuration.SortingPhaseConcurrency,
          configuration.InputBufferLength,
          configuration.RecordsBufferLength, logger);

@@ -71,14 +71,14 @@ namespace SortingEngine.Sorting
          (_items[left], _items[right]) = (_items[right], _items[left]);
       }
 
-      private bool Less(int i, int j)
+      private bool More(int i, int j)
       {
-         return _comparer.Compare(_items[i].Item1, _items[j].Item1) < 0;
+         return _comparer.Compare(_items[i].Item1, _items[j].Item1) > 0;
       }
 
       private void Swim(int k)
       {
-         while (k > 0 && Less(k / 2, k))
+         while (k > 0 && More(k / 2, k))
          {
             Exchange(k / 2, k);
             k = k / 2;
@@ -90,9 +90,9 @@ namespace SortingEngine.Sorting
          while (2 * k <= _currentSize)
          {
             int j = 2 * k;
-            if (j < _currentSize && Less(j, j + 1))
+            if (j < _currentSize && More(j, j + 1))
                j++;
-            if (!Less(k, j))
+            if (!More(k, j))
                break;
             Exchange(k, j);
             k = j;

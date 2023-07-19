@@ -11,6 +11,7 @@ internal class DataChunkManager : IAsyncDisposable
    //todo keep open or reopen every time
    private readonly Stream _dataSource;
    private readonly Memory<byte> _rowStorage;
+   private readonly int _offset;
    private int _currentPosition;
    private readonly ExpandingStorage<LineMemory> _recordsStorage;
    private byte[]? _remainedBytes;
@@ -19,9 +20,10 @@ internal class DataChunkManager : IAsyncDisposable
    private readonly RecordsExtractor _extractor;
    private int _loadedLines;
 
-   public DataChunkManager(string file, Memory<byte> rowStorage, Encoding encoding, int bufferSize)
+   public DataChunkManager(string file, Memory<byte> rowStorage, Encoding encoding, int bufferSize, int offset)
    {
       _rowStorage = rowStorage;
+      _offset = offset;
       _recordsStorage = new ExpandingStorage<LineMemory>(bufferSize);
       _dataSource = File.OpenRead(file);
       var eolBytes = encoding.GetBytes(Environment.NewLine);
@@ -30,30 +32,6 @@ internal class DataChunkManager : IAsyncDisposable
       _extractor =
          new RecordsExtractor(eolBytes, delimiterBytes);
    }
-
-   // public async IAsyncEnumerable<LineMemory> GetRecordsAsync()
-   // {
-   //    _extractor =
-   //       new RecordsExtractor(_encoding.GetBytes(Environment.NewLine), _encoding.GetBytes(". "));
-   //    while (true)
-   //    {
-   //       int received = await _dataSource.ReadAsync(_rowStorage[_remindedBytesLength..]);
-   //       if (received == 0)
-   //          break;
-   //       _currentPosition = 0;
-   //       //todo repetition
-   //       ExtractionResult result = _extractor.SplitOnMemoryRecords(_rowStorage.Span, _recordsStorage);
-   //       _remindedBytesLength = _rowStorage.Length - result.StartRemainingBytes;
-   //       if (_remindedBytesLength > 0)
-   //       {
-   //          _rowStorage[result.StartRemainingBytes..].CopyTo(_rowStorage);
-   //       }
-   //
-   //       if (result.Size >= _currentPosition)
-   //          continue;
-   //       yield return _recordsStorage[_currentPosition++];
-   //    }
-   // }
 
    public async Task<(ExtractionResult, bool, LineMemory)> TryGetNextLineAsync()
    {
@@ -98,7 +76,7 @@ internal class DataChunkManager : IAsyncDisposable
       //todo repetition
       int recognizableBytes = (_remindedBytesLength + received);
       ExtractionResult result =
-         _extractor.ExtractRecords(_rowStorage.Span[..recognizableBytes], _recordsStorage);
+         _extractor.ExtractRecords(_rowStorage.Span[..recognizableBytes], _recordsStorage, _offset);
 
       //todo railway 
       if (!result.Success)

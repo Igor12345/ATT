@@ -14,8 +14,5 @@ namespace SortingEngine.RuntimeConfiguration
       string InputFile { get; }
       Encoding Encoding { get; }
       bool UseOneWay { get; }
-
-      // static abstract IConfig Create(Action<IConfigBuilder> buildConfig);
-      
    }
 }
