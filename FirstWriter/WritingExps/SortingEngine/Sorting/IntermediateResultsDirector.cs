@@ -1,47 +1,40 @@
 ﻿using System.Reactive.Subjects;
 using Infrastructure.Parameters;
-using LogsHub;
 using SortingEngine.RowData;
 using SortingEngine.RuntimeConfiguration;
 
 namespace SortingEngine.Sorting;
 
-internal class IntermediateResultsDirector //: IAsyncObserver<AfterSortingPhasePackage>
+internal class IntermediateResultsDirector 
 {
-   private readonly ILinesWriter _linesWriter;
+   private readonly IOneTimeLinesWriter _linesWriter;
    private readonly IConfig _configuration;
-   private readonly ILogger _logger;
    private volatile int _lastFileNumber;
    private readonly string _path;
-   private readonly string _filePath;
-   private readonly CancellationToken _token;
+   private readonly string? _filePath;
    private readonly object _lock = new();
    private readonly HashSet<int> _processedPackages = new();
    private volatile int _lastPackageNumber = -1;
 
-   private IntermediateResultsDirector(ILinesWriter linesWriter, IConfig configuration, ILogger logger,
-      CancellationToken token)
+   private IntermediateResultsDirector(IOneTimeLinesWriter linesWriter, IConfig configuration)
    {
       _linesWriter = Guard.NotNull(linesWriter);
       _configuration = Guard.NotNull(configuration);
       _path = Guard.NotNullOrEmpty(configuration.TemporaryFolder);
-      _logger = Guard.NotNull(logger);
-      _token = Guard.NotNull(token);
       //use strategy
       if (_configuration.UseOneWay)
          _filePath = _configuration.Output;
    }
 
-   public static IntermediateResultsDirector Create(ILinesWriter linesWriter, IConfig configuration, ILogger logger,
-      CancellationToken token = default)
+   public static IntermediateResultsDirector Create(IOneTimeLinesWriter linesWriter, IConfig configuration)
    {
-      IntermediateResultsDirector instance = new IntermediateResultsDirector(linesWriter, configuration, logger, token);
+      IntermediateResultsDirector instance = new IntermediateResultsDirector(linesWriter, configuration);
       if (!configuration.UseOneWay)
-         instance.InitTemporaryFolder(configuration.TemporaryFolder);
+         instance.InitTemporaryFolder();
       return instance;
    }
 
-   private void InitTemporaryFolder(string path)
+   private void InitTemporaryFolder()
    {
       if (!Directory.Exists(_path))
          Directory.CreateDirectory(_path);
@@ -53,7 +46,7 @@ internal class IntermediateResultsDirector //: IAsyncObserver<AfterSortingPhaseP
          return Result.Ok;
 
       string fileName = GetNextFileName();
-      string filePath = _configuration.UseOneWay ? _filePath : Path.Combine(_path, fileName);
+      string filePath = (_configuration.UseOneWay ? _filePath : Path.Combine(_path, fileName))!;
 
       return _linesWriter.WriteRecords(filePath, package.SortedLines, package.LinesNumber, package.RowData);
    }
@@ -71,35 +64,21 @@ internal class IntermediateResultsDirector //: IAsyncObserver<AfterSortingPhaseP
 
    public async ValueTask<AfterSortingPhasePackage> ProcessPackageAsync(AfterSortingPhasePackage package)
    {
-      int id = package.RowData.GetHashCode();
-      await Log(
-         $"Processing package: {package.PackageNumber}(last - {package.IsLastPackage}), " +
-         $"Before write this chunk on Disk: Lines: {package.LinesNumber}, bytes: {package.RowData.Length}, buffer Id: {id}, AllLines: {package.SortedLines}, thread: {Thread.CurrentThread.ManagedThreadId}  ");
-
       Result result = WriteRecords(package);
       if (!result.Success)
          await _sortedLinesSavedSubject.OnErrorAsync(new InvalidOperationException(result.Message));
 
-      await Log($"Processed package: {package.PackageNumber}, all lines saved: {result.Success}");
-
-      //todo
-      // id = package.RowData.GetHashCode();
-      // Console.WriteLine($"Sending IntermediateResultsDirector.SortedLinesSaved.OnNextAsync {package.PackageNumber}, is last: {package.IsLastPackage}, buffer Id: {id}");
       await _sortedLinesSavedSubject.OnNextAsync(package);
 
-      bool allProcessed = await CheckIfAllProcessed(package);
+      bool allProcessed = CheckIfAllProcessed(package);
 
       if (allProcessed)
-      {
-         // Console.WriteLine(
-         //    $"<____!!!_____> All packages processed after {package.PackageNumber}, closing SortedLinesSaved !!!, thread {Thread.CurrentThread.ManagedThreadId}");
          await _sortedLinesSavedSubject.OnCompletedAsync();
-      }
 
       return package;
    }
 
-   private async Task<bool> CheckIfAllProcessed(AfterSortingPhasePackage package)
+   private bool CheckIfAllProcessed(AfterSortingPhasePackage package)
    {
       bool allProcessed = false;
       lock (_lock)
@@ -117,15 +96,6 @@ internal class IntermediateResultsDirector //: IAsyncObserver<AfterSortingPhaseP
             }
          }
       }
-      
-      await Log($"Processed package: {package.PackageNumber}, ready to complete: {allProcessed}");
       return allProcessed;
-   }
-   
-   private async ValueTask Log(string message)
-   {
-      //in the real projects it will be structured logs
-      string prefix = $"{this.GetType()}, at: {DateTime.UtcNow:hh:mm:ss-fff} ";
-      await _logger.LogAsync(prefix + message);
    }
 }

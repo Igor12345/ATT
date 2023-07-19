@@ -8,17 +8,39 @@ using SortingEngine.RowData;
 
 namespace ConsoleWrapper.IOProcessing;
 
-public sealed class LinesWriter : ILinesWriter
+//not the best decision, only as a temporary case, for this proof of concept
+public class LinesWriter : IOneTimeLinesWriter, ISeveralTimesLinesWriter
 {
    private readonly int _bufferSize;
    private readonly int _charLength;
    private readonly ILogger _logger;
+   private readonly string _filePath;
+   private FileStream? _fileStream;
+   private FileStream? _syncFileStream;
 
-   public LinesWriter(int charLength, int bufferSize, ILogger logger)
+   private LinesWriter(string filePath, int charLength, int bufferSize, ILogger logger) : this(charLength, bufferSize,
+      logger)
+   {
+      _filePath = Guard.NotNullOrEmpty(filePath);
+   }
+
+   private LinesWriter(int charLength, int bufferSize, ILogger logger)
    {
       _charLength = Guard.Positive(charLength);
       _bufferSize = Guard.Positive(bufferSize);
       _logger = Guard.NotNull(logger);
+   }
+
+   public static IOneTimeLinesWriter CreateForOnceWriting(int charLength, int bufferSize, ILogger logger)
+   {
+      LinesWriter instance = new LinesWriter(charLength, bufferSize, logger);
+      return instance;
+   }
+
+   public static ISeveralTimesLinesWriter CreateForMultipleWriting(string filePath, int charLength, int bufferSize, ILogger logger)
+   {
+      LinesWriter instance = new LinesWriter(filePath, charLength, bufferSize, logger);
+      return instance;
    }
 
    //todo
@@ -30,10 +52,10 @@ public sealed class LinesWriter : ILinesWriter
       await _logger.LogAsync(prefix + message);
    }
 
-   public async Task<Result> WriteRecordsAsync(string filePath, LineMemory[] lines, int linesNumber, ReadOnlyMemory<byte> source,
+   private async Task<Result> WriteRecordsAsync(LineMemory[] lines, int linesNumber, ReadOnlyMemory<byte> source,
       CancellationToken token)
    {
-      FileStream fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None,
+      _fileStream ??= new FileStream(_filePath, FileMode.Create, FileAccess.Write, FileShare.None,
          bufferSize: _bufferSize, true);
       IMemoryOwner<byte> buffer = MemoryPool<byte>.Shared.Rent(Constants.MaxLineLengthUtf8 * _charLength);
       try
@@ -42,9 +64,9 @@ public sealed class LinesWriter : ILinesWriter
          {
             int length = LongToBytesConverter.WriteULongToBytes(lines[i].Number, buffer.Memory.Span);
             source.Span[lines[i].From..lines[i].To].CopyTo(buffer.Memory.Span[length..]);
-            await fileStream.WriteAsync(buffer.Memory[..lines[i].To], token);
+            await _fileStream.WriteAsync(buffer.Memory[..lines[i].To], token);
          }
-         await fileStream.FlushAsync(token);
+         await _fileStream.FlushAsync(token);
          
          return Result.Ok;
       }
@@ -58,9 +80,9 @@ public sealed class LinesWriter : ILinesWriter
       }
    }
 
-   public Result WriteRecords(string filePath, LineMemory[] lines, int linesNumber, ReadOnlyMemory<byte> source)
+   private Result WriteRecords(LineMemory[] lines, int linesNumber, ReadOnlyMemory<byte> source)
    {
-      using FileStream syncFileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None,
+      _syncFileStream ??= new FileStream(_filePath, FileMode.Create, FileAccess.Write, FileShare.None,
          bufferSize: _bufferSize, false);
       
       byte[]? rented = null;
@@ -78,17 +100,72 @@ public sealed class LinesWriter : ILinesWriter
 
             source.Span[lines[i].From..lines[i].To].CopyTo(buffer[length..]);
             int fullLength = length + lines[i].To - lines[i].From;
-            syncFileStream.Write(buffer[..fullLength]);
+            _syncFileStream.Write(buffer[..fullLength]);
          }
-         syncFileStream.Flush();
+         _syncFileStream.Flush();
          if (rented != null)
             ArrayPool<byte>.Shared.Return(rented);
-        
+         
          return Result.Ok;
       }
       catch (Exception e)
       {
          return Result.Error(e.Message);
       }
+   }
+
+   Result IOneTimeLinesWriter.WriteRecords(string filePath, LineMemory[] lines, int linesNumber, ReadOnlyMemory<byte> source)
+   {
+      try
+      {
+         _syncFileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None,
+            bufferSize: _bufferSize, false);
+         return WriteRecords(lines, linesNumber, source);
+      }
+      finally
+      {
+         _syncFileStream?.Dispose();
+         _syncFileStream = null;
+      }
+   }
+
+   async Task<Result> IOneTimeLinesWriter.WriteRecordsAsync(string filePath, LineMemory[] lines, int linesNumber, ReadOnlyMemory<byte> source,
+      CancellationToken token)
+   {
+      try
+      {
+         _fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None,
+            bufferSize: _bufferSize, true);
+         return await WriteRecordsAsync(lines, linesNumber, source, token);
+      }
+      finally
+      {
+         if (_fileStream != null) await _fileStream.DisposeAsync();
+         _fileStream = null;
+      }
+   }
+
+   Result ISeveralTimesLinesWriter.WriteRecords(LineMemory[] lines, int linesNumber, ReadOnlyMemory<byte> source)
+   {
+      return WriteRecords(lines, linesNumber, source);
+   }
+
+   Task<Result> ISeveralTimesLinesWriter.WriteRecordsAsync(LineMemory[] lines, int linesNumber, ReadOnlyMemory<byte> source, CancellationToken token)
+   {
+      return WriteRecordsAsync(lines, linesNumber, source, token);
+   }
+
+   public async ValueTask DisposeAsync()
+   {
+      if (_fileStream != null) await _fileStream.DisposeAsync();
+      if (_syncFileStream != null)
+         throw new InvalidOperationException("Erroneous class usage LinesWriter.");
+   }
+
+   public void Dispose()
+   {
+      _syncFileStream?.Dispose();
+      if (_fileStream != null)
+         throw new InvalidOperationException("Erroneous class usage LinesWriter.");
    }
 }

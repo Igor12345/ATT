@@ -6,13 +6,10 @@ using SortingEngine.Entities;
 
 namespace SortingEngine.RowData;
 
-public sealed class ObservableRecordsExtractor //: IAsyncObserver<ReadingPhasePackage>
+public sealed class ObservableRecordsExtractor 
 {
-    private readonly CancellationToken _token;
     private readonly SimpleAsyncSubject<PreReadPackage> _readyForNextChunkSubject =
         new SequentialSimpleAsyncSubject<PreReadPackage>();
-    // private readonly SimpleAsyncSubject<SortingPhasePackage> _readyForSortingSubject = 
-    //     new SequentialSimpleAsyncSubject<SortingPhasePackage>();
       
     private readonly ILogger _logger;
     private readonly RecordsExtractor _recordsExtractor;
@@ -21,12 +18,7 @@ public sealed class ObservableRecordsExtractor //: IAsyncObserver<ReadingPhasePa
     {
         _recordsExtractor = new RecordsExtractor(eol, lineDelimiter);
         _logger = Guard.NotNull(logger);
-        _token = Guard.NotNull(token);
-        
     }
-
-    public IAsyncObservable<PreReadPackage> ReadyForNextChunk => _readyForNextChunkSubject;
-    // public IAsyncObservable<SortingPhasePackage> ReadyForSorting => _readyForSortingSubject;
 
     public async Task<(SortingPhasePackage,PreReadPackage)> ExtractNextAsync(ReadingPhasePackage package)
     {

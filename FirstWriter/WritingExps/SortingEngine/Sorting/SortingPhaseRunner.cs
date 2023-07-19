@@ -10,54 +10,67 @@ namespace SortingEngine.Sorting;
 
 public class SortingPhaseRunner
 {
-    private readonly ILinesWriter _linesWriter;
+    private readonly IOneTimeLinesWriter _linesWriter;
     private readonly IBytesProducer _bytesProducer;
 
-    public SortingPhaseRunner(IBytesProducer bytesProducer, ILinesWriter linesWriter)
+    public SortingPhaseRunner(IBytesProducer bytesProducer, IOneTimeLinesWriter linesWriter)
     {
         _bytesProducer = Guard.NotNull(bytesProducer);
         _linesWriter = Guard.NotNull(linesWriter);
     }
-    
-    public async Task<Result> Execute(IConfig configuration, SemaphoreSlim semaphore, ILogger logger, CancellationToken cancellationToken)
+
+    public async Task<Result> Execute(IConfig configuration, SemaphoreSlim semaphore, ILogger logger,
+        CancellationToken cancellationToken)
     {
         Stopwatch sw = new Stopwatch();
         sw.Start();
-      
+
         ObservableRecordsExtractor extractor = new ObservableRecordsExtractor(
             configuration.Encoding.GetBytes(Environment.NewLine),
             configuration.Encoding.GetBytes(Constants.Delimiter), logger, cancellationToken);
 
-        IntermediateResultsDirector chunksDirector =
-            IntermediateResultsDirector.Create(_linesWriter, configuration, logger, cancellationToken);
-      
+        IntermediateResultsDirector chunksDirector = IntermediateResultsDirector.Create(_linesWriter, configuration);
+
         SetOfLinesSorter sorter = new SetOfLinesSorter(logger, buffer => new LinesSorter(buffer));
-      
+
         using SortingPhasePool sortingPhasePool = new SortingPhasePool(configuration.SortingPhaseConcurrency,
             configuration.InputBufferLength,
-            configuration.RecordsBufferLength, logger);
-      
-        using SortingPhasePoolAsObserver sortingPhasePoolAsObserver = new SortingPhasePoolAsObserver(sortingPhasePool, logger);
+            configuration.RecordsBufferLength);
+
+        using SortingPhasePoolAsObserver sortingPhasePoolAsObserver = new SortingPhasePoolAsObserver(sortingPhasePool);
 
         await using IAsyncDisposable? releaseBufferSub =
-            await chunksDirector.SortedLinesSaved.SubscribeAsync(sortingPhasePoolAsObserver.ReleaseBuffers);
+            await chunksDirector.SortedLinesSaved
+                .Do(async p => await logger.LogAsync(() =>
+                    $"All lines in the package: {p.PackageNumber} has been saved in a file, and the buffer is ready to reuse. This is the last part: {p.IsLastPackage}."))
+                .SubscribeAsync(sortingPhasePoolAsObserver.ReleaseBuffers);
 
         var published = sortingPhasePoolAsObserver.StreamLinesByBatches(cancellationToken)
+            .Do(async p => await logger.LogAsync(() =>
+                new LogEntry($"Ready to read the next chunk of data. package: {p.PackageNumber}.")))
             .Select(async p => await _bytesProducer.ProcessPackageAsync(p))
+            .Do(async p => await logger.LogAsync(() =>
+                new LogEntry(
+                    $"The next chunk of data has been read. package: {p.PackageNumber}, contains: {p.WrittenBytesLength} bytes, this is the last part: {p.IsLastPackage}.")))
             .Select(async p => await extractor.ExtractNextAsync(p))
             .Publish();
 
         await using var backLoopSub = await published.Select(pp => pp.Item2)
+            .Do(async p => await logger.LogAsync(() =>
+                $"The package: {p.PackageNumber} left a tail of {p.RemainedBytesLength} bytes; they will be put at the beginning of the following package."))
             .SubscribeAsync(sortingPhasePoolAsObserver.ReadyProcessingNextChunk);
 
         await using var sortingSub = await published
             .Select(pp => pp.Item1)
+            .Do(async p => await logger.LogAsync(() =>
+                $"{p.LinesNumber} lines were extracted in the package: {p.PackageNumber}, this is the last part: {p.IsLastPackage}."))
             .Select(p => AsyncObservable.FromAsync(async () => await sorter.ProcessPackageAsync(p)))
             .Merge()
+            .Do(async p => await logger.LogAsync(() =>
+                $"Were lines in the package: {p.PackageNumber} has been sorted, this is the last part: {p.IsLastPackage}."))
             .Select(async p => await chunksDirector.ProcessPackageAsync(p))
             .SubscribeAsync(
-                _ =>
-                {},
+                _ => { },
                 ex =>
                 {
                     //Here can be some smarter handler
@@ -73,14 +86,16 @@ public class SortingPhaseRunner
             );
         await published.ConnectAsync();
         await sortingPhasePoolAsObserver.LetsStartAsync();
-         
+
         await semaphore.WaitAsync(cancellationToken);
-      
+
         sw.Stop();
-        Console.WriteLine($"The sorting phase completed in {sw.Elapsed.TotalSeconds:F2} sec, {sw.Elapsed.TotalMilliseconds} ms");
-      
+        Console.WriteLine(
+            $"The sorting phase completed in {sw.Elapsed.TotalSeconds:F2} sec, {sw.Elapsed.TotalMilliseconds} ms");
+
         return Result.Ok;
     }
+
     private void HandleError(Exception exception)
     {
         var color = Console.ForegroundColor;

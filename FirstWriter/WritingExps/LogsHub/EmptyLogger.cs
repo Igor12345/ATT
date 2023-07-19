@@ -6,4 +6,9 @@ public class EmptyLogger : ILogger
     {
         return ValueTask.CompletedTask;
     }
+
+    public ValueTask LogAsync(Func<LogEntry> getRecord)
+    {
+        return ValueTask.CompletedTask;
+    }
 }

@@ -1,5 +1,4 @@
-﻿using LogsHub;
-using SortingEngine.RowData;
+﻿using SortingEngine.RowData;
 
 namespace SortingEngineTests.RowData;
 
@@ -11,8 +10,8 @@ public class SortingPhasePoolTests
         int minBytesBufferLength = 200;
         int minLinesBufferLength = 200;
         SortingPhasePool pool =
-            new SortingPhasePool(2, minBytesBufferLength, minLinesBufferLength, new EmptyLogger());
-        
+            new SortingPhasePool(2, minBytesBufferLength, minLinesBufferLength);
+
         ReadingPhasePackage package = await pool.TryAcquireNextAsync();
 
         Assert.NotNull(package);
@@ -20,15 +19,15 @@ public class SortingPhasePoolTests
         Assert.NotNull(package.RowData);
         Assert.True(package.RowData.Length >= minBytesBufferLength);
     }
-    
+
     [Fact]
     public async Task PoolManager_ShouldProvideOnlyAllowedNumberOfBuffers()
     {
         int minBytesBufferLength = 200;
         int minLinesBufferLength = 200;
         SortingPhasePool pool =
-            new SortingPhasePool(2, minBytesBufferLength, minLinesBufferLength, new EmptyLogger());
-        
+            new SortingPhasePool(2, minBytesBufferLength, minLinesBufferLength);
+
         ReadingPhasePackage package1 = await pool.TryAcquireNextAsync();
         ReadingPhasePackage package2 = await pool.TryAcquireNextAsync();
         Task<ReadingPhasePackage> askingNextPackage = pool.TryAcquireNextAsync();
@@ -40,24 +39,23 @@ public class SortingPhasePoolTests
         Assert.NotNull(package2);
         Assert.Same(winner, timeLimit);
     }
-    
+
     [Fact]
     public async Task PoolManager_ShouldAllowReuseBuffers()
     {
         int minBytesBufferLength = 200;
         int minLinesBufferLength = 200;
         SortingPhasePool pool =
-            new SortingPhasePool(2, minBytesBufferLength, minLinesBufferLength, new EmptyLogger());
-        
+            new SortingPhasePool(2, minBytesBufferLength, minLinesBufferLength);
+
         ReadingPhasePackage package1 = await pool.TryAcquireNextAsync();
-        ReadingPhasePackage package2 = await pool.TryAcquireNextAsync();
         Task<ReadingPhasePackage> askingNextPackage = pool.TryAcquireNextAsync();
         Task timeLimit = Task.Delay(50);
 
         Task winner = await Task.WhenAny(askingNextPackage, timeLimit);
 
         Assert.Same(winner, timeLimit);
-        
+
         pool.ReleaseBuffer(package1.RowData);
 
         var package3 = await askingNextPackage;

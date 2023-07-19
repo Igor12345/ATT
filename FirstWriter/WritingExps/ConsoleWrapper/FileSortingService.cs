@@ -2,6 +2,7 @@
 //and the merge phase will slow down by almost 30%.
 
 // #define MERGE_ASYNC
+
 using System.Diagnostics;
 using System.Runtime;
 using ConsoleWrapper.IOProcessing;
@@ -72,8 +73,8 @@ internal class FileSortingService : IHostedService
       //only for demonstration, use NLog, Serilog, ... in real projects
       // https://learn.microsoft.com/en-us/dotnet/core/extensions/high-performance-logging
       // https://learn.microsoft.com/en-us/dotnet/core/extensions/logger-message-generator
-      // ILogger logger = Logger.Create(cancellationToken);
-      ILogger logger = Logger.CreateEmpty(cancellationToken);
+      ILogger logger = Logger.Create(cancellationToken);
+      // ILogger logger = Logger.CreateEmpty(cancellationToken);
 
       Console.WriteLine($"Starting at: {DateTime.UtcNow:hh:mm:ss-fff}, sorting file: {validInput.File}.");
 
@@ -86,7 +87,7 @@ internal class FileSortingService : IHostedService
             logger,
             cancellationToken);
       
-      LinesWriter writer = new LinesWriter(configuration.Encoding.GetBytes("1").Length, configuration.ReadStreamBufferSize, logger);
+      IOneTimeLinesWriter writer = LinesWriter.CreateForOnceWriting(configuration.Encoding.GetBytes("1").Length, configuration.ReadStreamBufferSize, logger);
       SortingPhaseRunner sortingPhase = new SortingPhaseRunner(bytesReader, writer);
       
       Result sortingResult = await sortingPhase.Execute(configuration, semaphore, logger, cancellationToken);
@@ -114,7 +115,8 @@ internal class FileSortingService : IHostedService
    private static async Task<Result> MergingPhaseAsync(IConfig configuration,
       ILogger logger)
    {
-      ILinesWriter resultWriter = new LinesWriter(configuration.Encoding.GetBytes(".").Length,
+      ISeveralTimesLinesWriter resultWriter = LinesWriter.CreateForMultipleWriting(configuration.Output,
+         configuration.Encoding.GetBytes(".").Length,
          configuration.WriteStreamBufferSize, logger);
 
       Console.WriteLine("The merge phase runs asynchronously.");
@@ -131,7 +133,8 @@ internal class FileSortingService : IHostedService
    private static Result MergingPhase(IConfig configuration,
       ILogger logger)
    {
-      ILinesWriter resultWriter = new LinesWriter(configuration.Encoding.GetBytes(".").Length,
+      ISeveralTimesLinesWriter resultWriter = LinesWriter.CreateForMultipleWriting(configuration.Output,
+         configuration.Encoding.GetBytes(".").Length,
          configuration.WriteStreamBufferSize, logger);
 
       Console.WriteLine("The merge phase is executed in synchronous mode.");

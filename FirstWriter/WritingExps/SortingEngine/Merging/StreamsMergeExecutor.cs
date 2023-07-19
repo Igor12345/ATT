@@ -10,14 +10,14 @@ namespace SortingEngine.Merging;
 public sealed class StreamsMergeExecutor
 {
    private readonly IConfig _config;
-   private readonly ILinesWriter _linesWriter;
+   private readonly ISeveralTimesLinesWriter _linesWriter;
    private string[] _files = null!;
 
    private LineMemory[] _outputBuffer = null!;
    private int _lastLine;
    private Memory<byte> _inputBuffer;
    
-   public StreamsMergeExecutor(IConfig config, ILinesWriter linesWriter)
+   public StreamsMergeExecutor(IConfig config, ISeveralTimesLinesWriter linesWriter)
    {
       _config = Guard.NotNull(config);
       _linesWriter = Guard.NotNull(linesWriter);
@@ -107,6 +107,6 @@ public sealed class StreamsMergeExecutor
 
    private Result WriteLinesFromBuffer(LineMemory[] lines, int linesNumber, ReadOnlyMemory<byte> source)
    {
-      return _linesWriter.WriteRecords(_config.Output, lines, linesNumber, source);
+      return _linesWriter.WriteRecords(lines, linesNumber, source);
    }
 }

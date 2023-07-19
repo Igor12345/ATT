@@ -1,7 +1,5 @@
-﻿using System.Buffers;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using Infrastructure.Parameters;
-using LogsHub;
 using SortingEngine.DataStructures;
 using SortingEngine.Entities;
 
@@ -9,7 +7,6 @@ namespace SortingEngine.RowData;
 
 public class SortingPhasePool : IDisposable
 {
-    private readonly ILogger _logger;
     private readonly SemaphoreSlim _semaphore;
     private readonly int _inputBuffersLength;
     private volatile int _packageNumber = -1;
@@ -18,14 +15,12 @@ public class SortingPhasePool : IDisposable
     private readonly ConcurrentStack<ExpandingStorage<LineMemory>> _lineStorages;
     private SpinLock _lock;
 
-    public SortingPhasePool(int numberOfBuffers, int inputBuffersLength, int recordChunksLength,
-        ILogger logger)
+    public SortingPhasePool(int numberOfBuffers, int inputBuffersLength, int recordChunksLength)
     {
         _lock = new SpinLock();
         _ = Guard.Positive(numberOfBuffers);
         _inputBuffersLength = Math.Min(Guard.Positive(inputBuffersLength), Array.MaxLength);
         _recordChunksLength = Math.Min(Guard.Positive(recordChunksLength), Array.MaxLength);
-        _logger = Guard.NotNull(logger);
         _buffers = new ConcurrentStack<byte[]>();
         _semaphore = new SemaphoreSlim(numberOfBuffers, numberOfBuffers);
         //The most likely scenario is that storages for recognized lines will be returned
@@ -35,42 +30,26 @@ public class SortingPhasePool : IDisposable
         _lineStorages = new ConcurrentStack<ExpandingStorage<LineMemory>>();
     }
     
-    //in a real project, working with logs will look completely different
-    private async ValueTask Log(string message)
-    {
-        //in the real projects it will be structured logs
-        string prefix = $"{this.GetType()}, at: {DateTime.UtcNow:hh:mm:ss-fff} ";
-        await _logger.LogAsync(prefix + message);
-    }
-    
     public async Task<ReadingPhasePackage> TryAcquireNextAsync()
     {
-        //todo remove semaphore
-        await Log(
-            $"Trying acquire new bytes buffer, last package was {_packageNumber}, semaphore: {_semaphore.CurrentCount}, thread: {Thread.CurrentThread.ManagedThreadId}");
         await _semaphore.WaitAsync();
-        await Log(
-            $"Semaphore passed, last package was {_packageNumber}, semaphore: {_semaphore.CurrentCount}, thread: {Thread.CurrentThread.ManagedThreadId}");
         
         bool lockTaken = false;
         try
         {
             _lock.Enter(ref lockTaken);
-            var bufferExists = _buffers.TryPop(out var buffer);
+            bool bufferExists = _buffers.TryPop(out byte[]? buffer);
             if (!bufferExists)
             {
                 //The semaphore ensures that we don't exceed the allowed number of existing buffers.
                 //It is safe a new buffer here
                 buffer = new byte[_inputBuffersLength];
-                //Array pool holds memory and refuses to free it
+                //Array pool holds memory and refuses to release it
                 // buffer = ArrayPool<byte>.Shared.Rent(_inputBuffersLength);
             }
             ExpandingStorage<LineMemory> linesStorage = RentLinesStorage();
 
-            //todo
-            int bufferId = buffer.GetHashCode();
-            await Log($"New bytes buffer has been rented, this package is {_packageNumber + 1}. This is reused buffer: {bufferExists}, Id: {bufferId}");
-            return new ReadingPhasePackage(buffer, linesStorage, Interlocked.Increment(ref _packageNumber), false);
+            return new ReadingPhasePackage(buffer!, linesStorage, Interlocked.Increment(ref _packageNumber), false);
         }
         finally
         {
@@ -113,12 +92,6 @@ public class SortingPhasePool : IDisposable
     
     public void Dispose()
     {
-        while (_buffers.TryPop(out var buffer))
-        {
-            // if (buffer != null)
-            //     ArrayPool<byte>.Shared.Return(buffer);
-        }
-
         while (_lineStorages.TryPop(out var storage))
         {
             storage.Dispose();

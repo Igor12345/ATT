@@ -25,6 +25,11 @@ public class Logger : ILogger
         return _input.Log(record);
     }
 
+    public ValueTask LogAsync(Func<LogEntry> getRecord)
+    {
+        return LogAsync(getRecord());
+    }
+
     public async ValueTask StopAsync()
     {
         //todo double-check vs Task.Delay(1)

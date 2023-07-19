@@ -1,10 +1,8 @@
 ﻿using System.Buffers;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
-using System.Reactive.Subjects;
 using System.Threading.Channels;
 using Infrastructure.Parameters;
-using LogsHub;
 using SortingEngine.DataStructures;
 using SortingEngine.Entities;
 
@@ -12,16 +10,14 @@ namespace SortingEngine.RowData;
 
 public class SortingPhasePoolAsObserver : IDisposable
 {
-    private readonly ILogger _logger;
     private readonly SortingPhasePool _pool;
     private readonly ReadyProcessingNextChunkObserver _readyProcessingNextChunkObserver;
     private readonly ReadyReleaseBuffersObserver _releaseBuffersObserver;
     private readonly Channel<ReadingPhasePackage> _packagesQueue = Channel.CreateUnbounded<ReadingPhasePackage>();
     
-    public SortingPhasePoolAsObserver(SortingPhasePool pool, ILogger logger)
+    public SortingPhasePoolAsObserver(SortingPhasePool pool)
     {
         _pool = Guard.NotNull(pool);
-        _logger = Guard.NotNull(logger);
         _readyProcessingNextChunkObserver = new ReadyProcessingNextChunkObserver(this);
         _releaseBuffersObserver = new ReadyReleaseBuffersObserver(this);
     }
@@ -39,17 +35,12 @@ public class SortingPhasePoolAsObserver : IDisposable
 
         public async ValueTask OnNextAsync(PreReadPackage package)
         {
-            // Console.WriteLine(
-            //     $"--> In SortingPhasePoolAsObserver OnNextAsync PreReadPackage for {package.PackageNumber}, " +
-            //     $"is last: {package.IsLastPackage}, contains bytes: {package.RemainedBytesLength}");
-
             if (package.IsLastPackage)
             {
                 ReadingPhasePackage last = new ReadingPhasePackage(Array.Empty<byte>(),
                     ExpandingStorage<LineMemory>.Empty, package.PackageNumber, true);
                 await _writer.WriteAsync(last);
                 
-                //todo complete? can we lost unprocessed jobs?
                 return;
             }
 
@@ -95,24 +86,10 @@ public class SortingPhasePoolAsObserver : IDisposable
 
         public async ValueTask OnNextAsync(AfterSortingPhasePackage package)
         {
-            //todo
-            // int bufferId = package.RowData.GetHashCode();
-            // int num = package.PackageNumber;
-            // Console.WriteLine(
-            //     $"-->! In SortingPhasePoolManager OnNextAsync AfterSortingPhasePackage for {package.PackageNumber}, is last: {package.IsLastPackage}, bufferId: {bufferId}");
-            // await _poolAsObserver.Log(
-            //     $"Incoming AfterSortingPhasePackage {package.PackageNumber}, is last package: {package.IsLastPackage}");
-
             ReleaseTakenStorages(package);
 
             if (package.IsLastPackage)
-            {
-                //todo
-                // Console.WriteLine(
-                //     $"--> !!! In SortingPhasePoolManager before _loadNextChunkSubject.OnCompletedAsync for {package.PackageNumber}, is last: {package.IsLastPackage}");
-                
                 _writer.Complete();
-            }
         }
 
         private void ReleaseTakenStorages(AfterSortingPhasePackage package)
@@ -130,18 +107,8 @@ public class SortingPhasePoolAsObserver : IDisposable
 
         public ValueTask OnCompletedAsync()
         {
-            // Console.WriteLine(
-            //     $"<---->! In SortingPhasePoolManager OOnCompletedAsync thread: {Thread.CurrentThread.ManagedThreadId}");
-
             return ValueTask.CompletedTask;
         }
-    }
-
-    private async ValueTask Log(string message)
-    {
-        //in the real projects it will be structured logs
-        string prefix = $"{this.GetType()}, at: {DateTime.UtcNow:hh:mm:ss-fff} ";
-        await _logger.LogAsync(prefix + message);
     }
 
     public IAsyncObserver<PreReadPackage> ReadyProcessingNextChunk => _readyProcessingNextChunkObserver;

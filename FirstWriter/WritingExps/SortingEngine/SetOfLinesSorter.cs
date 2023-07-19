@@ -20,10 +20,6 @@ public class SetOfLinesSorter
 
     public async Task<AfterSortingPhasePackage> ProcessPackageAsync(SortingPhasePackage package)
     {
-        //todo
-        //await Log(
-        //     $"Processing package: {package.PackageNumber}, buffer Id: {id}, contains: lines {package.LinesNumber}, " +
-        //     $"bytes {package.OccupiedLength}.");
         ReadOnlyMemory<byte> inputBytes = package.RowData.AsMemory()[..package.OccupiedLength];
         LineMemory[] sorted = SortRecords(inputBytes, package.LinesNumber, package.ParsedRecords);
 
@@ -45,6 +41,7 @@ public class SetOfLinesSorter
         return sorter.Sort(recordsStorage, linesNumber);
     }
 
+    // in a real project, working with logs will look completely different
     private async ValueTask Log(string message)
     {
         //in the real projects it will be structured logs
