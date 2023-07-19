@@ -150,9 +150,15 @@ internal class FileSortingService : IHostedService
    {
       using ILinesWriter resultWriter =
          LinesWriter.Create(configuration.Output, configuration.Encoding.GetBytes(".").Length, logger);
-      StreamsMergeExecutor merger = new StreamsMergeExecutor(configuration, resultWriter);
 
-      var result = await merger.MergeWithOrder();
+#if WRITE_ASYNC
+      StreamsMergeExecutorAsync mergerAsync = new StreamsMergeExecutorAsync(configuration, resultWriter);
+      var result = await mergerAsync.MergeWithOrderAsync();
+#else
+      StreamsMergeExecutor merger = new StreamsMergeExecutor(configuration, resultWriter);
+      var result = merger.MergeWithOrder();
+ #endif     
+      
       return result;
    }
 

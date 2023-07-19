@@ -6,7 +6,7 @@ using SortingEngine.RowData;
 
 namespace SortingEngine;
 
-internal class DataChunkManager : IAsyncDisposable
+internal class DataChunkManagerAsync : IAsyncDisposable
 {
    //todo keep open or reopen every time
    private readonly Stream _dataSource;
@@ -20,7 +20,7 @@ internal class DataChunkManager : IAsyncDisposable
    private readonly RecordsExtractor _extractor;
    private int _loadedLines;
 
-   public DataChunkManager(string file, Memory<byte> rowStorage, Encoding encoding, int bufferSize, int offset)
+   public DataChunkManagerAsync(string file, Memory<byte> rowStorage, Encoding encoding, int bufferSize, int offset)
    {
       _rowStorage = rowStorage;
       _offset = offset;
@@ -32,12 +32,12 @@ internal class DataChunkManager : IAsyncDisposable
       _extractor =
          new RecordsExtractor(eolBytes, delimiterBytes);
    }
-
-   public (ExtractionResult, bool, LineMemory) TryGetNextLine()
+   
+   public async Task<(ExtractionResult, bool, LineMemory)> TryGetNextLineAsync()
    {
       if (NeedLoadLines())
       {
-         ExtractionResult result = LoadLines();
+         ExtractionResult result = await LoadLinesAsync();
          if (result is { Success: true, LinesNumber: 0 })
          {
             return (result, false, default);
@@ -59,7 +59,7 @@ internal class DataChunkManager : IAsyncDisposable
       return _currentPosition >= _loadedLines;
    }
 
-   private ExtractionResult LoadLines()
+   private async Task<ExtractionResult> LoadLinesAsync()
    {
       _recordsStorage.Clear();
 
@@ -69,7 +69,7 @@ internal class DataChunkManager : IAsyncDisposable
          _remainedBytes.CopyTo(_rowStorage);
       }
 
-      int received = _dataSource.Read(_rowStorage.Span[_remindedBytesLength..]);
+      int received = await _dataSource.ReadAsync(_rowStorage[_remindedBytesLength..]);
       if (received == 0)
          return ExtractionResult.Ok(0, -1);
       _currentPosition = 0;
