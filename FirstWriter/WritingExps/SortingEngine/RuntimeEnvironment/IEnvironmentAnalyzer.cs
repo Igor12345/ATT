@@ -30,6 +30,8 @@ namespace SortingEngine.RuntimeEnvironment
          int recordsLength = SetBufferLength(_baseConfiguration.RecordsBufferLength, 2_000);
          int outputBufferLength = SetBufferLength(_baseConfiguration.OutputBufferLength, 1_000);
 
+         int readStreamBufferSize = _baseConfiguration.ReadStreamBufferSize ?? 4096;
+         int writeStreamBufferSize = _baseConfiguration.WriteStreamBufferSize ?? 4096;
          string outputPath = GetOutputPath(path);
 
          bool useOneStepSorting = CheckForOneStep(path, inputBufferLength);
@@ -39,6 +41,8 @@ namespace SortingEngine.RuntimeEnvironment
             .UseInputBuffer(inputBufferLength)
             .UseMergeBuffer(mergeBufferLength)
             .UseRecordsBuffer(recordsLength)
+            .UseReadStreamBufferSize(readStreamBufferSize)
+            .UseWriteStreamBufferSize(writeStreamBufferSize)
             .SortingPhaseConcurrency(_baseConfiguration.SortingPhaseConcurrency)
             .UseOutputBuffer(outputBufferLength)
             .UseOutputPath(outputPath)

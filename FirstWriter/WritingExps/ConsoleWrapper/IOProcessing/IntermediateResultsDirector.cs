@@ -56,7 +56,7 @@ internal class IntermediateResultsDirector //: IAsyncObserver<AfterSortingPhaseP
       //use synchronous version to prevent from holding the variable by async state machine
       //it looks like something wrong this this version of async code
       using LinesWriter writer =
-         LinesWriter.Create(fullFileName, _configuration.Encoding.GetBytes("1").Length, _logger);
+         LinesWriter.Create(fullFileName, _configuration.Encoding.GetBytes("1").Length, _configuration.ReadStreamBufferSize, _logger);
       return writer.WriteRecords(package.SortedLines, package.LinesNumber, package.RowData);
    }
 

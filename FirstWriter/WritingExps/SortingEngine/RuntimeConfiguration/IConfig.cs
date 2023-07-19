@@ -9,6 +9,8 @@ namespace SortingEngine.RuntimeConfiguration
       int MergeBufferLength { get; }
       int OutputBufferLength { get; }
       int RecordsBufferLength { get; }
+      int ReadStreamBufferSize { get; }
+      int WriteStreamBufferSize { get; }
       string Output { get; }
       string TemporaryFolder { get; }
       string InputFile { get; }

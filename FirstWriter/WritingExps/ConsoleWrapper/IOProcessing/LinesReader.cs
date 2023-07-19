@@ -4,7 +4,7 @@ using SortingEngine;
 
 namespace ConsoleWrapper.IOProcessing
 {
-   public class LinesReader : IAsyncDisposable, IDisposable
+   public class LinesReader 
    {
       private readonly Func<Stream> _streamFactory;
       private readonly Stream _inputStream;
@@ -46,16 +46,6 @@ namespace ConsoleWrapper.IOProcessing
       {
          int length = _inputStream.Read(buffer, offset, buffer.Length - offset);
          return new ReadingResult() { Success = true, Size = length + offset };
-      }
-
-      public async ValueTask DisposeAsync()
-      {
-         await _inputStream.DisposeAsync();
-      }
-
-      public void Dispose()
-      {
-         _inputStream.Dispose();
       }
    }
 }

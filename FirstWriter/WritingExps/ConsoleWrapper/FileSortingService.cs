@@ -98,6 +98,9 @@ internal class FileSortingService : IHostedService
    private async Task<Result> SortingPhase(IConfig configuration,
       ValidatedInputParameters validInput, SemaphoreSlim semaphore, ILogger logger, CancellationToken cancellationToken)
    {
+      Stopwatch sw = new Stopwatch();
+      sw.Start();
+      
       ObservableRecordsExtractor extractor = new ObservableRecordsExtractor(
          configuration.Encoding.GetBytes(Environment.NewLine),
          configuration.Encoding.GetBytes(Constants.Delimiter), logger, cancellationToken);
@@ -105,8 +108,9 @@ internal class FileSortingService : IHostedService
       IntermediateResultsDirector chunksDirector =
          IntermediateResultsDirector.Create(configuration, logger, cancellationToken);
 
-      await using IBytesProducer bytesReader =
-         new LongFileReader(validInput.File, configuration.Encoding, logger, cancellationToken);
+      IBytesProducer bytesReader =
+         new LongFileReader(validInput.File, configuration.Encoding, configuration.ReadStreamBufferSize, logger,
+            cancellationToken);
       
       SetOfLinesSorter sorter = new SetOfLinesSorter(logger, buffer => new LinesSorter(buffer));
       
@@ -143,6 +147,7 @@ internal class FileSortingService : IHostedService
             },
             () =>
             {
+               bytesReader.Dispose();
                MemoryCleaner.CleanMemory();
                semaphore.Release();
             }
@@ -152,6 +157,10 @@ internal class FileSortingService : IHostedService
       await sortingPhasePoolAsObserver.LetsStartAsync();
          
       await semaphore.WaitAsync(cancellationToken);
+      
+      sw.Stop();
+      Console.WriteLine($"The sorting phase completed in {sw.Elapsed.TotalSeconds:F2} sec, {sw.Elapsed.TotalMilliseconds} ms");
+      
       return Result.Ok;
    }
 
@@ -159,7 +168,8 @@ internal class FileSortingService : IHostedService
       ILogger logger)
    {
       using ILinesWriter resultWriter =
-         LinesWriter.Create(configuration.Output, configuration.Encoding.GetBytes(".").Length, logger);
+         LinesWriter.Create(configuration.Output, configuration.Encoding.GetBytes(".").Length,
+            configuration.WriteStreamBufferSize, logger);
 
       Console.WriteLine("The merge phase runs asynchronously.");
       Stopwatch sw = new Stopwatch();
@@ -176,7 +186,8 @@ internal class FileSortingService : IHostedService
       ILogger logger)
    {
       using ILinesWriter resultWriter =
-         LinesWriter.Create(configuration.Output, configuration.Encoding.GetBytes(".").Length, logger);
+         LinesWriter.Create(configuration.Output, configuration.Encoding.GetBytes(".").Length,
+            configuration.WriteStreamBufferSize, logger);
 
       Console.WriteLine("The merge phase is executed in synchronous mode.");
       Stopwatch sw = new Stopwatch();

@@ -10,24 +10,26 @@ namespace ConsoleWrapper.IOProcessing;
 
 public class LinesWriter : ILinesWriter, IAsyncDisposable
 {
+   private readonly int _bufferSize;
    private readonly int _charLength;
    private readonly ILogger _logger;
    private readonly string _filePath;
    private FileStream? _fileStream;
    private FileStream? _syncFileStream;
 
-   private LinesWriter(string filePath, int charLength, ILogger logger)
+   private LinesWriter(string filePath, int charLength, int bufferSize, ILogger logger)
    {
       _charLength = Guard.Positive(charLength);
       _filePath = Guard.NotNullOrEmpty(filePath);
+      _bufferSize = Guard.Positive(bufferSize);
       _logger = Guard.NotNull(logger);
    }
 
    //todo delete b
-   public static LinesWriter Create(string filePath, int charLength, ILogger logger)
+   public static LinesWriter Create(string filePath, int charLength, int bufferSize, ILogger logger)
    {
       CheckFilePath(filePath);
-      LinesWriter instance = new LinesWriter(filePath, charLength, logger);
+      LinesWriter instance = new LinesWriter(filePath, charLength, bufferSize, logger);
       return instance;
    }
 
@@ -50,7 +52,8 @@ public class LinesWriter : ILinesWriter, IAsyncDisposable
    public async Task<Result> WriteRecordsAsync(LineMemory[] lines, int linesNumber, ReadOnlyMemory<byte> source,
       CancellationToken token)
    {
-      _fileStream ??= File.Open(_filePath, FileMode.Create, FileAccess.Write);
+      _fileStream ??= new FileStream(_filePath, FileMode.Create, FileAccess.Write, FileShare.None,
+         bufferSize: _bufferSize, true);
       IMemoryOwner<byte> buffer = MemoryPool<byte>.Shared.Rent(Constants.MaxLineLengthUtf8 * _charLength);
       try
       {
@@ -77,7 +80,7 @@ public class LinesWriter : ILinesWriter, IAsyncDisposable
    public Result WriteRecords(LineMemory[] lines, int linesNumber, ReadOnlyMemory<byte> source)
    {
       _syncFileStream ??= new FileStream(_filePath, FileMode.Create, FileAccess.Write, FileShare.None,
-         bufferSize: 64_000, false);
+         bufferSize: _bufferSize, false);
 
       // Console.WriteLine(
       //    $"Enter buffer file {_syncFileStream.Name}, position: {_syncFileStream.Position}, length: {_syncFileStream.Length}");

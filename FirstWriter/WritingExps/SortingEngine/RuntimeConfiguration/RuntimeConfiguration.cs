@@ -19,6 +19,8 @@ public class RuntimeConfiguration : IConfig
    public Encoding Encoding { get; private set; } = Encoding.UTF8;
    public int RecordsBufferLength { get; private set; }
    public string? Output { get; private set; }
+   public int ReadStreamBufferSize { get; private set; }
+   public int WriteStreamBufferSize { get; private set; }
 
    public bool UseOneWay { get; private set; }
 
@@ -86,6 +88,18 @@ public class RuntimeConfiguration : IConfig
       public IConfigBuilder UseRecordsBuffer(int recordsBuffer)
       {
          _configuration.RecordsBufferLength = recordsBuffer;
+         return this;
+      }
+
+      public IConfigBuilder UseReadStreamBufferSize(int readStreamBufferSize)
+      {
+         _configuration.ReadStreamBufferSize = readStreamBufferSize;
+         return this;
+      }
+
+      public IConfigBuilder UseWriteStreamBufferSize(int writeStreamBufferSize)
+      {
+         _configuration.WriteStreamBufferSize = writeStreamBufferSize;
          return this;
       }
 
