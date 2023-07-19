@@ -32,7 +32,6 @@ public class Logger : ILogger
 
     public async ValueTask StopAsync()
     {
-        //todo double-check vs Task.Delay(1)
         await Task.Yield();
         _consoleLogger.Stop();
     }

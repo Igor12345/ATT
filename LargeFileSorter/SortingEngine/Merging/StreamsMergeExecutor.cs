@@ -13,7 +13,7 @@ public sealed class StreamsMergeExecutor
    private readonly ISeveralTimesLinesWriter _linesWriter;
    private string[] _files = null!;
 
-   private LineMemory[] _outputBuffer = null!;
+   private Line[] _outputBuffer = null!;
    private int _lastLine;
    private Memory<byte> _inputBuffer;
    
@@ -34,14 +34,14 @@ public sealed class StreamsMergeExecutor
    {
       _files = Directory.GetFiles(_config.TemporaryFolder);
       _inputBuffer = new byte[_config.MergeBufferLength * _files.Length].AsMemory();
-      _outputBuffer = new LineMemory[_config.OutputBufferLength];
+      _outputBuffer = new Line[_config.OutputBufferLength];
    }
 
    private Result ExecuteMerge()
    {
       DataChunkManager[] managers = CreateDataChunkManagers();
 
-      var queue = new IndexPriorityQueue<LineMemory, IComparer<LineMemory>>(_files.Length,
+      var queue = new IndexPriorityQueue<Line, IComparer<Line>>(_files.Length,
             new OnSiteLinesComparer(_inputBuffer));
       Result creatingQueueResult = InitializeQueue(managers, queue);
       if (!creatingQueueResult.Success)
@@ -66,7 +66,7 @@ public sealed class StreamsMergeExecutor
             _lastLine = 0;
          }
       }
-      //todo !!! add eol if necessary
+      
       return _lastLine == 0 ? Result.Ok : WriteLinesFromBuffer(_outputBuffer, _lastLine, _inputBuffer);
    }
 
@@ -75,7 +75,6 @@ public sealed class StreamsMergeExecutor
       DataChunkManager[] managers = new DataChunkManager[_files.Length];
       for (int i = 0; i < _files.Length; i++)
       {
-         //todo configure LineMemory creation
          int from = i * _config.MergeBufferLength;
          int to = (i + 1) * _config.MergeBufferLength;
          managers[i] = new DataChunkManager(_files[i], _inputBuffer[from..to], _config.Encoding,
@@ -86,11 +85,11 @@ public sealed class StreamsMergeExecutor
    }
 
    private Result InitializeQueue(DataChunkManager[] managers,
-      IndexPriorityQueue<LineMemory, IComparer<LineMemory>> queue)
+      IndexPriorityQueue<Line, IComparer<Line>> queue)
    {
       for (int i = 0; i < _files.Length; i++)
       {
-         (ExtractionResult extractionResult, bool hasLine, LineMemory line) = managers[i].TryGetNextLine();
+         (ExtractionResult extractionResult, bool hasLine, Line line) = managers[i].TryGetNextLine();
          if (!extractionResult.Success)
          {
             return Result.Error(extractionResult.Message);
@@ -105,7 +104,7 @@ public sealed class StreamsMergeExecutor
       return Result.Ok;
    }
 
-   private Result WriteLinesFromBuffer(LineMemory[] lines, int linesNumber, ReadOnlyMemory<byte> source)
+   private Result WriteLinesFromBuffer(Line[] lines, int linesNumber, ReadOnlyMemory<byte> source)
    {
       return _linesWriter.WriteRecords(lines, linesNumber, source);
    }

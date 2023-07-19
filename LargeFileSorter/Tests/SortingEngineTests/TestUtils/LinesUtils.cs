@@ -7,7 +7,7 @@ namespace SortingEngineTests.TestUtils;
 
 public static class LinesUtils
 {
-    public static string LineToString(LineMemory line, byte[] source)
+    public static string LineToString(Line line, byte[] source)
     {
         Span<byte> buffer = stackalloc byte[Constants.MaxLineLengthUtf8];
         int length = LineToBytes(line, source, buffer);
@@ -15,7 +15,7 @@ public static class LinesUtils
         return ByteToStringConverter.Convert(buffer[..length]);
     }
 
-    public static int LineToBytes(LineMemory line, ReadOnlySpan<byte> source, Span<byte> destination)
+    public static int LineToBytes(Line line, ReadOnlySpan<byte> source, Span<byte> destination)
     {
         byte[]? rented = null;
         Span<byte> buffer = Constants.MaxLineLengthUtf8 <= Constants.MaxStackLimit

@@ -21,7 +21,7 @@ namespace SortingEngine.RuntimeEnvironment
 
       public IConfig SuggestConfig(string path, Encoding encoding)
       {
-         //todo
+         //todo implement 
          int cpus = Environment.ProcessorCount;
          long availableMemory = GC.GetGCMemoryInfo().TotalAvailableMemoryBytes;
          int inputBufferLength =
@@ -47,7 +47,6 @@ namespace SortingEngine.RuntimeEnvironment
             .UseOutputBuffer(outputBufferLength)
             .UseOutputPath(outputPath)
             .UseFileAndFolder(path, "")
-            //todo merge with the preset config
             .UseEncoding(encoding)
             .UseKeepReadStreamOpen(_baseConfiguration.KeepReadStreamOpen ?? true)
             .UseOneWay(useOneStepSorting));
@@ -79,9 +78,9 @@ namespace SortingEngine.RuntimeEnvironment
          var extension = Path.GetExtension(path);
          string delimiter = extension.Length > 0 ? "." : "";
          
-         //todo custom?
+         //todo implement custom?
          string resultFile = $"{fileName}_sorted{delimiter}{extension}";
-         //todo
+         
          string? directory = Path.GetDirectoryName(path);
          string pathToResult = Path.Combine(directory ?? throw new InvalidOperationException("Wrong directory."), resultFile);
          return pathToResult;

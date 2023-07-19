@@ -8,12 +8,11 @@ namespace SortingEngine.Merging;
 
 internal class DataChunkManagerAsync : IAsyncDisposable
 {
-   //todo keep open or reopen every time
    private readonly Stream _dataSource;
    private readonly Memory<byte> _rowStorage;
    private readonly int _offset;
    private int _currentPosition;
-   private readonly ExpandingStorage<LineMemory> _recordsStorage;
+   private readonly ExpandingStorage<Line> _recordsStorage;
    private byte[]? _remainedBytes;
    private int _remindedBytesLength;
    private readonly int _remindedBytesCapacity;
@@ -24,7 +23,7 @@ internal class DataChunkManagerAsync : IAsyncDisposable
    {
       _rowStorage = rowStorage;
       _offset = offset;
-      _recordsStorage = new ExpandingStorage<LineMemory>(bufferSize);
+      _recordsStorage = new ExpandingStorage<Line>(bufferSize);
       _dataSource = File.OpenRead(file);
       var eolBytes = encoding.GetBytes(Environment.NewLine);
       var delimiterBytes = encoding.GetBytes(Constants.Delimiter);
@@ -33,7 +32,7 @@ internal class DataChunkManagerAsync : IAsyncDisposable
          new RecordsExtractor(eolBytes, delimiterBytes);
    }
    
-   public async Task<(ExtractionResult, bool, LineMemory)> TryGetNextLineAsync()
+   public async Task<(ExtractionResult, bool, Line)> TryGetNextLineAsync()
    {
       if (NeedLoadLines())
       {
@@ -65,7 +64,6 @@ internal class DataChunkManagerAsync : IAsyncDisposable
 
       if (_remindedBytesLength > 0)
       {
-         //todo benchmark
          _remainedBytes.CopyTo(_rowStorage);
       }
 
@@ -73,12 +71,12 @@ internal class DataChunkManagerAsync : IAsyncDisposable
       if (received == 0)
          return ExtractionResult.Ok(0, -1);
       _currentPosition = 0;
-      //todo repetition
+      
       int recognizableBytes = (_remindedBytesLength + received);
       ExtractionResult result =
          _extractor.ExtractRecords(_rowStorage.Span[..recognizableBytes], _recordsStorage, _offset);
 
-      //todo railway 
+      //todo convert all to the railway style 
       if (!result.Success)
          return result;
 

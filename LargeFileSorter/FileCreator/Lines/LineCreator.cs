@@ -30,7 +30,6 @@ public sealed class LineCreator
         _delimiterLength = _delimiter.Length;
     }
 
-    //todo use memoization
     public int WriteLine(Memory<byte> lineBuffer)
     {
         PositionedBuffer destination = new PositionedBuffer(lineBuffer, 0);

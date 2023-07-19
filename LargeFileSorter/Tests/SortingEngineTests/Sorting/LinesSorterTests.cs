@@ -10,10 +10,10 @@ public class LinesSorterTests
 {
     [Theory]
     [ClassData(typeof(LinesSorterTestData))]
-    public void LinesSorter_ShouldCorrectlySortLines((ExpandingStorage<LineMemory> LinesStorage, byte[] Source, string[] Origin) input)
+    public void LinesSorter_ShouldCorrectlySortLines((ExpandingStorage<Line> LinesStorage, byte[] Source, string[] Origin) input)
     {
         LinesSorter sorter = new LinesSorter(input.Source);
-        LineMemory[] sortedLines = sorter.Sort(input.LinesStorage, input.Origin.Length);
+        Line[] sortedLines = sorter.Sort(input.LinesStorage, input.Origin.Length);
 
         string[] converted = sortedLines.Take(input.Origin.Length)
             .Select(line => LinesUtils.LineToString(line, input.Source)).ToArray();
@@ -29,11 +29,6 @@ public class LinesSorterTests
 
 public class LinesSorterTestData : IEnumerable<object[]>
 {
-    //todo support any encoding?
-    public LinesSorterTestData() 
-    {
-    }
-
     //the original strings should be ordered correctly
     public IEnumerator<object[]> GetEnumerator()
     {
@@ -51,7 +46,7 @@ public class LinesSorterTestData : IEnumerable<object[]>
                 "123. abc;",
                 "123. def"
             };
-            ExpandingStorage<LineMemory> linesStorage = new ExpandingStorage<LineMemory>(20);
+            ExpandingStorage<Line> linesStorage = new ExpandingStorage<Line>(20);
             byte[] source =
                 DataGenerator.UTF8.FillLinesStorageFromStrings(new[] { origin[1], origin[0], origin[2] }, linesStorage);
 
@@ -68,7 +63,7 @@ public class LinesSorterTestData : IEnumerable<object[]>
                 "323. abc",
                 "234. abcd"
             };
-            ExpandingStorage<LineMemory> linesStorage = new ExpandingStorage<LineMemory>(20);
+            ExpandingStorage<Line> linesStorage = new ExpandingStorage<Line>(20);
             byte[] source =
                 DataGenerator.UTF8.FillLinesStorageFromStrings(new[] { origin[1], origin[0], origin[2] }, linesStorage);
 
@@ -85,7 +80,7 @@ public class LinesSorterTestData : IEnumerable<object[]>
                 "321. abc",
                 "12. def"
             };
-            ExpandingStorage<LineMemory> linesStorage = new ExpandingStorage<LineMemory>(20);
+            ExpandingStorage<Line> linesStorage = new ExpandingStorage<Line>(20);
             byte[] source =
                 DataGenerator.UTF8.FillLinesStorageFromStrings(new[] { origin[1], origin[0], origin[2] }, linesStorage);
 

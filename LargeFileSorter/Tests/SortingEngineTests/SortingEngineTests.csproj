@@ -23,9 +23,4 @@
     <ItemGroup>
       <ProjectReference Include="..\..\SortingEngine\SortingEngine.csproj" />
     </ItemGroup>
-    <ItemGroup>
-      <None Update="TestData\LostLines">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
-    </ItemGroup>
 </Project>

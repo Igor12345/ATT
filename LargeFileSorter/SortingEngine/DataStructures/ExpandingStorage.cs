@@ -46,8 +46,6 @@ namespace SortingEngine.DataStructures
          }
       }
 
-      public long CurrentCapacity => _lastBuffer * _chunkSize;
-
       public void CopyTo(T[] destination, int length)
       {
          for (int i = 0; i <= _lastBuffer; i++)

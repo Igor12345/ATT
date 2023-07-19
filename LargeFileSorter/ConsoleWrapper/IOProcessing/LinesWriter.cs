@@ -40,7 +40,7 @@ public class LinesWriter : IOneTimeLinesWriter, ISeveralTimesLinesWriter
       return instance;
    }
 
-   private async Task<Result> WriteRecordsAsync(LineMemory[] lines, int linesNumber, ReadOnlyMemory<byte> source,
+   private async Task<Result> WriteRecordsAsync(Line[] lines, int linesNumber, ReadOnlyMemory<byte> source,
       CancellationToken token)
    {
       _fileStream ??= new FileStream(_filePath!, FileMode.Create, FileAccess.Write, FileShare.None,
@@ -68,7 +68,7 @@ public class LinesWriter : IOneTimeLinesWriter, ISeveralTimesLinesWriter
       }
    }
 
-   private Result WriteRecords(LineMemory[] lines, int linesNumber, ReadOnlyMemory<byte> source)
+   private Result WriteRecords(Line[] lines, int linesNumber, ReadOnlyMemory<byte> source)
    {
       _syncFileStream ??= new FileStream(_filePath!, FileMode.Create, FileAccess.Write, FileShare.None,
          bufferSize: _bufferSize, false);
@@ -81,7 +81,7 @@ public class LinesWriter : IOneTimeLinesWriter, ISeveralTimesLinesWriter
             ? stackalloc byte[requiredLength]
             : rented = ArrayPool<byte>.Shared.Rent(requiredLength);
          
-         //todo increase output buffer size (benchmark!)
+         //todo increase output buffer size? (benchmark!)
          for (int i = 0; i < linesNumber; i++)
          {
             int length = LongToBytesConverter.WriteULongToBytes(lines[i].Number, buffer);
@@ -102,7 +102,7 @@ public class LinesWriter : IOneTimeLinesWriter, ISeveralTimesLinesWriter
       }
    }
 
-   Result IOneTimeLinesWriter.WriteRecords(string filePath, LineMemory[] lines, int linesNumber, ReadOnlyMemory<byte> source)
+   Result IOneTimeLinesWriter.WriteRecords(string filePath, Line[] lines, int linesNumber, ReadOnlyMemory<byte> source)
    {
       try
       {
@@ -117,7 +117,7 @@ public class LinesWriter : IOneTimeLinesWriter, ISeveralTimesLinesWriter
       }
    }
 
-   async Task<Result> IOneTimeLinesWriter.WriteRecordsAsync(string filePath, LineMemory[] lines, int linesNumber, ReadOnlyMemory<byte> source,
+   async Task<Result> IOneTimeLinesWriter.WriteRecordsAsync(string filePath, Line[] lines, int linesNumber, ReadOnlyMemory<byte> source,
       CancellationToken token)
    {
       try
@@ -133,12 +133,12 @@ public class LinesWriter : IOneTimeLinesWriter, ISeveralTimesLinesWriter
       }
    }
 
-   Result ISeveralTimesLinesWriter.WriteRecords(LineMemory[] lines, int linesNumber, ReadOnlyMemory<byte> source)
+   Result ISeveralTimesLinesWriter.WriteRecords(Line[] lines, int linesNumber, ReadOnlyMemory<byte> source)
    {
       return WriteRecords(lines, linesNumber, source);
    }
 
-   Task<Result> ISeveralTimesLinesWriter.WriteRecordsAsync(LineMemory[] lines, int linesNumber, ReadOnlyMemory<byte> source, CancellationToken token)
+   Task<Result> ISeveralTimesLinesWriter.WriteRecordsAsync(Line[] lines, int linesNumber, ReadOnlyMemory<byte> source, CancellationToken token)
    {
       return WriteRecordsAsync(lines, linesNumber, source, token);
    }

@@ -25,7 +25,7 @@ public class InputParametersValidator
             break;
 
          Console.WriteLine("Enter the filePath. Or 'X' to exit.");
-         //todo
+         
          path = Console.ReadLine() ?? "";
          if (path.Equals( "X", StringComparison.InvariantCultureIgnoreCase))
             return false;

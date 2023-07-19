@@ -54,7 +54,7 @@ internal sealed class CreatingFileService : IHostedService
     private bool TimeToStop(int lineLength, out int bytesToWrite)
     {
         bytesToWrite = lineLength;
-        //todo split long string for precise size, but add eol!!!
+        
         if (_config.FileSize <= _currentLength+(ulong)lineLength)
             return true;
         _currentLength += (ulong)lineLength;

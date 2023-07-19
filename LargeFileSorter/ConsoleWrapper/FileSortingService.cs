@@ -121,7 +121,7 @@ internal class FileSortingService : IHostedService
 
    private static async Task<Result> MergingPhaseAsync(IConfig configuration)
    {
-      ISeveralTimesLinesWriter resultWriter = LinesWriter.CreateForMultipleWriting(configuration.Output,
+      await using ISeveralTimesLinesWriter resultWriter = LinesWriter.CreateForMultipleWriting(configuration.Output,
          configuration.Encoding.GetBytes(".").Length,
          configuration.WriteStreamBufferSize);
 
@@ -131,14 +131,14 @@ internal class FileSortingService : IHostedService
       StreamsMergeExecutorAsync mergerAsync = new StreamsMergeExecutorAsync(configuration, resultWriter);
       Result result = await mergerAsync.MergeWithOrderAsync();
       sw.Stop();
-      Console.WriteLine($"Merge completed in {sw.Elapsed.TotalSeconds:F2} sec, {sw.Elapsed.TotalMilliseconds} ms");
+      Console.WriteLine($"---> Merge completed in {sw.Elapsed.TotalSeconds:F2} sec, {sw.Elapsed.TotalMilliseconds} ms");
       
       return result;
    }
 
    private static Result MergingPhase(IConfig configuration)
    {
-      ISeveralTimesLinesWriter resultWriter = LinesWriter.CreateForMultipleWriting(configuration.Output,
+      using ISeveralTimesLinesWriter resultWriter = LinesWriter.CreateForMultipleWriting(configuration.Output,
          configuration.Encoding.GetBytes(".").Length,
          configuration.WriteStreamBufferSize);
 
@@ -148,7 +148,7 @@ internal class FileSortingService : IHostedService
       StreamsMergeExecutor merger = new StreamsMergeExecutor(configuration, resultWriter);
       Result result = merger.MergeWithOrder();
       sw.Stop();
-      Console.WriteLine($"Merge completed in {sw.Elapsed.TotalSeconds:F2} sec, {sw.Elapsed.TotalMilliseconds} ms");
+      Console.WriteLine($"---> Merge completed in {sw.Elapsed.TotalSeconds:F2} sec, {sw.Elapsed.TotalMilliseconds} ms");
 
       return result;
    }

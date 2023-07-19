@@ -10,8 +10,6 @@ namespace ConsoleWrapper
    {
       static async Task Main(string[] args)
       {
-         //todo!!! handle lack eol on the last line
-
          IHostBuilder hostBuilder = Host.CreateDefaultBuilder(args);
 
          hostBuilder.ConfigureAppConfiguration((_, configBuilder) =>

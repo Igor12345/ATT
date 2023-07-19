@@ -11,8 +11,7 @@ namespace SortingEngine.Sorting
       private readonly TC _comparer;
 
       private readonly int _capacity;
-
-      //todo aligning
+      
       private readonly (T, int)[] _items;
       private int _currentSize = -1;
 

@@ -2,7 +2,7 @@
 
 namespace SortingEngine.Comparators;
 
-public class OnSiteLinesComparer : IComparer<LineMemory>
+public class OnSiteLinesComparer : IComparer<Line>
 {
    private readonly ReadOnlyMemory<byte> _source;
 
@@ -18,7 +18,7 @@ public class OnSiteLinesComparer : IComparer<LineMemory>
    /// either a negative integer, 0, or a positive integer; respectively.
    /// The lines are compared firstly by their text and then, it texts are equal, by their numbers 
    /// </summary>
-   public int Compare(LineMemory left, LineMemory right)
+   public int Compare(Line left, Line right)
    {
       int orderByText =
          StringAsBytesComparer.Compare(_source[left.From..left.To].Span, _source[right.From..right.To].Span);

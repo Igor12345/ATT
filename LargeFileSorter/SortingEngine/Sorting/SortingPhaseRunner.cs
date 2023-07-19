@@ -91,7 +91,7 @@ public class SortingPhaseRunner
 
         sw.Stop();
         Console.WriteLine(
-            $"The sorting phase completed in {sw.Elapsed.TotalSeconds:F2} sec, {sw.Elapsed.TotalMilliseconds} ms");
+            $"---> The sorting phase has completed in {sw.Elapsed.TotalSeconds:F2} sec, {sw.Elapsed.TotalMilliseconds} ms");
 
         return Result.Ok;
     }

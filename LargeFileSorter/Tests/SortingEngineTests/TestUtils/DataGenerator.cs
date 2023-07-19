@@ -58,14 +58,14 @@ public class DataGenerator
         return result;
     }
 
-    public (LineMemory[], byte[]) CreateLinesFromStrings(string[] originalStrings)
+    public (Line[], byte[]) CreateLinesFromStrings(string[] originalStrings)
     {
         byte[] source = CreateWholeBytes(originalStrings, RandomBytes(242));
         RecordsExtractor extractor = new RecordsExtractor(_eol, _delimiter);
-        ExpandingStorage<LineMemory> linesStorage = new ExpandingStorage<LineMemory>(100);
+        ExpandingStorage<Line> linesStorage = new ExpandingStorage<Line>(100);
         ExtractionResult result = extractor.ExtractRecords(source.AsSpan(), linesStorage);
 
-        LineMemory[] lines = new LineMemory[result.LinesNumber];
+        Line[] lines = new Line[result.LinesNumber];
         for (int i = 0; i < result.LinesNumber; i++)
         {
             lines[i] = linesStorage[i];
@@ -74,13 +74,13 @@ public class DataGenerator
         return (lines, source);
     }
 
-    public byte[] FillLinesStorageFromStrings(string[] originalStrings, ExpandingStorage<LineMemory> linesStorage)
+    public byte[] FillLinesStorageFromStrings(string[] originalStrings, ExpandingStorage<Line> linesStorage)
     {
         byte[] source = CreateWholeBytes(originalStrings, RandomBytes(242));
         RecordsExtractor extractor = new RecordsExtractor(_eol, _delimiter);
         ExtractionResult result = extractor.ExtractRecords(source.AsSpan(), linesStorage);
 
-        LineMemory[] lines = new LineMemory[result.LinesNumber];
+        Line[] lines = new Line[result.LinesNumber];
         for (int i = 0; i < result.LinesNumber; i++)
         {
             lines[i] = linesStorage[i];

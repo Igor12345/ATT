@@ -5,7 +5,7 @@ using SortingEngine.Entities;
 
 namespace SortingEngine.RowData
 {
-   //todo two responsibilities
+   //todo two responsibilities here
    public class RecordsExtractor
    {
       private readonly byte[] _eol;
@@ -24,7 +24,7 @@ namespace SortingEngine.RowData
       }
 
       //this is hardcoded for UTF-8
-      public ExtractionResult ExtractRecords(ReadOnlySpan<byte> input, ExpandingStorage<LineMemory> records,
+      public ExtractionResult ExtractRecords(ReadOnlySpan<byte> input, ExpandingStorage<Line> records,
          int offset = 0)
       {
          int lineIndex = 0;
@@ -36,7 +36,7 @@ namespace SortingEngine.RowData
             {
                endOfLastLine = i + 1;
                var startLine = endLine;
-               //todo
+               
                //text will include eof. the question with the last line.
                endLine = i + 2;
                var result = ParseLine(input[startLine..endLine], startLine);
@@ -44,7 +44,7 @@ namespace SortingEngine.RowData
                if (!result.Success)
                   return ExtractionResult.Error(result.Message);
 
-               LineMemory line = result.Value with { From = result.Value.From + offset, To = result.Value.To + offset };
+               Line line = result.Value with { From = result.Value.From + offset, To = result.Value.To + offset };
                records.Add(line);
                lineIndex++;
                i++;
@@ -54,7 +54,7 @@ namespace SortingEngine.RowData
          return ExtractionResult.Ok(lineIndex, endOfLastLine + 1);
       }
 
-      private Result<LineMemory> ParseLine(ReadOnlySpan<byte> lineSpan, int startIndex)
+      private Result<Line> ParseLine(ReadOnlySpan<byte> lineSpan, int startIndex)
       {
          Span<char> numberChars = stackalloc char[Constants.MaxNumberLength];
          for (int i = 0; i < lineSpan.Length - 1; i++)
@@ -65,90 +65,20 @@ namespace SortingEngine.RowData
                   break;
                for (int j = 0; j < i; j++)
                {
-                  //todo encoding
+                  //todo only utf-8 encoding
                   numberChars[j] = (char)lineSpan[j];
                }
 
                bool success = ulong.TryParse(numberChars, out var number);
                if (!success)
-                  return Result<LineMemory>.Error($"wrong line: {ByteToStringConverter.Convert(lineSpan)}");
+                  return Result<Line>.Error($"wrong line: {ByteToStringConverter.Convert(lineSpan)}");
                
                //text will include ". " and eol
-               return Result<LineMemory>.Ok(new LineMemory(number, startIndex + i, startIndex + lineSpan.Length));
+               return Result<Line>.Ok(new Line(number, startIndex + i, startIndex + lineSpan.Length));
             }
          }
 
-         return Result<LineMemory>.Error($"wrong line: {ByteToStringConverter.Convert(lineSpan)}");
+         return Result<Line>.Error($"wrong line: {ByteToStringConverter.Convert(lineSpan)}");
       }
-
-      //todo remove
-      #region Chars records
-
-      public void SplitOnLines(Span<byte> buffer, Span<int> linesPositions)
-      {
-         //compare with 
-         // foreach (byte b in buffer)
-         // {
-         //    
-         // }
-         int lineIndex = 0;
-         for (int i = 0; i < buffer.Length - 1; i++)
-         {
-            if (buffer[i] == _eol[0] && buffer[i + 1] == _eol[1])
-            {
-               linesPositions[lineIndex++] = i;
-               i++;
-            }
-         }
-      }
-
-      public Result SplitOnRecords(Span<byte> input, LineRecord[] records)
-      {
-         int lineIndex = 0;
-         int endLine = 0;
-         for (int i = 0; i < input.Length - 1; i++)
-         {
-            if (input[i] == _eol[0] && input[i + 1] == _eol[1])
-            {
-               var startLine = endLine;
-               endLine = i;
-               LineRecord line = ExtractRecord(input[startLine..endLine]);
-               records[lineIndex++] = line;
-               i++;
-
-               //todo
-               if (lineIndex >= records.Length)
-                  return new Result(true, "");
-            }
-         }
-
-         return new Result(true, "");
-      }
-
-      private LineRecord ExtractRecord(Span<byte> lineSpan)
-      {
-         for (int i = 0; i < lineSpan.Length-1; i++)
-         {
-            if (lineSpan[i] == _lineDelimiter[0] && lineSpan[i + 1] == _lineDelimiter[1])
-            {
-               Span<char> chars = new char[i];
-               for (int j = 0; j < i; j++)
-               {
-                  //todo encoding
-                  chars[j] = (char)lineSpan[j];
-               }
-               var success = ulong.TryParse(chars, out ulong number);
-               //todo !success
-               return new LineRecord(number, lineSpan[(i + 2)..].ToArray());
-            }
-         }
-
-         //todo
-         throw new InvalidOperationException($"wrong line {lineSpan.ToString()}");
-
-      }
-
-      #endregion
-
    }
 }

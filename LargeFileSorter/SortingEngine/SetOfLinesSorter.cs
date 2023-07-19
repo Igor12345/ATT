@@ -21,7 +21,7 @@ public class SetOfLinesSorter
     public async Task<AfterSortingPhasePackage> ProcessPackageAsync(SortingPhasePackage package)
     {
         ReadOnlyMemory<byte> inputBytes = package.RowData.AsMemory()[..package.OccupiedLength];
-        LineMemory[] sorted = SortRecords(inputBytes, package.LinesNumber, package.ParsedRecords);
+        Line[] sorted = SortRecords(inputBytes, package.LinesNumber, package.ParsedRecords);
 
         await Log(
             $"Sorted lines: {package.LinesNumber}) " +
@@ -30,8 +30,8 @@ public class SetOfLinesSorter
             package.ParsedRecords, package.LinesNumber, package.PackageNumber, package.IsLastPackage);
     }
 
-    private LineMemory[] SortRecords(ReadOnlyMemory<byte> inputBuffer, int linesNumber,
-        ExpandingStorage<LineMemory> recordsStorage)
+    private Line[] SortRecords(ReadOnlyMemory<byte> inputBuffer, int linesNumber,
+        ExpandingStorage<Line> recordsStorage)
     {
         //In the case of such a highly specific line comparison algorithm,
         //it makes no sense to add an interface and use DI

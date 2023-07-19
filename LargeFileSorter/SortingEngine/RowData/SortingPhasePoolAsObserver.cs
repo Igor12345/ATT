@@ -38,7 +38,7 @@ public class SortingPhasePoolAsObserver : IDisposable
             if (package.IsLastPackage)
             {
                 ReadingPhasePackage last = new ReadingPhasePackage(Array.Empty<byte>(),
-                    ExpandingStorage<LineMemory>.Empty, package.PackageNumber, true);
+                    ExpandingStorage<Line>.Empty, package.PackageNumber, true);
                 await _writer.WriteAsync(last);
                 
                 return;
@@ -88,7 +88,7 @@ public class SortingPhasePoolAsObserver : IDisposable
         {
             _poolAsObserver._pool.ReleaseBuffer(package.ParsedRecords);
             _poolAsObserver._pool.ReleaseBuffer(package.RowData);
-            ArrayPool<LineMemory>.Shared.Return(package.SortedLines);
+            ArrayPool<Line>.Shared.Return(package.SortedLines);
         }
 
         //Here can be some smart handler

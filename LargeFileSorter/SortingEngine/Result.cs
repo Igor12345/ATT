@@ -4,8 +4,8 @@
 //There are many open-source libraries, for example: https://github.com/mcintyre321/OneOf
 public record struct Result(bool Success, string Message)
 {
-   public static Result Ok = new Result(true, "");
-   public static Result Error(string message) => new Result(false, message);
+   public static Result Ok = new(true, "");
+   public static Result Error(string message) => new(false, message);
 }
 
 public record struct Result<T>(bool Success, T Value, string Message)

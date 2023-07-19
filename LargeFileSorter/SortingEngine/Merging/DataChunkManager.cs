@@ -12,7 +12,7 @@ internal class DataChunkManager : IAsyncDisposable
    private readonly Memory<byte> _rowStorage;
    private readonly int _offset;
    private int _currentPosition;
-   private readonly ExpandingStorage<LineMemory> _recordsStorage;
+   private readonly ExpandingStorage<Line> _recordsStorage;
    private byte[]? _remainedBytes;
    private int _remindedBytesLength;
    private readonly int _remindedBytesCapacity;
@@ -23,7 +23,7 @@ internal class DataChunkManager : IAsyncDisposable
    {
       _rowStorage = rowStorage;
       _offset = offset;
-      _recordsStorage = new ExpandingStorage<LineMemory>(bufferSize);
+      _recordsStorage = new ExpandingStorage<Line>(bufferSize);
       _dataSource = File.OpenRead(file);
       var eolBytes = encoding.GetBytes(Environment.NewLine);
       var delimiterBytes = encoding.GetBytes(Constants.Delimiter);
@@ -32,7 +32,7 @@ internal class DataChunkManager : IAsyncDisposable
          new RecordsExtractor(eolBytes, delimiterBytes);
    }
 
-   public (ExtractionResult, bool, LineMemory) TryGetNextLine()
+   public (ExtractionResult, bool, Line) TryGetNextLine()
    {
       if (NeedLoadLines())
       {
@@ -71,12 +71,12 @@ internal class DataChunkManager : IAsyncDisposable
       if (received == 0)
          return ExtractionResult.Ok(0, -1);
       _currentPosition = 0;
-      //todo repetition
+      
       int recognizableBytes = (_remindedBytesLength + received);
       ExtractionResult result =
          _extractor.ExtractRecords(_rowStorage.Span[..recognizableBytes], _recordsStorage, _offset);
 
-      //todo railway 
+      //todo convert all to the railway style 
       if (!result.Success)
          return result;
 

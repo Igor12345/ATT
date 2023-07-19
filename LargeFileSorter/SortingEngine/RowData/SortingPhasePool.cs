@@ -12,7 +12,7 @@ public class SortingPhasePool : IDisposable
     private volatile int _packageNumber = -1;
     private readonly int _recordChunksLength;
     private readonly ConcurrentStack<byte[]> _buffers;
-    private readonly ConcurrentStack<ExpandingStorage<LineMemory>> _lineStorages;
+    private readonly ConcurrentStack<ExpandingStorage<Line>> _lineStorages;
     private SpinLock _lock;
 
     public SortingPhasePool(int numberOfBuffers, int inputBuffersLength, int recordChunksLength)
@@ -27,7 +27,7 @@ public class SortingPhasePool : IDisposable
         //much faster than the buffers for the row bytes. In any case,
         //their size is much smaller than the size of the bytes array,
         //so creating a few extra storages won't be much harm.
-        _lineStorages = new ConcurrentStack<ExpandingStorage<LineMemory>>();
+        _lineStorages = new ConcurrentStack<ExpandingStorage<Line>>();
     }
     
     public async Task<ReadingPhasePackage> TryAcquireNextAsync()
@@ -47,7 +47,7 @@ public class SortingPhasePool : IDisposable
                 //Array pool holds memory and refuses to release it
                 // buffer = ArrayPool<byte>.Shared.Rent(_inputBuffersLength);
             }
-            ExpandingStorage<LineMemory> linesStorage = RentLinesStorage();
+            ExpandingStorage<Line> linesStorage = RentLinesStorage();
 
             return new ReadingPhasePackage(buffer!, linesStorage, Interlocked.Increment(ref _packageNumber), false);
         }
@@ -57,19 +57,19 @@ public class SortingPhasePool : IDisposable
         }
     }
 
-    private ExpandingStorage<LineMemory> RentLinesStorage()
+    private ExpandingStorage<Line> RentLinesStorage()
     {
-        ExpandingStorage<LineMemory> storage;
+        ExpandingStorage<Line> storage;
         while (!_lineStorages.TryPop(out storage!))
         {
-            _lineStorages.Push(new ExpandingStorage<LineMemory>(_recordChunksLength));
+            _lineStorages.Push(new ExpandingStorage<Line>(_recordChunksLength));
         }
 
         storage.Clear();
         return storage;
     }
 
-    public void ReleaseBuffer(ExpandingStorage<LineMemory> expandingStorage)
+    public void ReleaseBuffer(ExpandingStorage<Line> expandingStorage)
     {
         _lineStorages.Push(expandingStorage);
     }

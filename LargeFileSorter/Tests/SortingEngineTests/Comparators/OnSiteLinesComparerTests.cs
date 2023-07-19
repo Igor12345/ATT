@@ -9,7 +9,7 @@ public class OnSiteLinesComparerTests
 {
     [Theory]
     [ClassData(typeof(LinesComparerTestData))]
-    public void OnSiteLinesComparer_ShouldCorrectlyCompareLines((LineMemory[] Lines, byte[] Source, string[] Origin) input)
+    public void OnSiteLinesComparer_ShouldCorrectlyCompareLines((Line[] Lines, byte[] Source, string[] Origin) input)
     {
         OnSiteLinesComparer comparer = new OnSiteLinesComparer(input.Source);
 
@@ -23,11 +23,6 @@ public class OnSiteLinesComparerTests
 
 public class LinesComparerTestData : IEnumerable<object[]>
 {
-    //todo support any encoding?
-    public LinesComparerTestData() 
-    {
-    }
-
     //the original strings should be ordered correctly
     public IEnumerator<object[]> GetEnumerator()
     {
@@ -45,7 +40,7 @@ public class LinesComparerTestData : IEnumerable<object[]>
                 "123. abc",
                 "123. def"
             };
-            (LineMemory[] lines, byte[] source) = DataGenerator.UTF8.CreateLinesFromStrings(origin);
+            (Line[] lines, byte[] source) = DataGenerator.UTF8.CreateLinesFromStrings(origin);
 
             return (lines, source, origin);
         }
@@ -59,7 +54,7 @@ public class LinesComparerTestData : IEnumerable<object[]>
                 "123. abc",
                 "1233. abcd"
             };
-            (LineMemory[] lines, byte[] source) = DataGenerator.UTF8.CreateLinesFromStrings(origin);
+            (Line[] lines, byte[] source) = DataGenerator.UTF8.CreateLinesFromStrings(origin);
 
             return (lines, source, origin);
         }
@@ -73,7 +68,7 @@ public class LinesComparerTestData : IEnumerable<object[]>
                 "123. Def",
                 "123. abc"
             };
-            (LineMemory[] lines, byte[] source) = DataGenerator.UTF8.CreateLinesFromStrings(origin);
+            (Line[] lines, byte[] source) = DataGenerator.UTF8.CreateLinesFromStrings(origin);
 
             return (lines, source, origin);
         }
@@ -87,7 +82,7 @@ public class LinesComparerTestData : IEnumerable<object[]>
                 "123. abc",
                 "321. abc"
             };
-            (LineMemory[] lines, byte[] source) = DataGenerator.UTF8.CreateLinesFromStrings(origin);
+            (Line[] lines, byte[] source) = DataGenerator.UTF8.CreateLinesFromStrings(origin);
 
             return (lines, source, origin);
         }

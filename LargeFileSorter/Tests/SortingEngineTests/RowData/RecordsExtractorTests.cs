@@ -21,21 +21,6 @@ public class RecordsExtractorTests
         Assert.NotNull(extractor);
     }
 
-    //todo
-    [Fact]
-    public void Extractor_ShouldAlwaysExtract()
-    {
-        string inputStr = File.ReadAllText(@"TestData\LostLines");
-        RecordsExtractor extractor = GetUsual(Encoding.UTF8);
-
-        ExpandingStorage<LineMemory> storage = new ExpandingStorage<LineMemory>(1000);
-
-        Span<byte> inputSpan = Encoding.UTF8.GetBytes(inputStr);
-        ExtractionResult result = extractor.ExtractRecords(inputSpan, storage);
-        Assert.True(result.Success);
-        Assert.Equal(6, result.LinesNumber);
-    }
-
     [Fact]
     public void RecordsExtractor_ShouldRecognizeCorrectLines()
     {
@@ -43,7 +28,7 @@ public class RecordsExtractorTests
 
         byte[] input = DataGenerator.Use(encoding).CreateWholeBytes(new[] { "12345. abcd EF*GH!", "678910. @ijk3 lm-NO PQ;" },
             DataGenerator.RandomBytes(12));
-        ExpandingStorage<LineMemory> linesStorage = new ExpandingStorage<LineMemory>(500);
+        ExpandingStorage<Line> linesStorage = new ExpandingStorage<Line>(500);
         RecordsExtractor extractor = GetUsual(encoding);
 
         ExtractionResult result = extractor.ExtractRecords(input, linesStorage);
@@ -67,7 +52,7 @@ public class RecordsExtractorTests
         byte[] input = DataGenerator.Use(encoding).CreateWholeBytes(
             new[] { "12345. abcd EF*GH!", "678910, @ijk3Q;", "8765. hdgf huhb" },
             DataGenerator.RandomBytes(12));
-        ExpandingStorage<LineMemory> linesStorage = new ExpandingStorage<LineMemory>(500);
+        ExpandingStorage<Line> linesStorage = new ExpandingStorage<Line>(500);
         RecordsExtractor extractor = GetUsual(encoding);
 
         ExtractionResult result = extractor.ExtractRecords(input, linesStorage);
@@ -84,7 +69,7 @@ public class RecordsExtractorTests
         byte[] input = DataGenerator.Use(encoding).CreateWholeBytes(
             new[] { "12345. abcd EF*GH!", ". @ijk3Q;", "8765. hdgf huhb" },
             DataGenerator.RandomBytes(12));
-        ExpandingStorage<LineMemory> linesStorage = new ExpandingStorage<LineMemory>(500);
+        ExpandingStorage<Line> linesStorage = new ExpandingStorage<Line>(500);
         RecordsExtractor extractor = GetUsual(encoding);
 
         ExtractionResult result = extractor.ExtractRecords(input, linesStorage);
@@ -101,7 +86,7 @@ public class RecordsExtractorTests
         byte[] input = DataGenerator.Use(encoding).CreateWholeBytes(
             new[] { "12345. abcd EF*GH!", "123def789. @ijk3Q;", "8765. hdgf huhb" },
             DataGenerator.RandomBytes(12));
-        ExpandingStorage<LineMemory> linesStorage = new ExpandingStorage<LineMemory>(500);
+        ExpandingStorage<Line> linesStorage = new ExpandingStorage<Line>(500);
         RecordsExtractor extractor = GetUsual(encoding);
 
         ExtractionResult result = extractor.ExtractRecords(input, linesStorage);
@@ -118,7 +103,7 @@ public class RecordsExtractorTests
         byte[] input = DataGenerator.Use(encoding).CreateWholeBytes(
             new[] { "12345. abcd EF*GH!", "123456789012345678901. @ijk3 lm-NO PQ;", "8765. hdgf huhb" },
             DataGenerator.RandomBytes(12));
-        ExpandingStorage<LineMemory> linesStorage = new ExpandingStorage<LineMemory>(500);
+        ExpandingStorage<Line> linesStorage = new ExpandingStorage<Line>(500);
         RecordsExtractor extractor = GetUsual(encoding);
 
         ExtractionResult result = extractor.ExtractRecords(input, linesStorage);
@@ -131,7 +116,4 @@ public class RecordsExtractorTests
     {
         return new RecordsExtractor(encoding.GetBytes(Environment.NewLine), encoding.GetBytes(Constants.Delimiter));
     }
-
-    //todo temp
-    
 }

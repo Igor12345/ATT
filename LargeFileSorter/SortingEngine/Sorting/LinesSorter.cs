@@ -7,7 +7,7 @@ namespace SortingEngine.Sorting;
 
 public interface ILinesSorter
 {
-   LineMemory[] Sort(ExpandingStorage<LineMemory> recordsPool, int linesNumber);
+   Line[] Sort(ExpandingStorage<Line> recordsPool, int linesNumber);
 }
 
 public sealed class LinesSorter : ILinesSorter
@@ -20,11 +20,11 @@ public sealed class LinesSorter : ILinesSorter
    }
 
    //todo use MemoryOwner
-   public LineMemory[] Sort(ExpandingStorage<LineMemory> recordsPool, int linesNumber)
+   public Line[] Sort(ExpandingStorage<Line> recordsPool, int linesNumber)
    {
       //the array will be returned to ArrayPool after saving it. It is the responsibility of the writer
       //Yes, this is a violation of SRP
-      LineMemory[] result = ArrayPool<LineMemory>.Shared.Rent(linesNumber);
+      Line[] result = ArrayPool<Line>.Shared.Rent(linesNumber);
       recordsPool.CopyTo(result, linesNumber);
       Array.Sort(result, 0, linesNumber, new OnSiteLinesComparer(_source));
       return result;
