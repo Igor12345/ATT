@@ -1,7 +1,8 @@
-﻿
+﻿using System.Text;
 using BenchmarkDotNet.Attributes;
-using System.Text;
 using SortingEngine.Comparators;
+
+namespace SimpleBenchmarks.ByteOperations;
 
 [MemoryDiagnoser]
 public class StringsComparisonBenchmark
