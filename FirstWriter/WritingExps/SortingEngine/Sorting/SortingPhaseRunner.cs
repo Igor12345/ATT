@@ -27,7 +27,7 @@ public class SortingPhaseRunner
 
         ObservableRecordsExtractor extractor = new ObservableRecordsExtractor(
             configuration.Encoding.GetBytes(Environment.NewLine),
-            configuration.Encoding.GetBytes(Constants.Delimiter), logger, cancellationToken);
+            configuration.Encoding.GetBytes(Constants.Delimiter));
 
         IntermediateResultsDirector chunksDirector = IntermediateResultsDirector.Create(_linesWriter, configuration);
 
