@@ -16,5 +16,6 @@ namespace SortingEngine.RuntimeConfiguration
       string InputFile { get; }
       Encoding Encoding { get; }
       bool UseOneWay { get; }
+      bool KeepReadStreamOpen { get; }
    }
 }

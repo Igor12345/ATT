@@ -35,7 +35,7 @@ namespace SortingEngine.RuntimeEnvironment
          string outputPath = GetOutputPath(path);
 
          bool useOneStepSorting = CheckForOneStep(path, inputBufferLength);
-         
+
          //can be implemented more elegantly and concisely with using reflection or dynamic
          var config = RuntimeConfiguration.RuntimeConfiguration.Create(conf => conf
             .UseInputBuffer(inputBufferLength)
@@ -49,6 +49,7 @@ namespace SortingEngine.RuntimeEnvironment
             .UseFileAndFolder(path, "")
             //todo merge with the preset config
             .UseEncoding(encoding)
+            .UseKeepReadStreamOpen(_baseConfiguration.KeepReadStreamOpen ?? true)
             .UseOneWay(useOneStepSorting));
          return config;
       }

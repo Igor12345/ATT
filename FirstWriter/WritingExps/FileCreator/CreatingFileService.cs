@@ -37,7 +37,7 @@ internal sealed class CreatingFileService : IHostedService
             if (_linesToLog >= _config.LogEveryThsLine)
             {
                 _linesToLog = 0;
-                _logger.LogInformation($"{_linesCount} lines - {_currentLength} bytes.");
+                _logger.LogInformation("{lines} lines - {bytes} bytes.", _linesCount, _currentLength);
             }
             _linesToLog++;
             
@@ -46,8 +46,9 @@ internal sealed class CreatingFileService : IHostedService
             linesWriter.Write(buffer.AsSpan()[..bytesToWrite]);
             _linesCount++;
         }
-        //todo calculate to Gb, Mb, etc.
-        _logger.LogInformation($"All lines created {_linesCount} - {_currentLength} bytes.");
+        
+        _logger.LogInformation("All lines created {lines} - {bytes} bytes.", _linesCount, _currentLength);
+        _logger.LogInformation($"The file: {_config.FilePath}");
     }
 
     private bool TimeToStop(int lineLength, out int bytesToWrite)

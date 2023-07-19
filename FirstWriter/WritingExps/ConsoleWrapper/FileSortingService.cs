@@ -108,8 +108,11 @@ internal class FileSortingService : IHostedService
       IntermediateResultsDirector chunksDirector =
          IntermediateResultsDirector.Create(configuration, logger, cancellationToken);
 
-      IBytesProducer bytesReader =
-         new LongFileReader(validInput.File, configuration.Encoding, configuration.ReadStreamBufferSize, logger,
+      IBytesProducer bytesReader = configuration.KeepReadStreamOpen
+         ? new LongFileReader(validInput.File, configuration.Encoding, configuration.ReadStreamBufferSize, logger,
+            cancellationToken)
+         : new LongFileReaderKeepStream(validInput.File, configuration.Encoding, configuration.ReadStreamBufferSize,
+            logger,
             cancellationToken);
       
       SetOfLinesSorter sorter = new SetOfLinesSorter(logger, buffer => new LinesSorter(buffer));

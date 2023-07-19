@@ -2,6 +2,7 @@
 
 namespace SortingEngine.RuntimeConfiguration;
 
+//in this case it was a bad idea
 public interface IConfigBuilder
 {
    IConfigBuilder UseInputBuffer(int inputBufferSize);
@@ -15,4 +16,5 @@ public interface IConfigBuilder
    IConfigBuilder UseEncoding(Encoding encoding);
    IConfigBuilder UseOutputPath(string outputPath);
    IConfigBuilder UseOneWay(bool useOneStepSorting);
+   IConfigBuilder UseKeepReadStreamOpen(bool keepReadStreamOpen);
 }

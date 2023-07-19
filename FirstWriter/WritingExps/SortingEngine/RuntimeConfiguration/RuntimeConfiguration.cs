@@ -21,8 +21,8 @@ public class RuntimeConfiguration : IConfig
    public string? Output { get; private set; }
    public int ReadStreamBufferSize { get; private set; }
    public int WriteStreamBufferSize { get; private set; }
-
    public bool UseOneWay { get; private set; }
+   public bool KeepReadStreamOpen { get; private set; }
 
    public static IConfig Create(Action<IConfigBuilder> buildConfig)
    {
@@ -124,6 +124,12 @@ public class RuntimeConfiguration : IConfig
       public IConfigBuilder UseOneWay(bool useOneStepSorting)
       {
          _configuration.UseOneWay = useOneStepSorting;
+         return this;
+      }
+
+      public IConfigBuilder UseKeepReadStreamOpen(bool keepReadStreamOpen)
+      {
+         _configuration.KeepReadStreamOpen = keepReadStreamOpen;
          return this;
       }
    }

@@ -4,11 +4,10 @@ using Infrastructure.Parameters;
 using LogsHub;
 using SortingEngine;
 using SortingEngine.RowData;
-using System;
 
 namespace ConsoleWrapper.IOProcessing;
 
-//todo rename
+//This class violates SRP, but it's easier to experiment with performance.
 internal class LongFileReader : IBytesProducer
 {
    private readonly int _bufferSize;
@@ -16,65 +15,45 @@ internal class LongFileReader : IBytesProducer
    private readonly CancellationToken _cancellationToken;
    private readonly string _filePath;
    private readonly Encoding _encoding;
-   private FileStream? _stream;
    private long _lastPosition;
    private int _lastProcessedPackage;
    private readonly AsyncLock _lock;
 
-   public LongFileReader(string fullFileName, Encoding encoding, int bufferSize, ILogger logger,
-      CancellationToken cancellationToken)
+   public LongFileReader(string fullFileName, Encoding encoding, int bufferSize, ILogger logger, CancellationToken cancellationToken)
    {
+      _bufferSize = Guard.Positive(bufferSize);
       _lock = new AsyncLock();
       _filePath = Guard.FileExist(fullFileName);
       _encoding = Guard.NotNull(encoding);
-      _bufferSize = Guard.Positive(bufferSize);
       _logger = Guard.NotNull(logger);
       _cancellationToken = Guard.NotNull(cancellationToken);
    }
 
-   public async Task<ReadingResult> ReadBytesAsync(byte[] buffer, int offset,
+   private async Task<ReadingResult> ReadBytesAsync(byte[] buffer, int offset,
       CancellationToken cancellationToken)
    {
-      //todo either make private or use another lock
-      //it is save in the case of Rx, because it is always called from OnNextAsync
-      // await using FileStream stream = File.OpenRead(_filePath);
-      _stream ??= new FileStream(_filePath, FileMode.Open, FileAccess.Read, FileShare.None,
+      await using FileStream stream = new FileStream(_filePath, FileMode.Open, FileAccess.Read, FileShare.None,
          bufferSize: _bufferSize, true);
-      // if (_lastPosition > 0)
-      //    stream.Seek(_lastPosition, SeekOrigin.Begin);
+      if (_lastPosition > 0)
+         stream.Seek(_lastPosition, SeekOrigin.Begin);
 
-      // LinesReader reader = new LinesReader(_stream);
-      // var readingResult = await reader.ReadChunkAsync(buffer, offset, cancellationToken);
+      int length = await stream.ReadAsync(buffer, offset, buffer.Length - offset, cancellationToken);
       
-      int length = await _stream.ReadAsync(buffer.AsMemory(offset, buffer.Length - offset), cancellationToken);
-      return new ReadingResult() { Success = true, Size = length + offset };
-
-      
-      // if (!readingResult.Success)
-      //    return readingResult;
-      //
-      // _lastPosition += readingResult.Size-offset;
-      // return readingResult;
+      _lastPosition += length;
+      return new ReadingResult { Success = true, Size = length + offset };
    }
 
    public ReadingResult ReadBytes(byte[] buffer, int offset)
    {
-      _stream ??= new FileStream(_filePath, FileMode.Open, FileAccess.Read, FileShare.None,
+      using FileStream stream = new FileStream(_filePath, FileMode.Open, FileAccess.Read, FileShare.None,
          bufferSize: _bufferSize, false);
-      // if (_lastPosition > 0)
-      //    stream.Seek(_lastPosition, SeekOrigin.Begin);
-
-      // LinesReader reader = new LinesReader(_stream);
-      // var readingResult = reader.ReadChunk(buffer, offset);
+      if (_lastPosition > 0)
+         stream.Seek(_lastPosition, SeekOrigin.Begin);
       
-      int length = _stream.Read(buffer, offset, buffer.Length - offset);
-      return new ReadingResult() { Success = true, Size = length + offset };
+      int length = stream.Read(buffer, offset, buffer.Length - offset);
 
-      // if (!readingResult.Success)
-      //    return readingResult;
-      //
-      // _lastPosition += readingResult.Size;
-      // return readingResult;
+      _lastPosition += length;
+      return new ReadingResult { Success = true, Size = length + offset };
    }
 
    public async Task<ReadingPhasePackage> ProcessPackageAsync(ReadingPhasePackage inputPackage)
@@ -127,17 +106,6 @@ internal class LongFileReader : IBytesProducer
       return nextPackage;
    }
 
-   // public ValueTask OnErrorAsync(Exception error)
-   // {
-   //    // return _nextChunkPreparedSubject.OnCompletedAsync();
-   // }
-   //
-   // public ValueTask OnCompletedAsync()
-   // {
-   //    //we will complete this sequence as well, in such case there is nothing to do. Something went wrong
-   //    // return _nextChunkPreparedSubject.OnCompletedAsync();
-   // }
-   
    private async ValueTask Log(string message)
    {
       //in the real projects it will be structured logs
@@ -145,13 +113,14 @@ internal class LongFileReader : IBytesProducer
       await _logger.LogAsync(prefix + message);
    }
 
-   public async ValueTask DisposeAsync()
+   //only for experiments, that is faster, keep open stream or create it when necessary
+   //another class is LongFileReaderKeepStream
+   public  ValueTask DisposeAsync()
    {
-      if (_stream != null) await _stream.DisposeAsync();
+      return ValueTask.CompletedTask;
    }
 
    public void Dispose()
    {
-      _stream?.Dispose();
    }
 }
