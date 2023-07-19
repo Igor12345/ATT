@@ -30,7 +30,7 @@ internal class LongFileReaderKeepStream : IBytesProducer
       _cancellationToken = Guard.NotNull(cancellationToken);
    }
 
-   public async Task<ReadingResult> ReadBytesAsync(byte[] buffer, int offset,
+   private async Task<ReadingResult> ReadBytesAsync(byte[] buffer, int offset,
       CancellationToken cancellationToken)
    {
       //todo either make private or use another lock
@@ -40,8 +40,7 @@ internal class LongFileReaderKeepStream : IBytesProducer
          bufferSize: _bufferSize, true);
       
       int length = await _stream.ReadAsync(buffer.AsMemory(offset, buffer.Length - offset), cancellationToken);
-      return new ReadingResult { Success = true, Size = length + offset };
-
+      return ReadingResult.Ok(length + offset, length);
    }
 
    public ReadingResult ReadBytes(byte[] buffer, int offset)
@@ -50,10 +49,10 @@ internal class LongFileReaderKeepStream : IBytesProducer
          bufferSize: _bufferSize, false);
       
       int length = _stream.Read(buffer, offset, buffer.Length - offset);
-      return new ReadingResult { Success = true, Size = length + offset };
+      return ReadingResult.Ok(length + offset, length);
    }
 
-   public async Task<ReadingPhasePackage> ProcessPackageAsync(ReadingPhasePackage inputPackage)
+   public async Task<ReadingPhasePackage> WriteBytesToBufferAsync(ReadingPhasePackage inputPackage)
    {
       await Task.Yield();
       ReadingResult result;
@@ -62,25 +61,18 @@ internal class LongFileReaderKeepStream : IBytesProducer
       {
          if (inputPackage.PackageNumber != _lastProcessedPackage++)
             throw new InvalidOperationException("Wrong packages sequence.");
-          
+
          result = await ReadBytesAsync(inputPackage.RowData, inputPackage.PrePopulatedBytesLength, _cancellationToken);
       }
-      
+
       //todo handle in railway style 
       if (!result.Success)
          throw new InvalidOperationException(result.Message);
 
-      var nextPackage = result.Size == 0
-         ? inputPackage with { IsLastPackage = true, WrittenBytesLength = 0 }
+      var nextPackage = result.ActuallyRead == 0
+         ? inputPackage with { IsLastPackage = true, WrittenBytesLength = result.Size }
          : inputPackage with { WrittenBytesLength = result.Size };
       return nextPackage;
-   }
-   
-   private async ValueTask Log(string message)
-   {
-      //in the real projects it will be structured logs
-      string prefix = $"{this.GetType()}, at: {DateTime.UtcNow:hh:mm:ss-fff} ";
-      await _logger.LogAsync(prefix + message);
    }
 
    public async ValueTask DisposeAsync()

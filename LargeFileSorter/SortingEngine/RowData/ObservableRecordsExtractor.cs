@@ -15,7 +15,7 @@ public sealed class ObservableRecordsExtractor
         _recordsExtractor = new RecordsExtractor(eol, lineDelimiter);
     }
 
-    public async Task<(SortingPhasePackage,PreReadPackage)> ExtractNextAsync(ReadingPhasePackage package)
+    public async Task<(SortingPhasePackage,PreReadPackage)> ExtractNextPartAsync(ReadingPhasePackage package)
     {
         ExtractionResult result = _recordsExtractor.ExtractRecords(package.RowData.AsSpan()[..package.WrittenBytesLength],
             package.ParsedRecords);

@@ -78,27 +78,13 @@ internal class FileSortingService : IHostedService
 
       Console.WriteLine($"Starting at: {DateTime.UtcNow:hh:mm:ss-fff}, sorting file: {validInput.File}.");
 
-      SemaphoreSlim semaphore = new SemaphoreSlim(0, 1);
-
-      IBytesProducer bytesReader = configuration.KeepReadStreamOpen
-         ? new LongFileReader(validInput.File, configuration.Encoding, configuration.ReadStreamBufferSize, logger,
-            cancellationToken)
-         : new LongFileReaderKeepStream(validInput.File, configuration.Encoding, configuration.ReadStreamBufferSize,
-            logger,
-            cancellationToken);
-      
-      IOneTimeLinesWriter writer = LinesWriter.CreateForOnceWriting(configuration.Encoding.GetBytes("1").Length, configuration.ReadStreamBufferSize);
-      SortingPhaseRunner sortingPhase = new SortingPhaseRunner(bytesReader, writer);
-      
-      Result sortingResult = await sortingPhase.Execute(configuration, semaphore, logger, cancellationToken);
+      Result sortingResult = await SortingPhase(cancellationToken, configuration, validInput, logger);
       if (!sortingResult.Success)
       {
          Console.WriteLine($"Sorting phase completed with an error {sortingResult.Message}");
          return sortingResult;
       }
       
-      Console.WriteLine($"Sorting phase completed at: {DateTime.UtcNow:hh:mm:ss-fff}.");
-
       Result result = configuration.UseOneWay
          ? Result.Ok
 #if MERGE_ASYNC
@@ -111,7 +97,28 @@ internal class FileSortingService : IHostedService
 
       return result;
    }
-   
+
+   private static async Task<Result> SortingPhase(CancellationToken cancellationToken, IConfig configuration,
+      ValidatedInputParameters validInput, ILogger logger)
+   {
+      SemaphoreSlim semaphore = new SemaphoreSlim(0, 1);
+
+      IBytesProducer bytesReader = configuration.KeepReadStreamOpen
+         ? new LongFileReader(validInput.File, configuration.Encoding, configuration.ReadStreamBufferSize, logger,
+            cancellationToken)
+         : new LongFileReaderKeepStream(validInput.File, configuration.Encoding, configuration.ReadStreamBufferSize,
+            logger,
+            cancellationToken);
+      IOneTimeLinesWriter writer = LinesWriter.CreateForOnceWriting(configuration.Encoding.GetBytes("1").Length,
+         configuration.ReadStreamBufferSize);
+
+      SortingPhaseRunner sortingPhase = new SortingPhaseRunner(bytesReader, writer);
+      Result sortingResult = await sortingPhase.Execute(configuration, semaphore, logger, cancellationToken);
+
+      Console.WriteLine($"Sorting phase completed at: {DateTime.UtcNow:hh:mm:ss-fff}.");
+      return sortingResult;
+   }
+
    private static async Task<Result> MergingPhaseAsync(IConfig configuration)
    {
       ISeveralTimesLinesWriter resultWriter = LinesWriter.CreateForMultipleWriting(configuration.Output,

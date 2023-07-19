@@ -14,10 +14,10 @@ public record struct Result<T>(bool Success, T Value, string Message)
    public static Result<T?> Error(string message) => new(false, default, message);
 }
 
-public record struct ReadingResult(bool Success, int Size, string Message)
+public record struct ReadingResult(bool Success, int Size, int ActuallyRead, string Message)
 {
-   public static ReadingResult Ok(int size) => new(true, size, "");
-   public static ReadingResult Error(string message) => new(false, -1, message);
+   public static ReadingResult Ok(int size, int length) => new(true, size, length, "");
+   public static ReadingResult Error(string message) => new(false, -1, -1, message);
 }
 
 public record struct ExtractionResult(bool Success, int LinesNumber, int StartRemainingBytes, string Message)

@@ -8,7 +8,6 @@ namespace SortingEngine.Merging;
 
 internal class DataChunkManager : IAsyncDisposable
 {
-   //todo keep open or reopen every time
    private readonly Stream _dataSource;
    private readonly Memory<byte> _rowStorage;
    private readonly int _offset;
@@ -65,7 +64,6 @@ internal class DataChunkManager : IAsyncDisposable
 
       if (_remindedBytesLength > 0)
       {
-         //todo benchmark
          _remainedBytes.CopyTo(_rowStorage);
       }
 

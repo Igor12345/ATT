@@ -48,11 +48,11 @@ public class SortingPhaseRunner
         var published = sortingPhasePoolAsObserver.StreamLinesByBatches(cancellationToken)
             .Do(async p => await logger.LogAsync(() =>
                 new LogEntry($"Ready to read the next chunk of data. package: {p.PackageNumber}.")))
-            .Select(async p => await _bytesProducer.ProcessPackageAsync(p))
+            .Select(async p => await _bytesProducer.WriteBytesToBufferAsync(p))
             .Do(async p => await logger.LogAsync(() =>
                 new LogEntry(
                     $"The next chunk of data has been read. package: {p.PackageNumber}, contains: {p.WrittenBytesLength} bytes, this is the last part: {p.IsLastPackage}.")))
-            .Select(async p => await extractor.ExtractNextAsync(p))
+            .Select(async p => await extractor.ExtractNextPartAsync(p))
             .Publish();
 
         await using var backLoopSub = await published.Select(pp => pp.Item2)

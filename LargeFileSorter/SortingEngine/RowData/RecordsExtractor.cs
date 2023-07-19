@@ -23,6 +23,7 @@ namespace SortingEngine.RowData
          _lineDelimiter = Guard.NotNull(lineDelimiter);
       }
 
+      //this is hardcoded for UTF-8
       public ExtractionResult ExtractRecords(ReadOnlySpan<byte> input, ExpandingStorage<LineMemory> records,
          int offset = 0)
       {

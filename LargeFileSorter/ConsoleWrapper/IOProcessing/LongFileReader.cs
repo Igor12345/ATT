@@ -40,7 +40,7 @@ internal class LongFileReader : IBytesProducer
       int length = await stream.ReadAsync(buffer, offset, buffer.Length - offset, cancellationToken);
       
       _lastPosition += length;
-      return new ReadingResult { Success = true, Size = length + offset };
+      return ReadingResult.Ok(length + offset, length);
    }
 
    public ReadingResult ReadBytes(byte[] buffer, int offset)
@@ -53,55 +53,28 @@ internal class LongFileReader : IBytesProducer
       int length = stream.Read(buffer, offset, buffer.Length - offset);
 
       _lastPosition += length;
-      return new ReadingResult { Success = true, Size = length + offset };
+      return ReadingResult.Ok(length + offset, length);
    }
 
-   public async Task<ReadingPhasePackage> ProcessPackageAsync(ReadingPhasePackage inputPackage)
+   public async Task<ReadingPhasePackage> WriteBytesToBufferAsync(ReadingPhasePackage inputPackage)
    {
       await Task.Yield();
-         //todo
-      //    int num = inputPackage.PackageNumber;
-      //    int wl = inputPackage.WrittenBytesLength;
-      //    int pb = inputPackage.PrePopulatedBytesLength;
-      // int id = inputPackage.RowData.GetHashCode();
-      // await Log($"Processing package: {inputPackage.PackageNumber}, is last: {inputPackage.IsLastPackage}, " +
-      //           $"bufferId: {id}, contains bytes: {inputPackage.WrittenBytesLength}, " +
-      //           $"already populated: {inputPackage.PrePopulatedBytesLength}, thread: {Thread.CurrentThread.ManagedThreadId}");
       ReadingResult result;
 
       using (var _ = await _lock.LockAsync())
       {
-         // Console.WriteLine($"LongFileReader.ProcessPackage; lock passed package: {inputPackage.PackageNumber}, thread: {Thread.CurrentThread.ManagedThreadId} ");
-         
          if (inputPackage.PackageNumber != _lastProcessedPackage++)
             throw new InvalidOperationException("Wrong packages sequence.");
-         
-         // Console.WriteLine($"Reading new package {inputPackage.PackageNumber}, tail from last ({inputPackage.PrePopulatedBytesLength} byte): ");
-         // Console.WriteLine($"Tail {ByteToStringConverter.Convert(inputPackage.RowData.AsSpan()[..inputPackage.PrePopulatedBytesLength])}");
-         // Console.WriteLine($"Package {inputPackage.PackageNumber}, rowData length: {inputPackage.RowData.Length}");
-         // Console.WriteLine("Reading ----- ");
-         
+
          result = await ReadBytesAsync(inputPackage.RowData, inputPackage.PrePopulatedBytesLength, _cancellationToken);
-         
-         // Console.WriteLine($"Tail+next ({inputPackage.PackageNumber}-{inputPackage.PrePopulatedBytesLength}): {ByteToStringConverter.Convert(inputPackage.RowData.AsSpan()[..(2*inputPackage.PrePopulatedBytesLength)])}");
       }
 
-      // Console.WriteLine(
-      //    $"LongFileReader.ProcessPackage; After  package: {inputPackage.PackageNumber}, " +
-      //    $"thread: {Thread.CurrentThread.ManagedThreadId}, reading result: {result.Success}, read bytes: {result.Size} ");
       //todo handle in railway style 
       if (!result.Success)
          throw new InvalidOperationException(result.Message);
 
-      // if (result.Size == 0)
-      // {
-      //    id = inputPackage.RowData.GetHashCode();
-      //    await Log($"Sending the last package: {inputPackage.PackageNumber} !!! " +
-      //              $"bufferId: {id}, contains bytes: {result.Size}, thread: {Thread.CurrentThread.ManagedThreadId}");
-      // }
-
-      var nextPackage = result.Size == 0
-         ? inputPackage with { IsLastPackage = true, WrittenBytesLength = 0 }
+      var nextPackage = result.ActuallyRead == 0
+         ? inputPackage with { IsLastPackage = true, WrittenBytesLength = result.Size }
          : inputPackage with { WrittenBytesLength = result.Size };
       return nextPackage;
    }
