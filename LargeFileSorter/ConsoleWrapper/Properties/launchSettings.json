@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "ConsoleWrapper": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "TechSettings__AvailableMemory": "7"
+      }
+    }
+  }
+}
