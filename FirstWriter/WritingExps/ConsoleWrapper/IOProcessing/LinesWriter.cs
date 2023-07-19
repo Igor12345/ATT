@@ -8,29 +8,17 @@ using SortingEngine.RowData;
 
 namespace ConsoleWrapper.IOProcessing;
 
-public class LinesWriter : ILinesWriter, IAsyncDisposable
+public sealed class LinesWriter : ILinesWriter
 {
    private readonly int _bufferSize;
    private readonly int _charLength;
    private readonly ILogger _logger;
-   private readonly string _filePath;
-   private FileStream? _fileStream;
-   private FileStream? _syncFileStream;
 
-   private LinesWriter(string filePath, int charLength, int bufferSize, ILogger logger)
+   public LinesWriter(int charLength, int bufferSize, ILogger logger)
    {
       _charLength = Guard.Positive(charLength);
-      _filePath = Guard.NotNullOrEmpty(filePath);
       _bufferSize = Guard.Positive(bufferSize);
       _logger = Guard.NotNull(logger);
-   }
-
-   //todo delete b
-   public static LinesWriter Create(string filePath, int charLength, int bufferSize, ILogger logger)
-   {
-      CheckFilePath(filePath);
-      LinesWriter instance = new LinesWriter(filePath, charLength, bufferSize, logger);
-      return instance;
    }
 
    //todo
@@ -42,17 +30,10 @@ public class LinesWriter : ILinesWriter, IAsyncDisposable
       await _logger.LogAsync(prefix + message);
    }
 
-   private static void CheckFilePath(string filePath)
-   {
-      var directory = Path.GetDirectoryName(filePath);
-      if (!Path.Exists(directory))
-         throw new ArgumentException("Wrong file path");
-   }
-
-   public async Task<Result> WriteRecordsAsync(LineMemory[] lines, int linesNumber, ReadOnlyMemory<byte> source,
+   public async Task<Result> WriteRecordsAsync(string filePath, LineMemory[] lines, int linesNumber, ReadOnlyMemory<byte> source,
       CancellationToken token)
    {
-      _fileStream ??= new FileStream(_filePath, FileMode.Create, FileAccess.Write, FileShare.None,
+      FileStream fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None,
          bufferSize: _bufferSize, true);
       IMemoryOwner<byte> buffer = MemoryPool<byte>.Shared.Rent(Constants.MaxLineLengthUtf8 * _charLength);
       try
@@ -61,9 +42,9 @@ public class LinesWriter : ILinesWriter, IAsyncDisposable
          {
             int length = LongToBytesConverter.WriteULongToBytes(lines[i].Number, buffer.Memory.Span);
             source.Span[lines[i].From..lines[i].To].CopyTo(buffer.Memory.Span[length..]);
-            await _fileStream.WriteAsync(buffer.Memory[..lines[i].To], token);
+            await fileStream.WriteAsync(buffer.Memory[..lines[i].To], token);
          }
-         await _fileStream.FlushAsync(token);
+         await fileStream.FlushAsync(token);
          
          return Result.Ok;
       }
@@ -77,13 +58,10 @@ public class LinesWriter : ILinesWriter, IAsyncDisposable
       }
    }
 
-   public Result WriteRecords(LineMemory[] lines, int linesNumber, ReadOnlyMemory<byte> source)
+   public Result WriteRecords(string filePath, LineMemory[] lines, int linesNumber, ReadOnlyMemory<byte> source)
    {
-      _syncFileStream ??= new FileStream(_filePath, FileMode.Create, FileAccess.Write, FileShare.None,
+      using FileStream syncFileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None,
          bufferSize: _bufferSize, false);
-
-      // Console.WriteLine(
-      //    $"Enter buffer file {_syncFileStream.Name}, position: {_syncFileStream.Position}, length: {_syncFileStream.Length}");
       
       byte[]? rented = null;
       try
@@ -93,8 +71,6 @@ public class LinesWriter : ILinesWriter, IAsyncDisposable
             ? stackalloc byte[requiredLength]
             : rented = ArrayPool<byte>.Shared.Rent(requiredLength);
          
-         // buffer.Clear();
-         
          //todo increase output buffer size (benchmark!)
          for (int i = 0; i < linesNumber; i++)
          {
@@ -102,17 +78,11 @@ public class LinesWriter : ILinesWriter, IAsyncDisposable
 
             source.Span[lines[i].From..lines[i].To].CopyTo(buffer[length..]);
             int fullLength = length + lines[i].To - lines[i].From;
-            _syncFileStream.Write(buffer[..fullLength]);
+            syncFileStream.Write(buffer[..fullLength]);
          }
-         //todo
-         // _syncFileStream.Flush();
-         
-         // Console.WriteLine($"----> Saved {linesNumber} lines, from {initPosition} to {_syncFileStream.Position}");
+         syncFileStream.Flush();
          if (rented != null)
             ArrayPool<byte>.Shared.Return(rented);
-         
-         // Console.WriteLine(
-         //    $"Next buffer file {_syncFileStream.Name}, position: {_syncFileStream.Position}, length: {_syncFileStream.Length}");
         
          return Result.Ok;
       }
@@ -120,15 +90,5 @@ public class LinesWriter : ILinesWriter, IAsyncDisposable
       {
          return Result.Error(e.Message);
       }
-   }
-
-   public async ValueTask DisposeAsync()
-   {
-      if (_syncFileStream != null) await _syncFileStream.DisposeAsync();
-   }
-
-   public void Dispose()
-   {
-      _syncFileStream?.Dispose();
    }
 }

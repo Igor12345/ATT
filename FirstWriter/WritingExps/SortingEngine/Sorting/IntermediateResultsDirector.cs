@@ -1,14 +1,14 @@
 ﻿using System.Reactive.Subjects;
 using Infrastructure.Parameters;
 using LogsHub;
-using SortingEngine;
 using SortingEngine.RowData;
 using SortingEngine.RuntimeConfiguration;
 
-namespace ConsoleWrapper.IOProcessing;
+namespace SortingEngine.Sorting;
 
 internal class IntermediateResultsDirector //: IAsyncObserver<AfterSortingPhasePackage>
 {
+   private readonly ILinesWriter _linesWriter;
    private readonly IConfig _configuration;
    private readonly ILogger _logger;
    private volatile int _lastFileNumber;
@@ -19,8 +19,10 @@ internal class IntermediateResultsDirector //: IAsyncObserver<AfterSortingPhaseP
    private readonly HashSet<int> _processedPackages = new();
    private volatile int _lastPackageNumber = -1;
 
-   private IntermediateResultsDirector(IConfig configuration, ILogger logger, CancellationToken token)
+   private IntermediateResultsDirector(ILinesWriter linesWriter, IConfig configuration, ILogger logger,
+      CancellationToken token)
    {
+      _linesWriter = Guard.NotNull(linesWriter);
       _configuration = Guard.NotNull(configuration);
       _path = Guard.NotNullOrEmpty(configuration.TemporaryFolder);
       _logger = Guard.NotNull(logger);
@@ -30,9 +32,10 @@ internal class IntermediateResultsDirector //: IAsyncObserver<AfterSortingPhaseP
          _filePath = _configuration.Output;
    }
 
-   public static IntermediateResultsDirector Create(IConfig configuration, ILogger logger, CancellationToken token = default)
+   public static IntermediateResultsDirector Create(ILinesWriter linesWriter, IConfig configuration, ILogger logger,
+      CancellationToken token = default)
    {
-      IntermediateResultsDirector instance = new IntermediateResultsDirector(configuration, logger, token);
+      IntermediateResultsDirector instance = new IntermediateResultsDirector(linesWriter, configuration, logger, token);
       if (!configuration.UseOneWay)
          instance.InitTemporaryFolder(configuration.TemporaryFolder);
       return instance;
@@ -50,14 +53,9 @@ internal class IntermediateResultsDirector //: IAsyncObserver<AfterSortingPhaseP
          return Result.Ok;
 
       string fileName = GetNextFileName();
-      string fullFileName = _configuration.UseOneWay ? _filePath : Path.Combine(_path, fileName);
+      string filePath = _configuration.UseOneWay ? _filePath : Path.Combine(_path, fileName);
 
-      //todo
-      //use synchronous version to prevent from holding the variable by async state machine
-      //it looks like something wrong this this version of async code
-      using LinesWriter writer =
-         LinesWriter.Create(fullFileName, _configuration.Encoding.GetBytes("1").Length, _configuration.ReadStreamBufferSize, _logger);
-      return writer.WriteRecords(package.SortedLines, package.LinesNumber, package.RowData);
+      return _linesWriter.WriteRecords(filePath, package.SortedLines, package.LinesNumber, package.RowData);
    }
 
    private string GetNextFileName()
@@ -68,7 +66,6 @@ internal class IntermediateResultsDirector //: IAsyncObserver<AfterSortingPhaseP
 
    private readonly IAsyncSubject<AfterSortingPhasePackage> _sortedLinesSavedSubject =
       new ConcurrentSimpleAsyncSubject<AfterSortingPhasePackage>();
-
 
    public IAsyncObservable<AfterSortingPhasePackage> SortedLinesSaved => _sortedLinesSavedSubject;
 

@@ -2,7 +2,7 @@
 
 namespace SortingEngine.RowData;
 
-public interface ILinesWriter: IDisposable
+public interface ILinesWriter
 {
-    Result WriteRecords(LineMemory[] lines, int linesNumber, ReadOnlyMemory<byte> source);
+    Result WriteRecords(string filePath, LineMemory[] lines, int linesNumber, ReadOnlyMemory<byte> source);
 }

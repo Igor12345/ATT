@@ -3,9 +3,8 @@
 
 // #define MERGE_ASYNC
 using System.Diagnostics;
-using System.Reactive.Linq;
+using System.Runtime;
 using ConsoleWrapper.IOProcessing;
-using Infrastructure.MemoryTools;
 using LogsHub;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -31,6 +30,8 @@ internal class FileSortingService : IHostedService
 
    public async Task StartAsync(CancellationToken cancellationToken)
    {
+      CheckGCMode();
+
       Stopwatch sw = Stopwatch.StartNew();
       
       Result finalResult = await Execute(cancellationToken);
@@ -44,10 +45,17 @@ internal class FileSortingService : IHostedService
 
       Console.ReadLine();
    }
+
    public async Task StopAsync(CancellationToken cancellationToken)
    {
       Console.WriteLine("******* Final ********");
-      await Task.Delay(2);
+      await Task.Delay(2, cancellationToken);
+   }
+
+   private static void CheckGCMode()
+   {
+      var result = GCSettings.IsServerGC ? "server" : "workstation";
+      Console.WriteLine("The {0} garbage collector is running.", result);
    }
 
    private async Task<Result> Execute(CancellationToken cancellationToken)
@@ -56,7 +64,7 @@ internal class FileSortingService : IHostedService
       (bool canContinue, ValidatedInputParameters validInput) = inputParametersValidator.CheckInputParameters(_input);
 
       if (!canContinue)
-         return Result.Error("Error");
+         return Result.Error("Something is wrong with the configuration.");
 
       IEnvironmentAnalyzer analyzer = new EnvironmentAnalyzer(_baseOptions);
       IConfig configuration = analyzer.SuggestConfig(validInput);
@@ -71,8 +79,17 @@ internal class FileSortingService : IHostedService
 
       SemaphoreSlim semaphore = new SemaphoreSlim(0, 1);
 
-      //todo return result
-      Result sortingResult = await SortingPhase(configuration, validInput, semaphore, logger, cancellationToken);
+      IBytesProducer bytesReader = configuration.KeepReadStreamOpen
+         ? new LongFileReader(validInput.File, configuration.Encoding, configuration.ReadStreamBufferSize, logger,
+            cancellationToken)
+         : new LongFileReaderKeepStream(validInput.File, configuration.Encoding, configuration.ReadStreamBufferSize,
+            logger,
+            cancellationToken);
+      
+      LinesWriter writer = new LinesWriter(configuration.Encoding.GetBytes("1").Length, configuration.ReadStreamBufferSize, logger);
+      SortingPhaseRunner sortingPhase = new SortingPhaseRunner(bytesReader, writer);
+      
+      Result sortingResult = await sortingPhase.Execute(configuration, semaphore, logger, cancellationToken);
       if (!sortingResult.Success)
       {
          Console.WriteLine($"Sorting phase completed with an error {sortingResult.Message}");
@@ -83,7 +100,6 @@ internal class FileSortingService : IHostedService
 
       Result result = configuration.UseOneWay
          ? Result.Ok
-
 #if MERGE_ASYNC
          : await MergingPhaseAsync(configuration, logger);
 #else
@@ -94,85 +110,12 @@ internal class FileSortingService : IHostedService
 
       return result;
    }
-
-   private async Task<Result> SortingPhase(IConfig configuration,
-      ValidatedInputParameters validInput, SemaphoreSlim semaphore, ILogger logger, CancellationToken cancellationToken)
-   {
-      Stopwatch sw = new Stopwatch();
-      sw.Start();
-      
-      ObservableRecordsExtractor extractor = new ObservableRecordsExtractor(
-         configuration.Encoding.GetBytes(Environment.NewLine),
-         configuration.Encoding.GetBytes(Constants.Delimiter), logger, cancellationToken);
-
-      IntermediateResultsDirector chunksDirector =
-         IntermediateResultsDirector.Create(configuration, logger, cancellationToken);
-
-      IBytesProducer bytesReader = configuration.KeepReadStreamOpen
-         ? new LongFileReader(validInput.File, configuration.Encoding, configuration.ReadStreamBufferSize, logger,
-            cancellationToken)
-         : new LongFileReaderKeepStream(validInput.File, configuration.Encoding, configuration.ReadStreamBufferSize,
-            logger,
-            cancellationToken);
-      
-      SetOfLinesSorter sorter = new SetOfLinesSorter(logger, buffer => new LinesSorter(buffer));
-      
-      using SortingPhasePool sortingPhasePool = new SortingPhasePool(configuration.SortingPhaseConcurrency,
-         configuration.InputBufferLength,
-         configuration.RecordsBufferLength, logger);
-      
-      using SortingPhasePoolAsObserver sortingPhasePoolAsObserver = new SortingPhasePoolAsObserver(sortingPhasePool, logger);
-
-      await using IAsyncDisposable? releaseBufferSub =
-         await chunksDirector.SortedLinesSaved.SubscribeAsync(sortingPhasePoolAsObserver.ReleaseBuffers);
-
-      var published = sortingPhasePoolAsObserver.StreamLinesByBatches(cancellationToken)
-         .Select(async p => await bytesReader.ProcessPackageAsync(p))
-         .Select(async p => await extractor.ExtractNextAsync(p))
-         .Publish();
-
-      await using var backLoopSub = await published.Select(pp => pp.Item2)
-         .SubscribeAsync(sortingPhasePoolAsObserver.ReadyProcessingNextChunk);
-
-      await using var sortingSub = await published
-         .Select(pp => pp.Item1)
-         .Select(p => AsyncObservable.FromAsync(async () => await sorter.ProcessPackageAsync(p)))
-         .Merge()
-         .Select(async p => await chunksDirector.ProcessPackageAsync(p))
-         .SubscribeAsync(
-            p =>
-            {},
-            ex =>
-            {
-               //Here can be some smarter handler
-               HandleError(ex);
-               throw ex;
-            },
-            () =>
-            {
-               bytesReader.Dispose();
-               MemoryCleaner.CleanMemory();
-               semaphore.Release();
-            }
-         );
-      await published.ConnectAsync();
-
-      await sortingPhasePoolAsObserver.LetsStartAsync();
-         
-      await semaphore.WaitAsync(cancellationToken);
-      
-      sw.Stop();
-      Console.WriteLine($"The sorting phase completed in {sw.Elapsed.TotalSeconds:F2} sec, {sw.Elapsed.TotalMilliseconds} ms");
-      
-      return Result.Ok;
-   }
-
+   
    private static async Task<Result> MergingPhaseAsync(IConfig configuration,
       ILogger logger)
    {
-      using ILinesWriter resultWriter =
-         LinesWriter.Create(configuration.Output, configuration.Encoding.GetBytes(".").Length,
-            configuration.WriteStreamBufferSize, logger);
+      ILinesWriter resultWriter = new LinesWriter(configuration.Encoding.GetBytes(".").Length,
+         configuration.WriteStreamBufferSize, logger);
 
       Console.WriteLine("The merge phase runs asynchronously.");
       Stopwatch sw = new Stopwatch();
@@ -188,9 +131,8 @@ internal class FileSortingService : IHostedService
    private static Result MergingPhase(IConfig configuration,
       ILogger logger)
    {
-      using ILinesWriter resultWriter =
-         LinesWriter.Create(configuration.Output, configuration.Encoding.GetBytes(".").Length,
-            configuration.WriteStreamBufferSize, logger);
+      ILinesWriter resultWriter = new LinesWriter(configuration.Encoding.GetBytes(".").Length,
+         configuration.WriteStreamBufferSize, logger);
 
       Console.WriteLine("The merge phase is executed in synchronous mode.");
       Stopwatch sw = new Stopwatch();
@@ -199,22 +141,7 @@ internal class FileSortingService : IHostedService
       Result result = merger.MergeWithOrder();
       sw.Stop();
       Console.WriteLine($"Merge completed in {sw.Elapsed.TotalSeconds:F2} sec, {sw.Elapsed.TotalMilliseconds} ms");
-      
+
       return result;
    }
-
-   private void HandleError(Exception exception)
-   {
-      var color = Console.ForegroundColor;
-      try
-      {
-         Console.ForegroundColor = ConsoleColor.DarkRed;
-         Console.WriteLine(exception);
-      }
-      finally
-      {
-         Console.ForegroundColor = color;
-      }
-   }
-
 }
