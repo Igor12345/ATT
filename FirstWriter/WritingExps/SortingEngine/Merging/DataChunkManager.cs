@@ -4,9 +4,9 @@ using SortingEngine.DataStructures;
 using SortingEngine.Entities;
 using SortingEngine.RowData;
 
-namespace SortingEngine;
+namespace SortingEngine.Merging;
 
-internal class DataChunkManagerAsync : IAsyncDisposable
+internal class DataChunkManager : IAsyncDisposable
 {
    //todo keep open or reopen every time
    private readonly Stream _dataSource;
@@ -20,7 +20,7 @@ internal class DataChunkManagerAsync : IAsyncDisposable
    private readonly RecordsExtractor _extractor;
    private int _loadedLines;
 
-   public DataChunkManagerAsync(string file, Memory<byte> rowStorage, Encoding encoding, int bufferSize, int offset)
+   public DataChunkManager(string file, Memory<byte> rowStorage, Encoding encoding, int bufferSize, int offset)
    {
       _rowStorage = rowStorage;
       _offset = offset;
@@ -32,12 +32,12 @@ internal class DataChunkManagerAsync : IAsyncDisposable
       _extractor =
          new RecordsExtractor(eolBytes, delimiterBytes);
    }
-   
-   public async Task<(ExtractionResult, bool, LineMemory)> TryGetNextLineAsync()
+
+   public (ExtractionResult, bool, LineMemory) TryGetNextLine()
    {
       if (NeedLoadLines())
       {
-         ExtractionResult result = await LoadLinesAsync();
+         ExtractionResult result = LoadLines();
          if (result is { Success: true, LinesNumber: 0 })
          {
             return (result, false, default);
@@ -59,7 +59,7 @@ internal class DataChunkManagerAsync : IAsyncDisposable
       return _currentPosition >= _loadedLines;
    }
 
-   private async Task<ExtractionResult> LoadLinesAsync()
+   private ExtractionResult LoadLines()
    {
       _recordsStorage.Clear();
 
@@ -69,7 +69,7 @@ internal class DataChunkManagerAsync : IAsyncDisposable
          _remainedBytes.CopyTo(_rowStorage);
       }
 
-      int received = await _dataSource.ReadAsync(_rowStorage[_remindedBytesLength..]);
+      int received = _dataSource.Read(_rowStorage.Span[_remindedBytesLength..]);
       if (received == 0)
          return ExtractionResult.Ok(0, -1);
       _currentPosition = 0;

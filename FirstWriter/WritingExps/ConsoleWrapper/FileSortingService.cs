@@ -1,4 +1,8 @@
-﻿using System.Diagnostics;
+﻿//Remove the comment or add the symbol to the solution,
+//and the merge phase will slow down by almost 30%.
+
+// #define MERGE_ASYNC
+using System.Diagnostics;
 using System.Reactive.Linq;
 using ConsoleWrapper.IOProcessing;
 using Infrastructure.MemoryTools;
@@ -6,6 +10,7 @@ using LogsHub;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using SortingEngine;
+using SortingEngine.Merging;
 using SortingEngine.RowData;
 using SortingEngine.RuntimeConfiguration;
 using SortingEngine.RuntimeEnvironment;
@@ -158,6 +163,7 @@ internal class FileSortingService : IHostedService
 
       Console.WriteLine("The merge phase runs asynchronously.");
       Stopwatch sw = new Stopwatch();
+      sw.Start();
       StreamsMergeExecutorAsync mergerAsync = new StreamsMergeExecutorAsync(configuration, resultWriter);
       Result result = await mergerAsync.MergeWithOrderAsync();
       sw.Stop();
@@ -174,6 +180,7 @@ internal class FileSortingService : IHostedService
 
       Console.WriteLine("The merge phase is executed in synchronous mode.");
       Stopwatch sw = new Stopwatch();
+      sw.Start();
       StreamsMergeExecutor merger = new StreamsMergeExecutor(configuration, resultWriter);
       Result result = merger.MergeWithOrder();
       sw.Stop();
