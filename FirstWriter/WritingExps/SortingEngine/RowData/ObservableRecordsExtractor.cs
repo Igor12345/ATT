@@ -28,7 +28,7 @@ public sealed class ObservableRecordsExtractor //: IAsyncObserver<ReadingPhasePa
     public IAsyncObservable<PreReadPackage> ReadyForNextChunk => _readyForNextChunkSubject;
     // public IAsyncObservable<SortingPhasePackage> ReadyForSorting => _readyForSortingSubject;
 
-    public async Task<(SortingPhasePackage,PreReadPackage)> ExtractNext(ReadingPhasePackage package)
+    public async Task<(SortingPhasePackage,PreReadPackage)> ExtractNextAsync(ReadingPhasePackage package)
     {
         int i = package.PackageNumber;
         int id = package.RowData.GetHashCode();

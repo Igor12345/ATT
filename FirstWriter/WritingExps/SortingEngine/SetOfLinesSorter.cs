@@ -18,7 +18,7 @@ public class SetOfLinesSorter
         _sorterFactory = Guard.NotNull(sorterFactory);
     }
 
-    public async Task<AfterSortingPhasePackage> ProcessPackage(SortingPhasePackage package)
+    public async Task<AfterSortingPhasePackage> ProcessPackageAsync(SortingPhasePackage package)
     {
         //todo
         //await Log(

@@ -71,7 +71,7 @@ internal class LongFileReader : IBytesProducer, IAsyncDisposable
       return _stream?.DisposeAsync() ?? ValueTask.CompletedTask;
    }
 
-   public async Task<ReadingPhasePackage> ProcessPackage(ReadingPhasePackage inputPackage)
+   public async Task<ReadingPhasePackage> ProcessPackageAsync(ReadingPhasePackage inputPackage)
    {
       await Task.Yield();
          //todo

@@ -33,8 +33,8 @@ internal class FileSortingService : IHostedService
       sw.Stop();
       Console.ForegroundColor = ConsoleColor.Green;
       Console.WriteLine(finalResult.Success
-         ? $"---> Success - {sw.Elapsed.TotalMinutes} min, {sw.Elapsed.Seconds} sec; " +
-           $"Total execution time: {sw.Elapsed.TotalSeconds} sec, {sw.Elapsed.TotalMilliseconds} ms"
+         ? $"---> Success - {sw.Elapsed.TotalMinutes:F2} min, {sw.Elapsed.Seconds:F2} sec; " +
+           $"Total execution time: {sw.Elapsed.TotalSeconds:F2} sec, {sw.Elapsed.TotalMilliseconds} ms"
          : $"---> Error: {finalResult.Message}");
 
       Console.ReadLine();
@@ -78,7 +78,12 @@ internal class FileSortingService : IHostedService
 
       Result result = configuration.UseOneWay
          ? Result.Ok
-         : await MergingPhase(cancellationToken, configuration, logger);
+
+#if MERGE_ASYNC
+         : await MergingPhaseAsync(configuration, logger);
+#else
+         :  MergingPhase(configuration, logger);
+#endif
       
       Console.WriteLine($"Completed at: {DateTime.UtcNow:hh:mm:ss-fff}, the file: {configuration.Output}.");
 
@@ -110,8 +115,8 @@ internal class FileSortingService : IHostedService
          await chunksDirector.SortedLinesSaved.SubscribeAsync(sortingPhasePoolAsObserver.ReleaseBuffers);
 
       var published = sortingPhasePoolAsObserver.StreamLinesByBatches(cancellationToken)
-         .Select(async p => await bytesReader.ProcessPackage(p))
-         .Select(async p => await extractor.ExtractNext(p))
+         .Select(async p => await bytesReader.ProcessPackageAsync(p))
+         .Select(async p => await extractor.ExtractNextAsync(p))
          .Publish();
 
       await using var backLoopSub = await published.Select(pp => pp.Item2)
@@ -119,9 +124,9 @@ internal class FileSortingService : IHostedService
 
       await using var sortingSub = await published
          .Select(pp => pp.Item1)
-         .Select(p => AsyncObservable.FromAsync(async () => await sorter.ProcessPackage(p)))
+         .Select(p => AsyncObservable.FromAsync(async () => await sorter.ProcessPackageAsync(p)))
          .Merge()
-         .Select(async p => await chunksDirector.ProcessPackage(p))
+         .Select(async p => await chunksDirector.ProcessPackageAsync(p))
          .SubscribeAsync(
             p =>
             {},
@@ -139,25 +144,40 @@ internal class FileSortingService : IHostedService
          );
       await published.ConnectAsync();
 
-      await sortingPhasePoolAsObserver.LetsStart();
+      await sortingPhasePoolAsObserver.LetsStartAsync();
          
       await semaphore.WaitAsync(cancellationToken);
       return Result.Ok;
    }
 
-   private static async Task<Result> MergingPhase(CancellationToken cancellationToken, IConfig configuration,
+   private static async Task<Result> MergingPhaseAsync(IConfig configuration,
       ILogger logger)
    {
       using ILinesWriter resultWriter =
          LinesWriter.Create(configuration.Output, configuration.Encoding.GetBytes(".").Length, logger);
 
-#if WRITE_ASYNC
+      Console.WriteLine("The merge phase runs asynchronously.");
+      Stopwatch sw = new Stopwatch();
       StreamsMergeExecutorAsync mergerAsync = new StreamsMergeExecutorAsync(configuration, resultWriter);
-      var result = await mergerAsync.MergeWithOrderAsync();
-#else
+      Result result = await mergerAsync.MergeWithOrderAsync();
+      sw.Stop();
+      Console.WriteLine($"Merge completed in {sw.Elapsed.TotalSeconds:F2} sec, {sw.Elapsed.TotalMilliseconds} ms");
+      
+      return result;
+   }
+
+   private static Result MergingPhase(IConfig configuration,
+      ILogger logger)
+   {
+      using ILinesWriter resultWriter =
+         LinesWriter.Create(configuration.Output, configuration.Encoding.GetBytes(".").Length, logger);
+
+      Console.WriteLine("The merge phase is executed in synchronous mode.");
+      Stopwatch sw = new Stopwatch();
       StreamsMergeExecutor merger = new StreamsMergeExecutor(configuration, resultWriter);
-      var result = merger.MergeWithOrder();
- #endif     
+      Result result = merger.MergeWithOrder();
+      sw.Stop();
+      Console.WriteLine($"Merge completed in {sw.Elapsed.TotalSeconds:F2} sec, {sw.Elapsed.TotalMilliseconds} ms");
       
       return result;
    }

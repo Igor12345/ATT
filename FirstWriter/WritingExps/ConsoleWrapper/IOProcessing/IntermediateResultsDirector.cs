@@ -72,7 +72,7 @@ internal class IntermediateResultsDirector //: IAsyncObserver<AfterSortingPhaseP
 
    public IAsyncObservable<AfterSortingPhasePackage> SortedLinesSaved => _sortedLinesSavedSubject;
 
-   public async ValueTask<AfterSortingPhasePackage> ProcessPackage(AfterSortingPhasePackage package)
+   public async ValueTask<AfterSortingPhasePackage> ProcessPackageAsync(AfterSortingPhasePackage package)
    {
       int id = package.RowData.GetHashCode();
       await Log(
