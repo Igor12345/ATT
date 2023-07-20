@@ -9,6 +9,7 @@ namespace SortingEngine.Merging;
 
 public sealed class StreamsMergeExecutorAsync
 {
+   private readonly CancellationToken _cancellationToken;
    private readonly IConfig _config;
    private readonly ISeveralTimesLinesWriter _linesWriter;
    private string[] _files = null!;
@@ -17,17 +18,19 @@ public sealed class StreamsMergeExecutorAsync
    private int _lastLine;
    private Memory<byte> _inputBuffer;
    
-   public StreamsMergeExecutorAsync(IConfig config, ISeveralTimesLinesWriter linesWriter)
+   public StreamsMergeExecutorAsync(IConfig config, ISeveralTimesLinesWriter linesWriter,
+      CancellationToken cancellationToken)
    {
       _config = Guard.NotNull(config);
       _linesWriter = Guard.NotNull(linesWriter);
+      _cancellationToken = Guard.NotNull(cancellationToken);
    }
 
    //todo file system dependence
    public async Task<Result> MergeWithOrderAsync()
    {
       Initialize();
-      return await ExecuteMerge();
+      return await ExecuteMergeAsync();
    }
 
    private void Initialize()
@@ -37,7 +40,7 @@ public sealed class StreamsMergeExecutorAsync
       _outputBuffer = new Line[_config.OutputBufferLength];
    }
 
-   private async Task<Result> ExecuteMerge()
+   private async Task<Result> ExecuteMergeAsync()
    {
       DataChunkManagerAsync[] managers = CreateDataChunkManagers();
 
@@ -60,13 +63,13 @@ public sealed class StreamsMergeExecutorAsync
          _outputBuffer[_lastLine++] = line;
          if (_lastLine >= _outputBuffer.Length)
          {
-            Result writingResult = WriteLinesFromBuffer(_outputBuffer, _outputBuffer.Length, _inputBuffer);
+            Result writingResult = await WriteLinesFromBuffer(_outputBuffer, _outputBuffer.Length, _inputBuffer);
             if (!writingResult.Success)
                return writingResult;
             _lastLine = 0;
          }
       }
-      return _lastLine == 0 ? Result.Ok : WriteLinesFromBuffer(_outputBuffer, _lastLine, _inputBuffer);
+      return _lastLine == 0 ? Result.Ok : await WriteLinesFromBuffer(_outputBuffer, _lastLine, _inputBuffer);
    }
 
    private DataChunkManagerAsync[] CreateDataChunkManagers()
@@ -103,8 +106,8 @@ public sealed class StreamsMergeExecutorAsync
       return Result.Ok;
    }
 
-   private Result WriteLinesFromBuffer(Line[] lines, int linesNumber, ReadOnlyMemory<byte> source)
+   private async Task<Result> WriteLinesFromBuffer(Line[] lines, int linesNumber, ReadOnlyMemory<byte> source)
    {
-      return _linesWriter.WriteRecords(lines, linesNumber, source);
+      return await _linesWriter.WriteLinesAsync(lines, linesNumber, source, _cancellationToken);
    }
 }

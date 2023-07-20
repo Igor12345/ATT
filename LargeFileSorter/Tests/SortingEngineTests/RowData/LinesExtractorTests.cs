@@ -7,17 +7,17 @@ using SortingEngineTests.TestUtils;
 
 namespace SortingEngineTests.RowData;
 
-public class RecordsExtractorTests
+public class LinesExtractorTests
 {
     [Fact]
     public void RecordsExtractor_CannotBeCreatedWithoutProvidedEolAndDelimiter()
     {
 #pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
-        Assert.Throws<ArgumentNullException>(() => new RecordsExtractor(null, new byte[2]));
-        Assert.Throws<ArgumentNullException>(() => new RecordsExtractor(new byte[] { 1 }, null));
+        Assert.Throws<ArgumentNullException>(() => new LinesExtractor(null, new byte[2]));
+        Assert.Throws<ArgumentNullException>(() => new LinesExtractor(new byte[] { 1 }, null));
 #pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
 
-        RecordsExtractor extractor = new RecordsExtractor(new byte[] { 1 }, new byte[] { 2 });
+        LinesExtractor extractor = new LinesExtractor(new byte[] { 1 }, new byte[] { 2 });
         Assert.NotNull(extractor);
     }
 
@@ -29,7 +29,7 @@ public class RecordsExtractorTests
         byte[] input = DataGenerator.Use(encoding).CreateWholeBytes(new[] { "12345. abcd EF*GH!", "678910. @ijk3 lm-NO PQ;" },
             DataGenerator.RandomBytes(12));
         ExpandingStorage<Line> linesStorage = new ExpandingStorage<Line>(500);
-        RecordsExtractor extractor = GetUsual(encoding);
+        LinesExtractor extractor = GetUsual(encoding);
 
         ExtractionResult result = extractor.ExtractRecords(input, linesStorage);
 
@@ -53,7 +53,7 @@ public class RecordsExtractorTests
             new[] { "12345. abcd EF*GH!", "678910, @ijk3Q;", "8765. hdgf huhb" },
             DataGenerator.RandomBytes(12));
         ExpandingStorage<Line> linesStorage = new ExpandingStorage<Line>(500);
-        RecordsExtractor extractor = GetUsual(encoding);
+        LinesExtractor extractor = GetUsual(encoding);
 
         ExtractionResult result = extractor.ExtractRecords(input, linesStorage);
 
@@ -70,7 +70,7 @@ public class RecordsExtractorTests
             new[] { "12345. abcd EF*GH!", ". @ijk3Q;", "8765. hdgf huhb" },
             DataGenerator.RandomBytes(12));
         ExpandingStorage<Line> linesStorage = new ExpandingStorage<Line>(500);
-        RecordsExtractor extractor = GetUsual(encoding);
+        LinesExtractor extractor = GetUsual(encoding);
 
         ExtractionResult result = extractor.ExtractRecords(input, linesStorage);
 
@@ -87,7 +87,7 @@ public class RecordsExtractorTests
             new[] { "12345. abcd EF*GH!", "123def789. @ijk3Q;", "8765. hdgf huhb" },
             DataGenerator.RandomBytes(12));
         ExpandingStorage<Line> linesStorage = new ExpandingStorage<Line>(500);
-        RecordsExtractor extractor = GetUsual(encoding);
+        LinesExtractor extractor = GetUsual(encoding);
 
         ExtractionResult result = extractor.ExtractRecords(input, linesStorage);
 
@@ -104,7 +104,7 @@ public class RecordsExtractorTests
             new[] { "12345. abcd EF*GH!", "123456789012345678901. @ijk3 lm-NO PQ;", "8765. hdgf huhb" },
             DataGenerator.RandomBytes(12));
         ExpandingStorage<Line> linesStorage = new ExpandingStorage<Line>(500);
-        RecordsExtractor extractor = GetUsual(encoding);
+        LinesExtractor extractor = GetUsual(encoding);
 
         ExtractionResult result = extractor.ExtractRecords(input, linesStorage);
 
@@ -112,8 +112,8 @@ public class RecordsExtractorTests
         Assert.Equal(@"wrong line: 123456789012345678901. @ijk3 lm-NO PQ;" + Environment.NewLine, result.Message);
     }
 
-    private static RecordsExtractor GetUsual(Encoding encoding)
+    private static LinesExtractor GetUsual(Encoding encoding)
     {
-        return new RecordsExtractor(encoding.GetBytes(Environment.NewLine), encoding.GetBytes(Constants.Delimiter));
+        return new LinesExtractor(encoding.GetBytes(Environment.NewLine), encoding.GetBytes(Constants.Delimiter));
     }
 }

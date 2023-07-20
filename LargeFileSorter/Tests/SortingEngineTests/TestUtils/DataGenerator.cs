@@ -61,7 +61,7 @@ public class DataGenerator
     public (Line[], byte[]) CreateLinesFromStrings(string[] originalStrings)
     {
         byte[] source = CreateWholeBytes(originalStrings, RandomBytes(242));
-        RecordsExtractor extractor = new RecordsExtractor(_eol, _delimiter);
+        LinesExtractor extractor = new LinesExtractor(_eol, _delimiter);
         ExpandingStorage<Line> linesStorage = new ExpandingStorage<Line>(100);
         ExtractionResult result = extractor.ExtractRecords(source.AsSpan(), linesStorage);
 
@@ -77,7 +77,7 @@ public class DataGenerator
     public byte[] FillLinesStorageFromStrings(string[] originalStrings, ExpandingStorage<Line> linesStorage)
     {
         byte[] source = CreateWholeBytes(originalStrings, RandomBytes(242));
-        RecordsExtractor extractor = new RecordsExtractor(_eol, _delimiter);
+        LinesExtractor extractor = new LinesExtractor(_eol, _delimiter);
         ExtractionResult result = extractor.ExtractRecords(source.AsSpan(), linesStorage);
 
         Line[] lines = new Line[result.LinesNumber];

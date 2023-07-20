@@ -16,7 +16,7 @@ internal class DataChunkManagerAsync : IAsyncDisposable
    private byte[]? _remainedBytes;
    private int _remindedBytesLength;
    private readonly int _remindedBytesCapacity;
-   private readonly RecordsExtractor _extractor;
+   private readonly LinesExtractor _extractor;
    private int _loadedLines;
 
    public DataChunkManagerAsync(string file, Memory<byte> rowStorage, Encoding encoding, int bufferSize, int offset)
@@ -29,7 +29,7 @@ internal class DataChunkManagerAsync : IAsyncDisposable
       var delimiterBytes = encoding.GetBytes(Constants.Delimiter);
       _remindedBytesCapacity = Constants.MaxTextLength + eolBytes.Length + delimiterBytes.Length;
       _extractor =
-         new RecordsExtractor(eolBytes, delimiterBytes);
+         new LinesExtractor(eolBytes, delimiterBytes);
    }
    
    public async Task<(ExtractionResult, bool, Line)> TryGetNextLineAsync()

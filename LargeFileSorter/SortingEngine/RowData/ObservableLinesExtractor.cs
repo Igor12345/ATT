@@ -3,21 +3,21 @@ using System.Reactive.Subjects;
 
 namespace SortingEngine.RowData;
 
-public sealed class ObservableRecordsExtractor 
+public sealed class ObservableLinesExtractor 
 {
     private readonly SimpleAsyncSubject<PreReadPackage> _readyForNextChunkSubject =
         new SequentialSimpleAsyncSubject<PreReadPackage>();
       
-    private readonly RecordsExtractor _recordsExtractor;
+    private readonly LinesExtractor _linesExtractor;
 
-    public ObservableRecordsExtractor(byte[] eol, byte[] lineDelimiter)
+    public ObservableLinesExtractor(byte[] eol, byte[] lineDelimiter)
     {
-        _recordsExtractor = new RecordsExtractor(eol, lineDelimiter);
+        _linesExtractor = new LinesExtractor(eol, lineDelimiter);
     }
 
     public async Task<(SortingPhasePackage,PreReadPackage)> ExtractNextPartAsync(ReadingPhasePackage package)
     {
-        ExtractionResult result = _recordsExtractor.ExtractRecords(package.RowData.AsSpan()[..package.WrittenBytesLength],
+        ExtractionResult result = _linesExtractor.ExtractRecords(package.RowData.AsSpan()[..package.WrittenBytesLength],
             package.ParsedRecords);
 
         if (!result.Success)

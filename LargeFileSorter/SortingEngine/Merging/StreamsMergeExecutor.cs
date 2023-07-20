@@ -106,6 +106,6 @@ public sealed class StreamsMergeExecutor
 
    private Result WriteLinesFromBuffer(Line[] lines, int linesNumber, ReadOnlyMemory<byte> source)
    {
-      return _linesWriter.WriteRecords(lines, linesNumber, source);
+      return _linesWriter.WriteLines(lines, linesNumber, source);
    }
 }

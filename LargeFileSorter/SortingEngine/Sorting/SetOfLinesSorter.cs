@@ -3,9 +3,8 @@ using LogsHub;
 using SortingEngine.DataStructures;
 using SortingEngine.Entities;
 using SortingEngine.RowData;
-using SortingEngine.Sorting;
 
-namespace SortingEngine;
+namespace SortingEngine.Sorting;
 
 public class SetOfLinesSorter
 {

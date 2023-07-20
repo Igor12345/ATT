@@ -6,7 +6,7 @@ using SortingEngine.Entities;
 namespace SortingEngine.RowData
 {
    //todo two responsibilities here
-   public class RecordsExtractor
+   public class LinesExtractor
    {
       private readonly byte[] _eol;
       private readonly byte[] _lineDelimiter;
@@ -17,7 +17,7 @@ namespace SortingEngine.RowData
       /// </summary>
       /// <param name="eol">The byte sequence of the end of a line in the used encoding</param>
       /// <param name="lineDelimiter">The byte sequence of the delimiter in the used encoding</param>
-      public RecordsExtractor(byte[] eol, byte[] lineDelimiter)
+      public LinesExtractor(byte[] eol, byte[] lineDelimiter)
       {
          _eol = Guard.NotNull(eol);
          _lineDelimiter = Guard.NotNull(lineDelimiter);

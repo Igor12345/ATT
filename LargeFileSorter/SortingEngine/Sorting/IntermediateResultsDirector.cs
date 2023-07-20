@@ -48,7 +48,7 @@ internal class IntermediateResultsDirector
       string fileName = GetNextFileName();
       string filePath = (_configuration.UseOneWay ? _filePath : Path.Combine(_path, fileName))!;
 
-      return _linesWriter.WriteRecords(filePath, package.SortedLines, package.LinesNumber, package.RowData);
+      return _linesWriter.WriteLines(filePath, package.SortedLines, package.LinesNumber, package.RowData);
    }
 
    private string GetNextFileName()

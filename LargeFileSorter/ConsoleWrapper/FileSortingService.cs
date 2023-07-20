@@ -88,7 +88,7 @@ internal class FileSortingService : IHostedService
       Result result = configuration.UseOneWay
          ? Result.Ok
 #if MERGE_ASYNC
-         : await MergingPhaseAsync(configuration);
+         : await MergingPhaseAsync(configuration, cancellationToken);
 #else
          :  MergingPhase(configuration);
 #endif
@@ -119,7 +119,7 @@ internal class FileSortingService : IHostedService
       return sortingResult;
    }
 
-   private static async Task<Result> MergingPhaseAsync(IConfig configuration)
+   private static async Task<Result> MergingPhaseAsync(IConfig configuration, CancellationToken cancellationToken)
    {
       await using ISeveralTimesLinesWriter resultWriter = LinesWriter.CreateForMultipleWriting(configuration.Output,
          configuration.Encoding.GetBytes(".").Length,
@@ -128,7 +128,7 @@ internal class FileSortingService : IHostedService
       Console.WriteLine("The merge phase runs asynchronously.");
       Stopwatch sw = new Stopwatch();
       sw.Start();
-      StreamsMergeExecutorAsync mergerAsync = new StreamsMergeExecutorAsync(configuration, resultWriter);
+      StreamsMergeExecutorAsync mergerAsync = new StreamsMergeExecutorAsync(configuration, resultWriter, cancellationToken);
       Result result = await mergerAsync.MergeWithOrderAsync();
       sw.Stop();
       Console.WriteLine($"---> Merge completed in {sw.Elapsed.TotalSeconds:F2} sec, {sw.Elapsed.TotalMilliseconds} ms");

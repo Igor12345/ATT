@@ -10,8 +10,8 @@ public interface
     
     IOneTimeLinesWriter
 {
-    Result WriteRecords(string filePath, Line[] lines, int linesNumber, ReadOnlyMemory<byte> source);
-    Task<Result> WriteRecordsAsync(string filePath, Line[] lines, int linesNumber, ReadOnlyMemory<byte> source,
+    Result WriteLines(string filePath, Line[] lines, int linesNumber, ReadOnlyMemory<byte> source);
+    Task<Result> WriteLinesAsync(string filePath, Line[] lines, int linesNumber, ReadOnlyMemory<byte> source,
         CancellationToken token);
 }
 
@@ -21,7 +21,7 @@ public interface
 /// </summary>
 public interface ISeveralTimesLinesWriter : IDisposable, IAsyncDisposable
 {
-    Result WriteRecords(Line[] lines, int linesNumber, ReadOnlyMemory<byte> source);
-    Task<Result> WriteRecordsAsync(Line[] lines, int linesNumber, ReadOnlyMemory<byte> source,
+    Result WriteLines(Line[] lines, int linesNumber, ReadOnlyMemory<byte> source);
+    Task<Result> WriteLinesAsync(Line[] lines, int linesNumber, ReadOnlyMemory<byte> source,
         CancellationToken token);
 }
