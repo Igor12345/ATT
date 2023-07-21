@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using Infrastructure.Concurrency;
 using Infrastructure.Parameters;
 using SortingEngine.DataStructures;
 using SortingEngine.Entities;
@@ -7,19 +8,19 @@ namespace SortingEngine.RowData;
 
 public class SortingPhasePool : IDisposable
 {
-    private readonly IBytesProducer _bytesProducer;
-
-    private readonly record struct OrderedBuffer(int Index, byte[] Buffer);
+//todo move?
+    private readonly record struct OrderedBuffer(int Index, byte[] Buffer, int WrittenBytes);
     
     private readonly SemaphoreSlim _semaphore;
+    private readonly IBytesProducer _bytesProducer;
     private readonly int _inputBuffersLength;
-    private volatile int _packageNumber = -1;
     private readonly int _recordChunksLength;
-    private readonly ConcurrentQueue<OrderedBuffer> _filledBuffers;
+    // private readonly ConcurrentQueue<OrderedBuffer> _filledBuffers;
     private readonly ConcurrentStack<byte[]> _emptyBuffers;
     private readonly ConcurrentStack<ExpandingStorage<Line>> _lineStorages;
     private SpinLock _lock;
     private SpinLock _readLock;
+    private readonly AwaitingQueue<OrderedBuffer> _filledBuffers;
 
     public SortingPhasePool(int numberOfBuffers, int inputBuffersLength, int recordChunksLength, IBytesProducer bytesProducer)
     {
@@ -30,6 +31,7 @@ public class SortingPhasePool : IDisposable
         _inputBuffersLength = Math.Min(Guard.Positive(inputBuffersLength), Array.MaxLength);
         _recordChunksLength = Math.Min(Guard.Positive(recordChunksLength), Array.MaxLength);
         _emptyBuffers = new ConcurrentStack<byte[]>();
+        _filledBuffers = new AwaitingQueue<OrderedBuffer>();
         _semaphore = new SemaphoreSlim(numberOfBuffers, numberOfBuffers);
         //The most likely scenario is that storages for recognized lines will be returned
         //much faster than the buffers for the row bytes. In any case,
@@ -49,16 +51,23 @@ public class SortingPhasePool : IDisposable
                 int index = 0;
                 do
                 {
-                    byte[] buffer = await pool.TryRentNextAsync();
+                    byte[] buffer = await pool.TryRentNextEmptyBufferAsync();
                     bool lockTaken = false;
                     try
                     {
                         pool._readLock.Enter(ref lockTaken);
-                        ReadingResult res = await pool._bytesProducer.WriteBytesToBufferAsync(buffer);
-                        if (res.ActuallyRead == 0)
-                            break;
-                        OrderedBuffer nextBuffer = new OrderedBuffer(index++, buffer);
+                        ReadingResult readingResult =
+                            await pool._bytesProducer.ProvideBytesAsync(buffer).ConfigureAwait(false);
+                        //todo process error
+                        
+                        //todo
+                        Console.WriteLine(
+                            $"The next buffer hes been read, it contains {readingResult.ActuallyRead} bytes. Result: {readingResult.Success}, ");
+                        
+                        OrderedBuffer nextBuffer = new OrderedBuffer(index++, buffer, readingResult.ActuallyRead);
                         pool._filledBuffers.Enqueue(nextBuffer);
+                        if (readingResult.ActuallyRead == 0)
+                            break;
                     }
                     finally
                     {
@@ -71,7 +80,7 @@ public class SortingPhasePool : IDisposable
             TaskCreationOptions.LongRunning | TaskCreationOptions.PreferFairness, TaskScheduler.Default);
     }
 
-    private async Task<byte[]> TryRentNextAsync()
+    private async Task<byte[]> TryRentNextEmptyBufferAsync()
     {
         await _semaphore.WaitAsync();
         
@@ -98,25 +107,25 @@ public class SortingPhasePool : IDisposable
             if (lockTaken) _lock.Exit(false);
         }
     }
-    
-    public async Task<ReadingPhasePackage> TryAcquireNextAsync(int lastIndex)
+
+    public async Task<FilledBufferPackage> TryAcquireNextFilledBufferAsync(int lastIndex)
     {
         bool lockTaken = false;
         try
         {
             _lock.Enter(ref lockTaken);
-            bool bufferExists = _filledBuffers.TryDequeue(out byte[]? buffer);
-            if (!bufferExists)
+            OrderedBuffer nextBuffer = await _filledBuffers.DequeueAsync();
+            if (nextBuffer.Index != lastIndex + 1)
             {
-                //The semaphore ensures that we don't exceed the allowed number of existing buffers.
-                //It is safe a new buffer here
-                buffer = new byte[_inputBuffersLength];
-                //Array pool holds memory and refuses to release it
-                // buffer = ArrayPool<byte>.Shared.Rent(_inputBuffersLength);
+                throw new InvalidOperationException(
+                    $"Wrong order of prepared buffers, expected buffer for the package {lastIndex}, but was: {nextBuffer.Index}.");
             }
+
             ExpandingStorage<Line> linesStorage = RentLinesStorage();
 
-            return new ReadingPhasePackage(buffer!, linesStorage, Interlocked.Increment(ref _packageNumber), false);
+            //todo return another entity, last parameter is useful
+            return new FilledBufferPackage(nextBuffer.Buffer, linesStorage, nextBuffer.Index,
+                nextBuffer.WrittenBytes == 0, nextBuffer.WrittenBytes);
         }
         finally
         {

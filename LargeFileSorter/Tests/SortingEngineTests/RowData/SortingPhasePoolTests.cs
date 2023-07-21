@@ -12,7 +12,7 @@ public class SortingPhasePoolTests
         SortingPhasePool pool =
             new SortingPhasePool(2, minBytesBufferLength, minLinesBufferLength);
 
-        ReadingPhasePackage package = await pool.TryAcquireNextAsync();
+        ReadyForExtractionPackage package = await pool.TryAcquireNextFilledBufferAsync();
 
         Assert.NotNull(package);
         Assert.NotNull(package.ParsedRecords);
@@ -28,9 +28,9 @@ public class SortingPhasePoolTests
         SortingPhasePool pool =
             new SortingPhasePool(2, minBytesBufferLength, minLinesBufferLength);
 
-        ReadingPhasePackage package1 = await pool.TryAcquireNextAsync();
-        ReadingPhasePackage package2 = await pool.TryAcquireNextAsync();
-        Task<ReadingPhasePackage> askingNextPackage = pool.TryAcquireNextAsync();
+        ReadyForExtractionPackage package1 = await pool.TryAcquireNextFilledBufferAsync();
+        ReadyForExtractionPackage package2 = await pool.TryAcquireNextFilledBufferAsync();
+        Task<ReadyForExtractionPackage> askingNextPackage = pool.TryAcquireNextFilledBufferAsync();
         Task timeLimit = Task.Delay(50);
 
         Task winner = await Task.WhenAny(askingNextPackage, timeLimit);
@@ -48,8 +48,8 @@ public class SortingPhasePoolTests
         SortingPhasePool pool =
             new SortingPhasePool(2, minBytesBufferLength, minLinesBufferLength);
 
-        ReadingPhasePackage package1 = await pool.TryAcquireNextAsync();
-        Task<ReadingPhasePackage> askingNextPackage = pool.TryAcquireNextAsync();
+        ReadyForExtractionPackage package1 = await pool.TryAcquireNextFilledBufferAsync();
+        Task<ReadyForExtractionPackage> askingNextPackage = pool.TryAcquireNextFilledBufferAsync();
         Task timeLimit = Task.Delay(50);
 
         Task winner = await Task.WhenAny(askingNextPackage, timeLimit);
@@ -58,7 +58,7 @@ public class SortingPhasePoolTests
 
         pool.ReuseBuffer(package1.RowData);
 
-        ReadingPhasePackage package3 = await askingNextPackage;
+        ReadyForExtractionPackage package3 = await askingNextPackage;
         Assert.Same(package3.RowData, package1.RowData);
     }
 }

@@ -24,9 +24,9 @@ public class SetOfLinesSorter
 
         await Log(
             $"Sorted lines: {package.LinesNumber}) " +
-            $"for the package: {package.PackageNumber}, sending AfterSortingPhasePackage");
+            $"for the package: {package.Id}, sending AfterSortingPhasePackage");
         return new AfterSortingPhasePackage(sorted, package.RowData,
-            package.ParsedRecords, package.LinesNumber, package.PackageNumber, package.IsLastPackage);
+            package.ParsedRecords, package.LinesNumber, package.Id, package.IsLastPackage);
     }
 
     private Line[] SortRecords(ReadOnlyMemory<byte> inputBuffer, int linesNumber,

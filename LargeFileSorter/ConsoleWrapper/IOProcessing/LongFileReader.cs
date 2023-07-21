@@ -53,17 +53,17 @@ internal class LongFileReader : IBytesProducer
       return ReadingResult.Ok(length + offset, length);
    }
 
-   public async Task<ReadingPhasePackage> WriteBytesToBufferAsync(ReadingPhasePackage inputPackage)
+   public async Task<ReadyForExtractionPackage> WriteBytesToBufferAsync(ReadyForExtractionPackage inputPackage)
    {
       await Task.Yield();
       ReadingResult result;
 
       using (var _ = await _lock.LockAsync())
       {
-         if (inputPackage.PackageNumber != _lastProcessedPackage++)
+         if (inputPackage.Id != _lastProcessedPackage++)
             throw new InvalidOperationException("Wrong packages sequence.");
 
-         result = await ReadBytesAsync(inputPackage.RowData, inputPackage.PrePopulatedBytesLength, _cancellationToken);
+         result = await ReadBytesAsync(inputPackage.RowData, inputPackage.StartOfLine, _cancellationToken);
       }
 
       //todo handle in railway style 

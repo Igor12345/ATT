@@ -83,11 +83,11 @@ internal class IntermediateResultsDirector
       bool allProcessed = false;
       lock (_lock)
       {
-         _processedPackages.Add(package.PackageNumber);
+         _processedPackages.Add(package.Id);
          if (package.IsLastPackage)
-            _lastPackageNumber = package.PackageNumber;
+            _lastPackageNumber = package.Id;
          
-         if (package.PackageNumber <= _lastPackageNumber)
+         if (package.Id <= _lastPackageNumber)
          {
             allProcessed = true;
             for (int i = 0; i < _lastPackageNumber; i++)

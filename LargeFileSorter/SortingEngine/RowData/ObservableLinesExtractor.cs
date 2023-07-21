@@ -15,10 +15,9 @@ public sealed class ObservableLinesExtractor
         _linesExtractor = new LinesExtractor(eol, lineDelimiter);
     }
 
-    public async Task<(SortingPhasePackage,PreReadPackage)> ExtractNextPartAsync(ReadingPhasePackage package)
+    public async Task<(SortingPhasePackage,PreReadPackage)> ExtractNextPartAsync(ReadyForExtractionPackage package)
     {
-        ExtractionResult result = _linesExtractor.ExtractRecords(package.RowData.AsSpan()[..package.WrittenBytesLength],
-            package.ParsedRecords);
+        ExtractionResult result = _linesExtractor.ExtractRecords(package.LineData.Span, package.ParsedRecords);
 
         if (!result.Success)
             await _readyForNextChunkSubject.OnErrorAsync(new InvalidOperationException(result.Message));
@@ -27,15 +26,15 @@ public sealed class ObservableLinesExtractor
         
         //will be returned in SortingPhasePoolManager
         byte[] remainedBytes = ArrayPool<byte>.Shared.Rent(remainingBytesLength);
-        package.RowData.AsSpan()[result.StartRemainingBytes..package.WrittenBytesLength].CopyTo(remainedBytes);
+        package.LineData[result.StartRemainingBytes..].CopyTo(remainedBytes);
 
-        SortingPhasePackage nextPackage = new SortingPhasePackage(package.RowData, package.WrittenBytesLength,
-            package.ParsedRecords, result.LinesNumber, package.PackageNumber, package.IsLastPackage);
+        SortingPhasePackage nextPackage = new SortingPhasePackage(package.RowData, package.LineData, package.WrittenBytesLength,
+            package.ParsedRecords, result.LinesNumber, package.Id, package.IsLastPackage);
 
         PreReadPackage preReadPackage = package.IsLastPackage
-            ? PreReadPackage.LastPackage(package.PackageNumber)
+            ? PreReadPackage.LastPackage(package.Id)
             : new PreReadPackage(remainedBytes,
-                remainingBytesLength, package.PackageNumber, false);
+                remainingBytesLength, package.Id, false);
         
         return (nextPackage, preReadPackage);
     }

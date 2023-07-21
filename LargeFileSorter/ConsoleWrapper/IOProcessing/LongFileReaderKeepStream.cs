@@ -66,18 +66,18 @@ internal class LongFileReaderKeepStream : IBytesProducer
       return ReadingResult.Ok(length, length);
    }
 
-   public async Task<ReadingPhasePackage> WriteBytesToBufferAsync(ReadingPhasePackage inputPackage)
+   public async Task<ReadyForExtractionPackage> WriteBytesToBufferAsync(ReadyForExtractionPackage inputPackage)
    {
       await Task.Yield();
       ReadingResult result;
 
       using (var _ = await _lock.LockAsync())
       {
-         if (inputPackage.PackageNumber != _lastProcessedPackage++)
+         if (inputPackage.Id != _lastProcessedPackage++)
             throw new InvalidOperationException("Wrong packages sequence.");
 
          result = _useAsync
-            ? await ReadBytesAsync(inputPackage.RowData, inputPackage.PrePopulatedBytesLength)
+            ? await ReadBytesAsync(inputPackage.RowData, inputPackage.StartOfLine)
             : ReadBytes(inputPackage.RowData.AsSpan(_offset..));
       }
 
