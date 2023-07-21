@@ -102,7 +102,7 @@ public class SortingPhaseRunner
                 }
             );
         await published.ConnectAsync();
-        await sortingPhasePoolAsObserver.LetsStartAsync();
+        await sortingPhasePoolAsObserver.LetsStartAsync(cancellationToken);
 
         await semaphore.WaitAsync(cancellationToken);
 

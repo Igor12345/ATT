@@ -56,7 +56,7 @@ public class SortingPhasePoolTests
 
         Assert.Same(winner, timeLimit);
 
-        pool.ReleaseBuffer(package1.RowData);
+        pool.ReuseBuffer(package1.RowData);
 
         ReadingPhasePackage package3 = await askingNextPackage;
         Assert.Same(package3.RowData, package1.RowData);

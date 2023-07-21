@@ -106,9 +106,14 @@ internal class FileSortingService : IHostedService
       IBytesProducer bytesReader = configuration.KeepReadStreamOpen
          ? new LongFileReader(validInput.File, configuration.ReadStreamBufferSize, logger,
             cancellationToken)
-         : new LongFileReaderKeepStream(validInput.File, configuration.ReadStreamBufferSize,
-            logger,
-            cancellationToken);
+#if MERGE_ASYNC
+         : LongFileReaderKeepStream.CreateForAsync(validInput.File, configuration.ReadStreamBufferSize,
+            logger, cancellationToken);
+#else
+         : LongFileReaderKeepStream.CreateForSync(validInput.File, configuration.MaxLineLength,
+            configuration.ReadStreamBufferSize, logger);
+#endif
+      
       IOneTimeLinesWriter writer = LinesWriter.CreateForOnceWriting(configuration.MaxLineLength,
          configuration.ReadStreamBufferSize);
 

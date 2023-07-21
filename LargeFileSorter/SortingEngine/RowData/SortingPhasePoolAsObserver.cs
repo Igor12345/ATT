@@ -87,7 +87,7 @@ public class SortingPhasePoolAsObserver : IDisposable
         private void ReleaseTakenStorages(AfterSortingPhasePackage package)
         {
             _poolAsObserver._pool.ReleaseBuffer(package.ParsedRecords);
-            _poolAsObserver._pool.ReleaseBuffer(package.RowData);
+            _poolAsObserver._pool.ReuseBuffer(package.RowData);
             ArrayPool<Line>.Shared.Return(package.SortedLines);
         }
 
@@ -140,8 +140,9 @@ public class SortingPhasePoolAsObserver : IDisposable
         return AsyncDisposable.Nop;
     }
 
-    public async ValueTask LetsStartAsync()
+    public async ValueTask LetsStartAsync(CancellationToken cancellationToken)
     {
+        _pool.Run(cancellationToken);
         ReadingPhasePackage package = await _pool.TryAcquireNextAsync();
         await _packagesQueue.Writer.WriteAsync(package);
     }

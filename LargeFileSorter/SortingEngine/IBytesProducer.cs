@@ -4,6 +4,6 @@ namespace SortingEngine;
 
 public interface IBytesProducer : IAsyncDisposable, IDisposable
 {
-    ReadingResult ReadBytes(byte[] buffer, int offset);
     Task<ReadingPhasePackage> WriteBytesToBufferAsync(ReadingPhasePackage inputPackage);
+    Task<ReadingResult> WriteBytesToBufferAsync(byte[] buffer);
 }

@@ -9,44 +9,61 @@ namespace ConsoleWrapper.IOProcessing;
 //This class violates SRP, but it's easier to experiment with performance.
 internal class LongFileReaderKeepStream : IBytesProducer
 {
-   private readonly int _bufferSize;
+   private readonly int _offset;
    private readonly ILogger _logger;
    private readonly CancellationToken _cancellationToken;
-   private readonly string _filePath;
-   private FileStream? _stream;
+   private FileStream _stream = null!;
    private int _lastProcessedPackage;
    private readonly AsyncLock _lock;
+   private bool _useAsync;
 
-   public LongFileReaderKeepStream(string fullFileName, int bufferSize, ILogger logger,
+   private LongFileReaderKeepStream(int offset, ILogger logger,
       CancellationToken cancellationToken)
    {
       _lock = new AsyncLock();
-      _filePath = Guard.FileExist(fullFileName);
-      _bufferSize = Guard.Positive(bufferSize);
+      _offset = Guard.Positive(offset);
       _logger = Guard.NotNull(logger);
       _cancellationToken = Guard.NotNull(cancellationToken);
    }
 
-   private async Task<ReadingResult> ReadBytesAsync(byte[] buffer, int offset,
+   public static IBytesProducer CreateForAsync(string filePath, int streamBufferSize, ILogger logger,
       CancellationToken cancellationToken)
+   {
+      //todo offset
+      LongFileReaderKeepStream instance = new LongFileReaderKeepStream(0, logger, cancellationToken);
+      instance.Init(filePath, streamBufferSize, true);
+      return instance;
+   }
+   public static IBytesProducer CreateForSync(string filePath, int offset, int streamBufferSize, ILogger logger)
+   {
+      LongFileReaderKeepStream instance = new LongFileReaderKeepStream(offset, logger, CancellationToken.None);
+      instance.Init(filePath, streamBufferSize, false);
+      return instance;
+   }
+
+   private void Init(string filePath, int bufferSize, bool useAsync)
+   {
+      _useAsync = useAsync;
+      filePath = Guard.FileExist(filePath);
+      bufferSize = Guard.Positive(bufferSize);
+      _stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.None,
+         bufferSize: bufferSize, useAsync);
+   }
+
+   private async Task<ReadingResult> ReadBytesAsync(byte[] buffer, int offset)
    {
       //todo either make private or use another lock
       //it is save in the case of Rx, because it is always called from OnNextAsync
       // await using FileStream stream = File.OpenRead(_filePath);
-      _stream ??= new FileStream(_filePath, FileMode.Open, FileAccess.Read, FileShare.None,
-         bufferSize: _bufferSize, true);
       
-      int length = await _stream.ReadAsync(buffer.AsMemory(offset, buffer.Length - offset), cancellationToken);
+      int length = await _stream.ReadAsync(buffer.AsMemory(offset, buffer.Length - offset), _cancellationToken);
       return ReadingResult.Ok(length + offset, length);
    }
 
-   public ReadingResult ReadBytes(byte[] buffer, int offset)
+   public ReadingResult ReadBytes(Span<byte> buffer)
    {
-      _stream ??= new FileStream(_filePath, FileMode.Open, FileAccess.Read, FileShare.None,
-         bufferSize: _bufferSize, false);
-      
-      int length = _stream.Read(buffer, offset, buffer.Length - offset);
-      return ReadingResult.Ok(length + offset, length);
+      int length = _stream.Read(buffer);
+      return ReadingResult.Ok(length, length);
    }
 
    public async Task<ReadingPhasePackage> WriteBytesToBufferAsync(ReadingPhasePackage inputPackage)
@@ -59,7 +76,9 @@ internal class LongFileReaderKeepStream : IBytesProducer
          if (inputPackage.PackageNumber != _lastProcessedPackage++)
             throw new InvalidOperationException("Wrong packages sequence.");
 
-         result = await ReadBytesAsync(inputPackage.RowData, inputPackage.PrePopulatedBytesLength, _cancellationToken);
+         result = _useAsync
+            ? await ReadBytesAsync(inputPackage.RowData, inputPackage.PrePopulatedBytesLength)
+            : ReadBytes(inputPackage.RowData.AsSpan(_offset..));
       }
 
       //todo handle in railway style 
@@ -74,11 +93,11 @@ internal class LongFileReaderKeepStream : IBytesProducer
 
    public async ValueTask DisposeAsync()
    {
-      if (_stream != null) await _stream.DisposeAsync();
+      await _stream.DisposeAsync();
    }
 
    public void Dispose()
    {
-      _stream?.Dispose();
+      _stream.Dispose();
    }
 }
