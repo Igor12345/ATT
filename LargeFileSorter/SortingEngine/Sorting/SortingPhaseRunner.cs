@@ -26,8 +26,7 @@ public class SortingPhaseRunner
         sw.Start();
 
         ObservableLinesExtractor extractor = new ObservableLinesExtractor(
-            configuration.Encoding.GetBytes(Environment.NewLine),
-            configuration.Encoding.GetBytes(Constants.Delimiter));
+            configuration.EolBytes, configuration.DelimiterBytes);
 
         IntermediateResultsDirector chunksDirector = IntermediateResultsDirector.Create(_linesWriter, configuration);
 

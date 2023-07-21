@@ -1,5 +1,4 @@
 ﻿using Infrastructure.Parameters;
-using System.Text;
 
 namespace SortingEngine.RuntimeConfiguration;
 
@@ -16,7 +15,10 @@ public class RuntimeConfiguration : IConfig
    public string InputFile { get; private set; } = null!;
    public int MergeBufferLength { get; private set; }
    public int OutputBufferLength { get; private set; }
-   public Encoding Encoding { get; private set; } = Encoding.UTF8;
+   // public Encoding Encoding { get; private set; } = Encoding.UTF8;
+   public int MaxLineLength { get; private set; }
+   public byte[] DelimiterBytes { get; private set; }
+   public byte[] EolBytes { get; private set; }
    public int RecordsBufferLength { get; private set; }
    public string Output { get; private set; } = null!;
    public int ReadStreamBufferSize { get; private set; }
@@ -109,15 +111,27 @@ public class RuntimeConfiguration : IConfig
          return this;
       }
 
-      public IConfigBuilder UseEncoding(Encoding encoding)
-      {
-         _configuration.Encoding = encoding;
-         return this;
-      }
-
       public IConfigBuilder UseOutputPath(string outputPath)
       {
          _configuration.Output = outputPath;
+         return this;
+      }
+
+      public IConfigBuilder UseDelimiter(byte[] delimiterBytes)
+      {
+         _configuration.DelimiterBytes = delimiterBytes;
+         return this;
+      }
+
+      public IConfigBuilder UseEolBytes(byte[] eolBytes)
+      {
+         _configuration.EolBytes = eolBytes;
+         return this;
+      }
+
+      public IConfigBuilder UseMaxLineLength(int maxLineLength)
+      {
+         _configuration.MaxLineLength = maxLineLength;
          return this;
       }
 

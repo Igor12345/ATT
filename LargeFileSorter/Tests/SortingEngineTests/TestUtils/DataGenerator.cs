@@ -19,7 +19,7 @@ public class DataGenerator
     {
         _encoding = Guard.NotNull(encoding);
         _eol = encoding.GetBytes(Environment.NewLine);
-        _delimiter = encoding.GetBytes(Constants.Delimiter);
+        _delimiter = encoding.GetBytes(TestConstants.Delimiter);
     }
 
     public static DataGenerator Use(Encoding encoding)

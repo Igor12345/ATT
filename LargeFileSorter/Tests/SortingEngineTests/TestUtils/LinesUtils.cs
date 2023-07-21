@@ -9,7 +9,7 @@ public static class LinesUtils
 {
     public static string LineToString(Line line, byte[] source)
     {
-        Span<byte> buffer = stackalloc byte[Constants.MaxLineLengthUtf8];
+        Span<byte> buffer = stackalloc byte[TestConstants.MaxLineLengthUtf8];
         int length = LineToBytes(line, source, buffer);
  
         return ByteToStringConverter.Convert(buffer[..length]);
@@ -18,9 +18,9 @@ public static class LinesUtils
     public static int LineToBytes(Line line, ReadOnlySpan<byte> source, Span<byte> destination)
     {
         byte[]? rented = null;
-        Span<byte> buffer = Constants.MaxLineLengthUtf8 <= Constants.MaxStackLimit
-            ? stackalloc byte[Constants.MaxLineLengthUtf8]
-            : rented = ArrayPool<byte>.Shared.Rent(Constants.MaxLineLengthUtf8);
+        Span<byte> buffer = TestConstants.MaxLineLengthUtf8 <= Constants.MaxStackLimit
+            ? stackalloc byte[TestConstants.MaxLineLengthUtf8]
+            : rented = ArrayPool<byte>.Shared.Rent(TestConstants.MaxLineLengthUtf8);
         
         int length = LongToBytesConverter.WriteULongToBytes(line.Number, buffer);
 

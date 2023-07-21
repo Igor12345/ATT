@@ -26,7 +26,8 @@ public class LinesExtractorTests
     {
         Encoding encoding = Encoding.UTF8;
 
-        byte[] input = DataGenerator.Use(encoding).CreateWholeBytes(new[] { "12345. abcd EF*GH!", "678910. @ijk3 lm-NO PQ;" },
+        byte[] input = DataGenerator.Use(encoding).CreateWholeBytes(
+            new[] { "12345. abcd EF*GH!", "678910. @ijk3 lm-NO PQ;" },
             DataGenerator.RandomBytes(12));
         ExpandingStorage<Line> linesStorage = new ExpandingStorage<Line>(500);
         LinesExtractor extractor = GetUsual(encoding);
@@ -114,6 +115,6 @@ public class LinesExtractorTests
 
     private static LinesExtractor GetUsual(Encoding encoding)
     {
-        return new LinesExtractor(encoding.GetBytes(Environment.NewLine), encoding.GetBytes(Constants.Delimiter));
+        return new LinesExtractor(encoding.GetBytes(Environment.NewLine), encoding.GetBytes(TestConstants.Delimiter));
     }
 }

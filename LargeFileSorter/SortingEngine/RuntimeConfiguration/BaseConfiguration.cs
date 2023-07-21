@@ -10,6 +10,10 @@ public class BaseConfiguration
     public int? ReadStreamBufferSize { get; set; }
     public int? WriteStreamBufferSize { get; set; }
     public int SortingPhaseConcurrency { get; set; }
+    
     public int AvailableMemory { get; set; }
     public bool? KeepReadStreamOpen { get; set; }
+    
+    public int? MaxLineLength { get; set; } 
+    public string? Delimiter { get; set; }
 }

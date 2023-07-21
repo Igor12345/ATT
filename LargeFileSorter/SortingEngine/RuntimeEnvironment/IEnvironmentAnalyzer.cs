@@ -35,6 +35,11 @@ namespace SortingEngine.RuntimeEnvironment
          string outputPath = GetOutputPath(path);
 
          bool useOneStepSorting = CheckForOneStep(path, inputBufferLength);
+         int oneCharacterLength = encoding.GetBytes("1").Length;
+         byte[] eolBytes = encoding.GetBytes(Environment.NewLine);
+         int maxLineLength = (_baseConfiguration.MaxLineLength ?? 1024) * oneCharacterLength + eolBytes.Length;
+         
+         byte[] delimiterBytes = encoding.GetBytes((_baseConfiguration.Delimiter ?? ". "));
 
          //can be implemented more elegantly and concisely with using reflection or dynamic
          IConfig config = RuntimeConfiguration.RuntimeConfiguration.Create(conf => conf
@@ -47,9 +52,12 @@ namespace SortingEngine.RuntimeEnvironment
             .UseOutputBuffer(outputBufferLength)
             .UseOutputPath(outputPath)
             .UseFileAndFolder(path, "")
-            .UseEncoding(encoding)
             .UseKeepReadStreamOpen(_baseConfiguration.KeepReadStreamOpen ?? true)
+            .UseMaxLineLength(maxLineLength)
+            .UseEolBytes(eolBytes)
+            .UseDelimiter(delimiterBytes)
             .UseOneWay(useOneStepSorting));
+
          return config;
       }
 

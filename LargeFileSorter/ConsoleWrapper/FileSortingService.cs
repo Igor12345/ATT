@@ -104,12 +104,12 @@ internal class FileSortingService : IHostedService
       SemaphoreSlim semaphore = new SemaphoreSlim(0, 1);
 
       IBytesProducer bytesReader = configuration.KeepReadStreamOpen
-         ? new LongFileReader(validInput.File, configuration.Encoding, configuration.ReadStreamBufferSize, logger,
+         ? new LongFileReader(validInput.File, configuration.ReadStreamBufferSize, logger,
             cancellationToken)
-         : new LongFileReaderKeepStream(validInput.File, configuration.Encoding, configuration.ReadStreamBufferSize,
+         : new LongFileReaderKeepStream(validInput.File, configuration.ReadStreamBufferSize,
             logger,
             cancellationToken);
-      IOneTimeLinesWriter writer = LinesWriter.CreateForOnceWriting(configuration.Encoding.GetBytes("1").Length,
+      IOneTimeLinesWriter writer = LinesWriter.CreateForOnceWriting(configuration.MaxLineLength,
          configuration.ReadStreamBufferSize);
 
       SortingPhaseRunner sortingPhase = new SortingPhaseRunner(bytesReader, writer);
@@ -122,8 +122,7 @@ internal class FileSortingService : IHostedService
    private static async Task<Result> MergingPhaseAsync(IConfig configuration, CancellationToken cancellationToken)
    {
       await using ISeveralTimesLinesWriter resultWriter = LinesWriter.CreateForMultipleWriting(configuration.Output,
-         configuration.Encoding.GetBytes(".").Length,
-         configuration.WriteStreamBufferSize);
+         configuration.MaxLineLength, configuration.WriteStreamBufferSize);
 
       Console.WriteLine("The merge phase runs asynchronously.");
       Stopwatch sw = new Stopwatch();
@@ -139,8 +138,7 @@ internal class FileSortingService : IHostedService
    private static Result MergingPhase(IConfig configuration)
    {
       using ISeveralTimesLinesWriter resultWriter = LinesWriter.CreateForMultipleWriting(configuration.Output,
-         configuration.Encoding.GetBytes(".").Length,
-         configuration.WriteStreamBufferSize);
+         configuration.MaxLineLength, configuration.WriteStreamBufferSize);
 
       Console.WriteLine("The merge phase is executed in synchronous mode.");
       Stopwatch sw = new Stopwatch();

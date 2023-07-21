@@ -1,5 +1,6 @@
 ﻿using Infrastructure.Parameters;
 using SortingEngine.Comparators;
+using SortingEngine.DataStructures;
 using SortingEngine.Entities;
 using SortingEngine.RowData;
 using SortingEngine.RuntimeConfiguration;
@@ -75,12 +76,15 @@ public sealed class StreamsMergeExecutorAsync
    private DataChunkManagerAsync[] CreateDataChunkManagers()
    {
       DataChunkManagerAsync[] managers = new DataChunkManagerAsync[_files.Length];
+      var eolBytes = _config.EolBytes;
+      var delimiterBytes = _config.DelimiterBytes;
+      LinesExtractor extractor = new LinesExtractor(eolBytes, delimiterBytes);
       for (int i = 0; i < _files.Length; i++)
       {
          int from = i * _config.MergeBufferLength;
          int to = (i + 1) * _config.MergeBufferLength;
-         managers[i] = new DataChunkManagerAsync(_files[i], _inputBuffer[from..to], _config.Encoding,
-            _config.RecordsBufferLength, from);
+         managers[i] = new DataChunkManagerAsync(_files[i], _inputBuffer[from..to], from, extractor,
+            () => new ExpandingStorage<Line>(_config.RecordsBufferLength), _config.MaxLineLength, _cancellationToken);
       }
 
       return managers;

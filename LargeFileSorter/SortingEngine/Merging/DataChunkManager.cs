@@ -1,5 +1,5 @@
 ﻿using System.Buffers;
-using System.Text;
+using Infrastructure.Parameters;
 using SortingEngine.DataStructures;
 using SortingEngine.Entities;
 using SortingEngine.RowData;
@@ -19,17 +19,16 @@ internal class DataChunkManager : IAsyncDisposable
    private readonly LinesExtractor _extractor;
    private int _loadedLines;
 
-   public DataChunkManager(string file, Memory<byte> rowStorage, Encoding encoding, int bufferSize, int offset)
+   public DataChunkManager(string file, Memory<byte> rowStorage, int offset, LinesExtractor extractor,
+      Func<ExpandingStorage<Line>> recordsStorageProvider, int maxLineLength)
    {
       _rowStorage = rowStorage;
       _offset = offset;
-      _recordsStorage = new ExpandingStorage<Line>(bufferSize);
+      _recordsStorage = recordsStorageProvider();
+      //todo
       _dataSource = File.OpenRead(file);
-      var eolBytes = encoding.GetBytes(Environment.NewLine);
-      var delimiterBytes = encoding.GetBytes(Constants.Delimiter);
-      _remindedBytesCapacity = Constants.MaxTextLength + eolBytes.Length + delimiterBytes.Length;
-      _extractor =
-         new LinesExtractor(eolBytes, delimiterBytes);
+      _remindedBytesCapacity = maxLineLength;
+      _extractor = Guard.NotNull(extractor);
    }
 
    public (ExtractionResult, bool, Line) TryGetNextLine()

@@ -1,6 +1,4 @@
-﻿using System.Text;
-
-namespace SortingEngine.RuntimeConfiguration;
+﻿namespace SortingEngine.RuntimeConfiguration;
 
 //in this case it was a bad idea
 public interface IConfigBuilder
@@ -13,8 +11,10 @@ public interface IConfigBuilder
    IConfigBuilder UseReadStreamBufferSize(int readStreamBufferSize);
    IConfigBuilder UseWriteStreamBufferSize(int writeStreamBufferSize);
    IConfigBuilder SortingPhaseConcurrency(int sortingPhaseConcurrency);
-   IConfigBuilder UseEncoding(Encoding encoding);
    IConfigBuilder UseOutputPath(string outputPath);
+   IConfigBuilder UseDelimiter(byte[] delimiterBytes);
+   IConfigBuilder UseEolBytes(byte[] eolBytes);
+   IConfigBuilder UseMaxLineLength(int maxLineLength);
    IConfigBuilder UseOneWay(bool useOneStepSorting);
    IConfigBuilder UseKeepReadStreamOpen(bool keepReadStreamOpen);
 }

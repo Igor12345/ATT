@@ -1,5 +1,4 @@
-﻿using System.Text;
-using Infrastructure.Concurrency;
+﻿using Infrastructure.Concurrency;
 using Infrastructure.Parameters;
 using LogsHub;
 using SortingEngine;
@@ -14,17 +13,15 @@ internal class LongFileReader : IBytesProducer
    private readonly ILogger _logger;
    private readonly CancellationToken _cancellationToken;
    private readonly string _filePath;
-   private readonly Encoding _encoding;
    private long _lastPosition;
    private int _lastProcessedPackage;
    private readonly AsyncLock _lock;
 
-   public LongFileReader(string fullFileName, Encoding encoding, int bufferSize, ILogger logger, CancellationToken cancellationToken)
+   public LongFileReader(string fullFileName, int bufferSize, ILogger logger, CancellationToken cancellationToken)
    {
       _bufferSize = Guard.Positive(bufferSize);
       _lock = new AsyncLock();
       _filePath = Guard.FileExist(fullFileName);
-      _encoding = Guard.NotNull(encoding);
       _logger = Guard.NotNull(logger);
       _cancellationToken = Guard.NotNull(cancellationToken);
    }

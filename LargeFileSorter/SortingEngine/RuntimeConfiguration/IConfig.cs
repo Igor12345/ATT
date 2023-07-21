@@ -14,7 +14,11 @@ namespace SortingEngine.RuntimeConfiguration
       string Output { get; }
       string TemporaryFolder { get; }
       string InputFile { get; }
-      Encoding Encoding { get; }
+      // Encoding Encoding { get; }
+      int MaxLineLength { get; }
+      //todo freeze
+      byte[] DelimiterBytes { get; }
+      byte[] EolBytes { get; }
       bool UseOneWay { get; }
       bool KeepReadStreamOpen { get; }
    }

@@ -1,7 +1,6 @@
 ﻿using System.Buffers;
 using Infrastructure.ByteOperations;
 using Infrastructure.Parameters;
-using LogsHub;
 using SortingEngine;
 using SortingEngine.Entities;
 using SortingEngine.RowData;
@@ -12,7 +11,8 @@ namespace ConsoleWrapper.IOProcessing;
 public class LinesWriter : IOneTimeLinesWriter, ISeveralTimesLinesWriter
 {
    private readonly int _bufferSize;
-   private readonly int _charLength;
+   // private readonly int _charLength;
+   private readonly int _maxLineLength;
    private readonly string? _filePath;
    private FileStream? _fileStream;
    private FileStream? _syncFileStream;
@@ -22,21 +22,21 @@ public class LinesWriter : IOneTimeLinesWriter, ISeveralTimesLinesWriter
       _filePath = Guard.NotNullOrEmpty(filePath);
    }
 
-   private LinesWriter(int charLength, int bufferSize)
+   private LinesWriter(int maxLineLength, int bufferSize)
    {
-      _charLength = Guard.Positive(charLength);
+      _maxLineLength = Guard.Positive(maxLineLength);
       _bufferSize = Guard.Positive(bufferSize);
    }
 
-   public static IOneTimeLinesWriter CreateForOnceWriting(int charLength, int bufferSize)
+   public static IOneTimeLinesWriter CreateForOnceWriting(int maxLineLength, int bufferSize)
    {
-      LinesWriter instance = new LinesWriter(charLength, bufferSize);
+      LinesWriter instance = new LinesWriter(maxLineLength, bufferSize);
       return instance;
    }
 
-   public static ISeveralTimesLinesWriter CreateForMultipleWriting(string filePath, int charLength, int bufferSize)
+   public static ISeveralTimesLinesWriter CreateForMultipleWriting(string filePath, int maxLineLength, int bufferSize)
    {
-      LinesWriter instance = new LinesWriter(filePath, charLength, bufferSize);
+      LinesWriter instance = new LinesWriter(filePath, maxLineLength, bufferSize);
       return instance;
    }
 
@@ -45,7 +45,7 @@ public class LinesWriter : IOneTimeLinesWriter, ISeveralTimesLinesWriter
    {
       _fileStream ??= new FileStream(_filePath!, FileMode.Create, FileAccess.Write, FileShare.None,
          bufferSize: _bufferSize, true);
-      IMemoryOwner<byte> buffer = MemoryPool<byte>.Shared.Rent(Constants.MaxLineLengthUtf8 * _charLength);
+      IMemoryOwner<byte> buffer = MemoryPool<byte>.Shared.Rent(_maxLineLength);
       try
       {
          for (int i = 0; i < linesNumber; i++)
@@ -77,10 +77,9 @@ public class LinesWriter : IOneTimeLinesWriter, ISeveralTimesLinesWriter
       byte[]? rented = null;
       try
       {
-         int requiredLength = Constants.MaxLineLengthUtf8 * _charLength;
-         Span<byte> buffer = requiredLength <= Constants.MaxStackLimit
-            ? stackalloc byte[requiredLength]
-            : rented = ArrayPool<byte>.Shared.Rent(requiredLength);
+         Span<byte> buffer = _maxLineLength <= Constants.MaxStackLimit
+            ? stackalloc byte[_maxLineLength]
+            : rented = ArrayPool<byte>.Shared.Rent(_maxLineLength);
          
          //todo increase output buffer size? (benchmark!)
          for (int i = 0; i < linesNumber; i++)
