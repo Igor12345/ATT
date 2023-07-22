@@ -118,3 +118,64 @@ public class LinesExtractorTests
         return new LinesExtractor(encoding.GetBytes(Environment.NewLine), encoding.GetBytes(TestConstants.Delimiter));
     }
 }
+
+public class LineParserTests
+{
+    [Theory]
+    [InlineData(". 4", "123. 456")]
+    public void ShouldBuildCorrectPrefixFunction(string pattern, string text)
+    {
+        int index = KmpAlgorithm(pattern, text);
+
+        var g = index;
+        var r = pattern[1];
+    }
+
+    private static int KmpAlgorithm(string pattern, string text)
+    {
+        int[] prefix = BuildPrefix(pattern);
+        int index;
+        int q = 0;
+
+        for (int i = 0; i < text.Length; i++)
+        {
+            while (q > 0 && pattern[q + 1] != text[i])
+            {
+                q = prefix[q];
+            }
+
+            if (pattern[q + 1] == text[i])
+                q++;
+            if (q == pattern.Length)
+                index = i - pattern.Length;
+        }
+
+        index = -1;
+        return index;
+    }
+
+    private static int[] BuildPrefix(string pattern)
+    {
+        int[] prefix = new int[pattern.Length];
+        prefix[0] = 0;
+        int index = 0;
+
+        for (int i = 1; i < pattern.Length; i++)
+        {
+            int k = prefix[i - 1];
+            while (pattern[k] != pattern[i] && k > 0)
+            {
+                k = prefix[k - 1];
+            }
+            if (pattern[k] == pattern[i])
+            {
+                prefix[i] = k + 1;
+            }
+            else
+            {
+                prefix[i] = 0;
+            }
+        }
+        return prefix;
+    }
+}

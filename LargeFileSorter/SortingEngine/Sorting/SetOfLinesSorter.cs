@@ -25,7 +25,7 @@ public class SetOfLinesSorter
             $"package {package.Id}, lines {package.LinesNumber}, is last {package.IsLastPackage}");
         //todo remove
         // ReadOnlyMemory<byte> inputBytes = package.RowData.AsMemory()[..package.OccupiedLength];
-        Line[] sorted = SortRecords(package.LineData, package.LinesNumber, package.ParsedRecords);
+        Line[] sorted = SortLines(package.LineData, package.LinesNumber, package.ParsedRecords);
 
         await Log(
             $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss fff}) Sorted lines: {package.LinesNumber}) " +
@@ -33,7 +33,7 @@ public class SetOfLinesSorter
         return new AfterSortingPhasePackage(package, sorted);
     }
 
-    private Line[] SortRecords(ReadOnlyMemory<byte> inputBuffer, int linesNumber,
+    private Line[] SortLines(ReadOnlyMemory<byte> inputBuffer, int linesNumber,
         ExpandingStorage<Line> recordsStorage)
     {
         //In the case of such a highly specific line comparison algorithm,

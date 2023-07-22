@@ -19,6 +19,10 @@ public sealed class LinesSorter : ILinesSorter
       _source = source;
    }
 
+   // use GetChars(ReadOnlySpan<Byte>, Span<Char>) if necessary
+   // https://learn.microsoft.com/en-us/dotnet/api/system.text.utf8encoding.getchars?view=net-7.0#system-text-utf8encoding-getchars(system-readonlyspan((system-byte))-system-span((system-char)))
+   
+   
    //todo use MemoryOwner
    public Line[] Sort(ExpandingStorage<Line> recordsPool, int linesNumber)
    {
