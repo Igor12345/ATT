@@ -59,19 +59,25 @@ namespace SortingEngine.RowData
          Span<char> numberChars = stackalloc char[Constants.MaxNumberLength];
          for (int i = 0; i < lineSpan.Length - 1; i++)
          {
+            //todo support delimiter any length
             if (lineSpan[i] == _lineDelimiter[0] && lineSpan[i + 1] == _lineDelimiter[1])
             {
                if (i >= numberChars.Length)
                   break;
                for (int j = 0; j < i; j++)
                {
-                  //todo only utf-8 encoding
+                  //todo only utf-8 encoding (codes of numbers < 128)
                   numberChars[j] = (char)lineSpan[j];
                }
 
                bool success = ulong.TryParse(numberChars, out var number);
                if (!success)
                   return Result<Line>.Error($"wrong line: {ByteToStringConverter.Convert(lineSpan)}");
+
+               if (number == 7800237479045902454)
+               {
+                  var l = ByteToStringConverter.Convert(lineSpan);
+               }
                
                //text will include ". " and eol
                return Result<Line>.Ok(new Line(number, startIndex + i, startIndex + lineSpan.Length));

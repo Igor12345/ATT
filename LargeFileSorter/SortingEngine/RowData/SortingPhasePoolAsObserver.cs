@@ -111,6 +111,10 @@ public class SortingPhasePoolAsObserver : IDisposable
         CancellationToken token)
     {
         ChannelReader<ReadyForExtractionPackage> reader = _packagesQueue.Reader;
+        //todo
+        Console.WriteLine(
+            $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss zzz}) SortingPhasePoolAsObserver entering EndlessReading");
+
 
         await Task.Factory.StartNew<Task<bool>>(static async (state) =>
             {
@@ -120,18 +124,33 @@ public class SortingPhasePoolAsObserver : IDisposable
                     (Tuple<IAsyncObserver<ReadyForExtractionPackage>, ChannelReader<ReadyForExtractionPackage>, CancellationToken>)
                     checkedState;
 
+                //todo
+                Console.WriteLine(
+                    $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss zzz}) SortingPhasePoolAsObserver before endless loop");
                 while (await reader.WaitToReadAsync(token))
                 {
+                    //todo
+                    Console.WriteLine(
+                        $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss zzz}) SortingPhasePoolAsObserver reader reading a package");
                     ReadyForExtractionPackage package = await reader.ReadAsync(token);
+                    
+                    //todo
+                    Console.WriteLine(
+                        $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss zzz}) SortingPhasePoolAsObserver " +
+                        $"reader read package {package.Id} with {package.WrittenBytesLength} bytes, is last: {package.IsLastPackage}, sending as ReadyForExtractionPackage");
+                    
                     if (package.IsLastPackage)
                     {
                         await observer.OnCompletedAsync();
                         break;
                     }
-
+                    
                     await observer.OnNextAsync(package);
                 }
 
+                //todo
+                Console.WriteLine(
+                    $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss zzz}) SortingPhasePoolAsObserver AFTER endless loop !!!!!");
                 return true;
             },
             new Tuple<IAsyncObserver<ReadyForExtractionPackage>, ChannelReader<ReadyForExtractionPackage>, CancellationToken>(
