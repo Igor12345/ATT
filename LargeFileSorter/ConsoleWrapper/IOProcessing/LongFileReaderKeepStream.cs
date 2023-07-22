@@ -15,6 +15,7 @@ internal class LongFileReaderKeepStream : IBytesProducer
    private FileStream _stream = null!;
    private int _lastProcessedPackage;
    private readonly AsyncLock _lock;
+   private object _lockObj = new();
    private bool _useAsync;
 
    private LongFileReaderKeepStream(int offset, ILogger logger,
@@ -50,6 +51,24 @@ internal class LongFileReaderKeepStream : IBytesProducer
          bufferSize: bufferSize, useAsync);
    }
 
+   public async Task<ReadingResult> ProvideBytesAsync(Memory<byte> buffer)
+   {
+      using (AsyncLock.Releaser _ = await _lock.LockAsync())
+      {
+         int length = await _stream.ReadAsync(buffer, _cancellationToken);
+         return ReadingResult.Ok(length, length);
+      }
+   }
+
+   public ReadingResult ProvideBytes(Memory<byte> buffer)
+   {
+      lock (_lockObj)
+      { 
+         int length = _stream.Read(buffer.Span);
+         return ReadingResult.Ok(length, length);
+      }
+   }
+
    private async Task<ReadingResult> ReadBytesAsync(byte[] buffer, int offset)
    {
       //todo either make private or use another lock
@@ -60,7 +79,7 @@ internal class LongFileReaderKeepStream : IBytesProducer
       return ReadingResult.Ok(length + offset, length);
    }
 
-   public ReadingResult ReadBytes(Span<byte> buffer)
+   private ReadingResult ReadBytes(Span<byte> buffer)
    {
       int length = _stream.Read(buffer);
       return ReadingResult.Ok(length, length);

@@ -26,6 +26,16 @@ internal class LongFileReader : IBytesProducer
       _cancellationToken = Guard.NotNull(cancellationToken);
    }
 
+   public Task<ReadingResult> ProvideBytesAsync(Memory<byte> buffer)
+   {
+      throw new NotImplementedException();
+   }
+
+   public ReadingResult ProvideBytes(Memory<byte> buffer)
+   {
+      throw new NotImplementedException();
+   }
+
    private async Task<ReadingResult> ReadBytesAsync(byte[] buffer, int offset,
       CancellationToken cancellationToken)
    {
