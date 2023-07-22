@@ -2,6 +2,7 @@
 //and the merge phase will slow down by almost 30%.
 
 // #define MERGE_ASYNC
+#define READ_ASYNC
 
 using System.Diagnostics;
 using System.Runtime;
@@ -106,7 +107,7 @@ internal class FileSortingService : IHostedService
       IBytesProducer bytesReader = !configuration.KeepReadStreamOpen
          ? new LongFileReader(validInput.File, configuration.ReadStreamBufferSize, logger,
             cancellationToken)
-#if MERGE_ASYNC
+#if READ_ASYNC
          : LongFileReaderKeepStream.CreateForAsync(validInput.File, configuration.ReadStreamBufferSize,
             logger, cancellationToken);
 #else

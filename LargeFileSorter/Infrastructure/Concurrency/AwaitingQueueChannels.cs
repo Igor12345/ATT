@@ -15,7 +15,7 @@ public class AwaitingQueueChannels<T>
         _queue = Channel.CreateBounded<T>(capacity);
     }
 
-    public ValueTask Enqueue(T item)
+    public ValueTask EnqueueAsync(T item)
     {
         Console.WriteLine($"--> ({Thread.CurrentThread.ManagedThreadId}) Enqueue item");
         return _queue.Writer.WriteAsync(item, _token);

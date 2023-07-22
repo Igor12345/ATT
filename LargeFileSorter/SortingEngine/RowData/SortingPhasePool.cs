@@ -1,4 +1,7 @@
-﻿using System.Collections.Concurrent;
+﻿// #define READ_ASYNC 
+//todo deadlock!!!
+
+using System.Collections.Concurrent;
 using Infrastructure.Concurrency;
 using Infrastructure.Parameters;
 using SortingEngine.DataStructures;
@@ -85,7 +88,11 @@ public class SortingPhasePool : IDisposable
                             $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss fff}) SortingPhasePool after lock, waiting for bytes.  circle: [{index}]");
                         
                         //todo try async???
+#if READ_ASYNC
+                        ReadingResult readingResult = await pool._bytesProducer.ProvideBytesAsync(buffer.AsMemory(pool._maxLineLength..)).ConfigureAwait(false);
+#else
                         ReadingResult readingResult = pool._bytesProducer.ProvideBytes(buffer.AsMemory(pool._maxLineLength..));
+#endif
                         //todo process error
 
                         //todo
@@ -94,7 +101,7 @@ public class SortingPhasePool : IDisposable
                             $"it contains {readingResult.Length} bytes. Putting in queue. Result: {readingResult.Success},  circle: [{index}]");
 
                         OrderedBuffer nextBuffer = new OrderedBuffer(index++, buffer, readingResult.Length);
-                        await pool._filledBuffers.Enqueue(nextBuffer);
+                        await pool._filledBuffers.EnqueueAsync(nextBuffer).ConfigureAwait(false);
                         
                         //todo
                         Console.WriteLine($"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss fff}) SortingPhasePool Inside Run loop Filled buffer added to queue index: {nextBuffer.Index},  circle: [{index}]");
@@ -133,7 +140,7 @@ public class SortingPhasePool : IDisposable
         Console.WriteLine(
             $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss fff}) SortingPhasePool TryAcquireNextFilledBufferAsync for " +
             $"index {lastIndex}, waiting for next filled buffer from queue");
-        OrderedBuffer nextBuffer = await _filledBuffers.DequeueAsync();
+        OrderedBuffer nextBuffer = await _filledBuffers.DequeueAsync().ConfigureAwait(false);
         
         //todo
         Console.WriteLine(

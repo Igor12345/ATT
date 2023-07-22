@@ -2,7 +2,7 @@
 
 namespace Infrastructure.Concurrency;
 
-public class AwaitingQueue1<T>
+public class AwaitingQueue<T>
 {
     private readonly ConcurrentQueue<T> _queue = new();
     private readonly SemaphoreSlim _semaphore = new(0, 1);
