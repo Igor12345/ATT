@@ -21,14 +21,14 @@ public class SetOfLinesSorter
     {
         //todo
         Console.WriteLine(
-            $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss zzz}) SetOfLinesSorter ProcessPackageAsync, " +
+            $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss fff}) SetOfLinesSorter ProcessPackageAsync, " +
             $"package {package.Id}, lines {package.LinesNumber}, is last {package.IsLastPackage}");
         //todo remove
         // ReadOnlyMemory<byte> inputBytes = package.RowData.AsMemory()[..package.OccupiedLength];
         Line[] sorted = SortRecords(package.LineData, package.LinesNumber, package.ParsedRecords);
 
         await Log(
-            $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss zzz}) Sorted lines: {package.LinesNumber}) " +
+            $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss fff}) Sorted lines: {package.LinesNumber}) " +
             $"for the package: {package.Id}, sending AfterSortingPhasePackage");
         return new AfterSortingPhasePackage(package, sorted);
     }

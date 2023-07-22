@@ -44,7 +44,7 @@ internal class IntermediateResultsDirector
    {
       //todo
       Console.WriteLine(
-         $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss zzz}) IntermediateResultsDirector WriteRecords, " +
+         $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss fff}) IntermediateResultsDirector WriteRecords, " +
          $"package {package.Id}, lines {package.LinesNumber}, is last {package.IsLastPackage}");
       
       if (package.LinesNumber == 0)
@@ -71,7 +71,7 @@ internal class IntermediateResultsDirector
    {
       //todo
       Console.WriteLine(
-         $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss zzz}) IntermediateResultsDirector ProcessPackageAsync, " +
+         $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss fff}) IntermediateResultsDirector ProcessPackageAsync, " +
          $"package {package.Id}, lines {package.LinesNumber}, is last {package.IsLastPackage}");
 
       Result result = WriteRecords(package);
@@ -83,7 +83,7 @@ internal class IntermediateResultsDirector
 
       //todo
       Console.WriteLine(
-         $" --->  ({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss zzz}) IntermediateResultsDirector ProcessPackageAsync, " +
+         $" --->  ({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss fff}) IntermediateResultsDirector ProcessPackageAsync, " +
          $"sending _sortedLinesSaved {package.Id}");
 
       AfterSavingBufferPackage nextPackage = new AfterSavingBufferPackage(package);
@@ -95,14 +95,14 @@ internal class IntermediateResultsDirector
       {
          //todo
          Console.WriteLine(
-            $" --->  ({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss zzz}) IntermediateResultsDirector ProcessPackageAsync, " +
+            $" --->  ({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss fff}) IntermediateResultsDirector ProcessPackageAsync, " +
             $" !!! allProcessed {package.Id} !!! <----");
          await _sortedLinesSavedSubject.OnCompletedAsync();
       }
 
 //todo
       Console.WriteLine(
-         $" --->  ({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss zzz}) IntermediateResultsDirector ProcessPackageAsync, " +
+         $" --->  ({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss fff}) IntermediateResultsDirector ProcessPackageAsync, " +
          $"return AfterSortingPhasePackage {package.Id}");
       return package;
    }

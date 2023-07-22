@@ -73,11 +73,6 @@ namespace SortingEngine.RowData
                bool success = ulong.TryParse(numberChars, out var number);
                if (!success)
                   return Result<Line>.Error($"wrong line: {ByteToStringConverter.Convert(lineSpan)}");
-
-               if (number == 7800237479045902454)
-               {
-                  var l = ByteToStringConverter.Convert(lineSpan);
-               }
                
                //text will include ". " and eol
                return Result<Line>.Ok(new Line(number, startIndex + i, startIndex + lineSpan.Length));
