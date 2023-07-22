@@ -20,7 +20,7 @@ public class SortingPhasePoolTests
     {
         int minBytesBufferLength = 200;
         int minLinesBufferLength = 200;
-        ReadingResult result = ReadingResult.Ok(23, 23);
+        ReadingResult result = ReadingResult.Ok(23);
         Mock<IBytesProducer> bytesProviderMock = new Mock<IBytesProducer>();
         bytesProviderMock.Setup(p => p.ProvideBytes(It.IsAny<Memory<byte>>())).Returns(result);
         FilledBufferPackage first;
@@ -35,7 +35,7 @@ public class SortingPhasePoolTests
 
             bytesProviderMock.Verify(p => p.ProvideBytes(It.IsAny<Memory<byte>>()), Times.Exactly(2));
             Assert.NotNull(first);
-            Assert.Equal(result.Size, first.WrittenBytesLength);
+            Assert.Equal(result.Length, first.WrittenBytesLength);
         }
     }
 
@@ -44,7 +44,7 @@ public class SortingPhasePoolTests
     {
         int minBytesBufferLength = 200;
         int minLinesBufferLength = 200;
-        ReadingResult result = ReadingResult.Ok(23, 23);
+        ReadingResult result = ReadingResult.Ok(23);
         Mock<IBytesProducer> bytesProviderMock = new Mock<IBytesProducer>();
         
         //TODO  !!! try with ProvideBytesAsync to handle the case with last, empty package
@@ -118,7 +118,7 @@ public class SortingPhasePoolTests
         int minBytesBufferLength = 200;
         int minLinesBufferLength = 200;
 
-        ReadingResult result = ReadingResult.Ok(23, 23);
+        ReadingResult result = ReadingResult.Ok(23);
         Mock<IBytesProducer> bytesProviderMock = new Mock<IBytesProducer>();
         bytesProviderMock.Setup(p => p.ProvideBytes(It.IsAny<Memory<byte>>())).Returns(result);
         FilledBufferPackage third;
@@ -144,7 +144,7 @@ public class SortingPhasePoolTests
             third = await askingNextPackage;
 
             bytesProviderMock.Verify(p => p.ProvideBytes(It.IsAny<Memory<byte>>()), Times.Exactly(3));
-            Assert.Equal(result.Size, third.WrittenBytesLength);
+            Assert.Equal(result.Length, third.WrittenBytesLength);
         }
     }
 }

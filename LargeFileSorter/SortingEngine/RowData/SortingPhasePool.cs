@@ -84,20 +84,21 @@ public class SortingPhasePool : IDisposable
                         Console.WriteLine(
                             $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss fff}) SortingPhasePool after lock, waiting for bytes.  circle: [{index}]");
                         
+                        //todo try async???
                         ReadingResult readingResult = pool._bytesProducer.ProvideBytes(buffer.AsMemory(pool._maxLineLength..));
                         //todo process error
 
                         //todo
                         Console.WriteLine(
                             $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss fff}) SortingPhasePool The next buffer hes been read, " +
-                            $"it contains {readingResult.ActuallyRead} bytes. Putting in queue. Result: {readingResult.Success},  circle: [{index}]");
+                            $"it contains {readingResult.Length} bytes. Putting in queue. Result: {readingResult.Success},  circle: [{index}]");
 
-                        OrderedBuffer nextBuffer = new OrderedBuffer(index++, buffer, readingResult.ActuallyRead);
+                        OrderedBuffer nextBuffer = new OrderedBuffer(index++, buffer, readingResult.Length);
                         await pool._filledBuffers.Enqueue(nextBuffer);
                         
                         //todo
                         Console.WriteLine($"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss fff}) SortingPhasePool Inside Run loop Filled buffer added to queue index: {nextBuffer.Index},  circle: [{index}]");
-                        if (readingResult.ActuallyRead == 0)
+                        if (readingResult.Length == 0)
                         {
                             pool._filledBuffers.Complete();
                             //todo handle stop!!!

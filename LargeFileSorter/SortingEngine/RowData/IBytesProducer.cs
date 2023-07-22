@@ -1,6 +1,4 @@
-﻿using SortingEngine.RowData;
-
-namespace SortingEngine;
+﻿namespace SortingEngine.RowData;
 
 public interface IBytesProducer : IAsyncDisposable, IDisposable
 {
