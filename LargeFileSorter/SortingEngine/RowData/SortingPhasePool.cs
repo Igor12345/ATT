@@ -8,8 +8,8 @@ namespace SortingEngine.RowData;
 
 public class SortingPhasePool : IDisposable
 {
-//todo move?
-    private readonly record struct OrderedBuffer(int Index, byte[] Buffer, int WrittenBytes);
+    private readonly int _maxLineLength;
+
 
     private readonly SemaphoreSlim _semaphore;
     private readonly IBytesProducer _bytesProducer;
@@ -30,13 +30,14 @@ public class SortingPhasePool : IDisposable
     private CancellationTokenSource? _cts;
 
 
-    public SortingPhasePool(int numberOfBuffers, int inputBuffersLength, int recordChunksLength,
+    public SortingPhasePool(int numberOfBuffers, int inputBuffersLength, int recordChunksLength, int maxLineLength,
         IBytesProducer bytesProducer)
     {
         _bytesProducer = Guard.NotNull(bytesProducer);
         _lock = new AsyncLock();
         _readLock = new SpinLock();
         _numberOfBuffers = Guard.Positive(numberOfBuffers);
+        _maxLineLength = Guard.Positive(maxLineLength);
         _inputBuffersLength = Math.Min(Guard.Positive(inputBuffersLength), Array.MaxLength);
         _recordChunksLength = Math.Min(Guard.Positive(recordChunksLength), Array.MaxLength);
         _emptyBuffers = new ConcurrentStack<byte[]>();
@@ -51,6 +52,9 @@ public class SortingPhasePool : IDisposable
 
     public void Run(CancellationToken cancellationToken)
     {
+        //todo
+        Console.WriteLine(
+            $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss zzz}) SortingPhasePool started");
         _filledBuffers = new AwaitingQueueChannels<OrderedBuffer>(_numberOfBuffers, cancellationToken);
         //todo
         Console.WriteLine($"({Thread.CurrentThread.ManagedThreadId}) Entering Pool.Run");
@@ -65,30 +69,37 @@ public class SortingPhasePool : IDisposable
                 do
                 {
                     //todo
-                    Console.WriteLine($"({Thread.CurrentThread.ManagedThreadId}) Inside Run loop");
+                    Console.WriteLine(
+                        $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss zzz}) SortingPhasePool inside loop, waiting for next empty buffer. circle: [{index}]");
                     byte[] buffer = await pool.TryRentNextEmptyBufferAsync(); //without .ConfigureAwait(false) either replace lock on asyncLock 
                     bool lockTaken = false;
                     try
                     {
+                        //todo
+                        Console.WriteLine(
+                            $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss zzz}) SortingPhasePool got empty buffer waiting for lock. circle: [{index}]");
                         pool._readLock.Enter(ref lockTaken);
                         
                         //todo
-                        Console.WriteLine($"({Thread.CurrentThread.ManagedThreadId}) Inside Run loop, after lock for {index}, waiting for bytes");
+                        Console.WriteLine(
+                            $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss zzz}) SortingPhasePool after lock, waiting for bytes.  circle: [{index}]");
                         
-                        ReadingResult readingResult = pool._bytesProducer.ProvideBytes(buffer);
+                        ReadingResult readingResult = pool._bytesProducer.ProvideBytes(buffer.AsMemory(pool._maxLineLength..));
                         //todo process error
 
                         //todo
                         Console.WriteLine(
-                            $"({Thread.CurrentThread.ManagedThreadId}) The next buffer hes been read, it contains {readingResult.ActuallyRead} bytes. Result: {readingResult.Success}, ");
+                            $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss zzz}) SortingPhasePool The next buffer hes been read, " +
+                            $"it contains {readingResult.ActuallyRead} bytes. Putting in queue. Result: {readingResult.Success},  circle: [{index}]");
 
                         OrderedBuffer nextBuffer = new OrderedBuffer(index++, buffer, readingResult.ActuallyRead);
                         await pool._filledBuffers.Enqueue(nextBuffer);
                         
                         //todo
-                        Console.WriteLine($"({Thread.CurrentThread.ManagedThreadId}) Inside Run loop Filled buffer added to queue index: {nextBuffer.Index}");
+                        Console.WriteLine($"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss zzz}) SortingPhasePool Inside Run loop Filled buffer added to queue index: {nextBuffer.Index},  circle: [{index}]");
                         if (readingResult.ActuallyRead == 0)
                         {
+                            pool._filledBuffers.Complete();
                             //todo handle stop!!!
                             break;
                         }
@@ -111,7 +122,7 @@ public class SortingPhasePool : IDisposable
         
         //todo
         Console.WriteLine(
-            $"({Thread.CurrentThread.ManagedThreadId}) Entering TryAcquireNextFilledBufferAsync index: {lastIndex}");
+            $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss zzz}) SortingPhasePool TryAcquireNextFilledBufferAsync for index {lastIndex}, waiting for lock");
 
         using var _ = await _lock.LockAsync();
         //todo use async lock
@@ -119,12 +130,13 @@ public class SortingPhasePool : IDisposable
 
         //todo
         Console.WriteLine(
-            $"({Thread.CurrentThread.ManagedThreadId}) TryAcquireNextFilledBufferAsync waiting for nextBuffer index: {lastIndex}");
+            $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss zzz}) SortingPhasePool TryAcquireNextFilledBufferAsync for " +
+            $"index {lastIndex}, waiting for next filled buffer from queue");
         OrderedBuffer nextBuffer = await _filledBuffers.DequeueAsync();
         
         //todo
         Console.WriteLine(
-            $"({Thread.CurrentThread.ManagedThreadId}) TryAcquireNextFilledBufferAsync nextBuffer received from queue, index: {lastIndex}");
+            $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss zzz}) SortingPhasePool TryAcquireNextFilledBufferAsync next Buffer received from queue, index: {lastIndex}");
         
         if (nextBuffer.Index != lastIndex + 1)
         {
@@ -136,10 +148,9 @@ public class SortingPhasePool : IDisposable
 
         //todo
         Console.WriteLine(
-            $"({Thread.CurrentThread.ManagedThreadId}) TryAcquireNextFilledBufferAsync nextBuffer acquired, return index: {lastIndex} - {nextBuffer.WrittenBytes}");
-        //todo return another entity, last parameter is useful
-        return new FilledBufferPackage(nextBuffer.Buffer, linesStorage, nextBuffer.Index,
-            nextBuffer.WrittenBytes == 0, nextBuffer.WrittenBytes);
+            $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss zzz}) SortingPhasePool TryAcquireNextFilledBufferAsync nextBuffer acquired, return index: {lastIndex} - {nextBuffer.WrittenBytes}");
+        
+        return new FilledBufferPackage(nextBuffer, nextBuffer.WrittenBytes, linesStorage);
     }
 
     public void ReleaseBuffer(ExpandingStorage<Line> expandingStorage)
@@ -149,29 +160,28 @@ public class SortingPhasePool : IDisposable
 
     public void ReuseBuffer(byte[] buffer)
     {
-        
         //todo
         Console.WriteLine(
-            $"({Thread.CurrentThread.ManagedThreadId}) Entering ReuseBuffer, _emptyBuffers: {_emptyBuffers.Count} ");
-        
+            $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss zzz}) SortingPhasePool ReuseBuffer ");
+
         _emptyBuffers.Push(buffer);
         _semaphore.Release();
         
         //todo
         Console.WriteLine(
-            $"({Thread.CurrentThread.ManagedThreadId}) ReuseBuffer, semaphore.Released _emptyBuffers: {_emptyBuffers.Count} ");
+            $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss zzz}) SortingPhasePool ReuseBuffer, semaphore.Released _emptyBuffers: {_emptyBuffers.Count} ");
     }
 
     private async Task<byte[]> TryRentNextEmptyBufferAsync()
     {
         //todo
         Console.WriteLine(
-            $"({Thread.CurrentThread.ManagedThreadId}) Entering TryRentNextEmptyBufferAsync, waiting for semaphore ");
+            $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss zzz}) SortingPhasePool Entering TryRentNextEmptyBufferAsync, waiting for semaphore ");
         await _semaphore.WaitAsync();
         
         //todo
         Console.WriteLine(
-            $"({Thread.CurrentThread.ManagedThreadId}) Entering TryRentNextEmptyBufferAsync, semaphore passed");
+            $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss zzz}) SortingPhasePool TryRentNextEmptyBufferAsync, semaphore passed");
         
         bool bufferExists = _emptyBuffers.TryPop(out byte[]? buffer);
         if (!bufferExists)
@@ -186,7 +196,8 @@ public class SortingPhasePool : IDisposable
 
         //todo
         Console.WriteLine(
-            $"({Thread.CurrentThread.ManagedThreadId}) TryRentNextEmptyBufferAsync, buffer received, existed in pool: {bufferExists}, created buffers {_createdBuffers}  ");
+            $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss zzz}) SortingPhasePool TryRentNextEmptyBufferAsync, buffer received, " +
+            $"existed in pool: {bufferExists}, created buffers {_createdBuffers}  ");
         return buffer!;
     }
 

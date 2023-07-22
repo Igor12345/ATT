@@ -103,7 +103,7 @@ internal class FileSortingService : IHostedService
    {
       SemaphoreSlim semaphore = new SemaphoreSlim(0, 1);
 
-      IBytesProducer bytesReader = configuration.KeepReadStreamOpen
+      IBytesProducer bytesReader = !configuration.KeepReadStreamOpen
          ? new LongFileReader(validInput.File, configuration.ReadStreamBufferSize, logger,
             cancellationToken)
 #if MERGE_ASYNC

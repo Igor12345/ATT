@@ -34,7 +34,7 @@ public class SortingPhaseRunner
 
         using SortingPhasePool sortingPhasePool = new SortingPhasePool(configuration.SortingPhaseConcurrency,
             configuration.InputBufferLength,
-            configuration.RecordsBufferLength, _bytesProducer);
+            configuration.RecordsBufferLength, configuration.MaxLineLength, _bytesProducer);
 
         using SortingPhasePoolAsObserver sortingPhasePoolAsObserver = new SortingPhasePoolAsObserver(sortingPhasePool, configuration.MaxLineLength);
 

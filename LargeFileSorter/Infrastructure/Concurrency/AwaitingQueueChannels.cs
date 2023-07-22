@@ -26,4 +26,9 @@ public class AwaitingQueueChannels<T>
         Console.WriteLine($"--> ({Thread.CurrentThread.ManagedThreadId}) Try to DequeueAsync item");
         return _queue.Reader.ReadAsync(_token);
     }
+
+    public void Complete()
+    {
+        _queue.Writer.Complete();
+    }
 }

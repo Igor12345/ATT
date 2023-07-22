@@ -35,5 +35,13 @@ namespace Infrastructure.Parameters
             throw new ArgumentOutOfRangeException(paramName, "Value should be greater than zero.");
          return value;
       }
+
+      public static T NotNegative<T>(T value, [CallerArgumentExpression("value")] string? paramName = null)
+         where T : INumberBase<T>, IComparable<T>
+      {
+         if (value.CompareTo(T.Zero) < 0)
+            throw new ArgumentOutOfRangeException(paramName, "Value should be greater or zero.");
+         return value;
+      }
    }
 }

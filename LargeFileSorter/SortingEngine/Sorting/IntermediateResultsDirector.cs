@@ -42,13 +42,18 @@ internal class IntermediateResultsDirector
 
    private Result WriteRecords(AfterSortingPhasePackage package)
    {
+      //todo
+      Console.WriteLine(
+         $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss zzz}) IntermediateResultsDirector WriteRecords, " +
+         $"package {package.Id}, lines {package.LinesNumber}, is last {package.IsLastPackage}");
+      
       if (package.LinesNumber == 0)
          return Result.Ok;
 
       string fileName = GetNextFileName();
       string filePath = (_configuration.UseOneWay ? _filePath : Path.Combine(_path, fileName))!;
 
-      return _linesWriter.WriteLines(filePath, package.SortedLines, package.LinesNumber, package.RowData);
+      return _linesWriter.WriteLines(filePath, package.SortedLines, package.LinesNumber, package.LineData);
    }
 
    private string GetNextFileName()
@@ -57,24 +62,48 @@ internal class IntermediateResultsDirector
       return currentNumber.ToString("D5");
    }
 
-   private readonly IAsyncSubject<AfterSortingPhasePackage> _sortedLinesSavedSubject =
-      new ConcurrentSimpleAsyncSubject<AfterSortingPhasePackage>();
+   private readonly IAsyncSubject<AfterSavingBufferPackage> _sortedLinesSavedSubject =
+      new ConcurrentSimpleAsyncSubject<AfterSavingBufferPackage>();
 
-   public IAsyncObservable<AfterSortingPhasePackage> SortedLinesSaved => _sortedLinesSavedSubject;
+   public IAsyncObservable<AfterSavingBufferPackage> SortedLinesSaved => _sortedLinesSavedSubject;
 
    public async ValueTask<AfterSortingPhasePackage> ProcessPackageAsync(AfterSortingPhasePackage package)
    {
+      //todo
+      Console.WriteLine(
+         $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss zzz}) IntermediateResultsDirector ProcessPackageAsync, " +
+         $"package {package.Id}, lines {package.LinesNumber}, is last {package.IsLastPackage}");
+
       Result result = WriteRecords(package);
       if (!result.Success)
+      {
          await _sortedLinesSavedSubject.OnErrorAsync(new InvalidOperationException(result.Message));
+         throw new InvalidOperationException(result.Message);
+      }
 
-      await _sortedLinesSavedSubject.OnNextAsync(package);
+      //todo
+      Console.WriteLine(
+         $" --->  ({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss zzz}) IntermediateResultsDirector ProcessPackageAsync, " +
+         $"sending _sortedLinesSaved {package.Id}");
+
+      AfterSavingBufferPackage nextPackage = new AfterSavingBufferPackage(package);
+      await _sortedLinesSavedSubject.OnNextAsync(nextPackage);
 
       bool allProcessed = CheckIfAllProcessed(package);
 
       if (allProcessed)
+      {
+         //todo
+         Console.WriteLine(
+            $" --->  ({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss zzz}) IntermediateResultsDirector ProcessPackageAsync, " +
+            $" !!! allProcessed {package.Id} !!! <----");
          await _sortedLinesSavedSubject.OnCompletedAsync();
+      }
 
+//todo
+      Console.WriteLine(
+         $" --->  ({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss zzz}) IntermediateResultsDirector ProcessPackageAsync, " +
+         $"return AfterSortingPhasePackage {package.Id}");
       return package;
    }
 

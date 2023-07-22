@@ -1,4 +1,5 @@
-﻿using Moq;
+﻿using System.Threading.Channels;
+using Moq;
 using SortingEngine;
 using SortingEngine.RowData;
 using Xunit.Abstractions;
@@ -11,7 +12,7 @@ public class SortingPhasePoolTests
 
     public SortingPhasePoolTests(ITestOutputHelper testOutputHelper)
     {
-
+        _testOutputHelper = testOutputHelper;
     }
 
     [Fact]
@@ -24,7 +25,7 @@ public class SortingPhasePoolTests
         bytesProviderMock.Setup(p => p.ProvideBytes(It.IsAny<Memory<byte>>())).Returns(result);
         FilledBufferPackage first;
         using (SortingPhasePool pool =
-               new SortingPhasePool(2, minBytesBufferLength, minLinesBufferLength, bytesProviderMock.Object))
+               new SortingPhasePool(2, minBytesBufferLength, minLinesBufferLength,100, bytesProviderMock.Object))
         {
             CancellationTokenSource cts = new CancellationTokenSource();
             pool.Run(cts.Token);
@@ -34,7 +35,7 @@ public class SortingPhasePoolTests
 
             bytesProviderMock.Verify(p => p.ProvideBytes(It.IsAny<Memory<byte>>()), Times.Exactly(2));
             Assert.NotNull(first);
-            Assert.Equal(result.Size, first.WrittenBytes);
+            Assert.Equal(result.Size, first.WrittenBytesLength);
         }
     }
 
@@ -54,7 +55,7 @@ public class SortingPhasePoolTests
         Task winner;
         Task timeLimit;
         using (SortingPhasePool pool =
-               new SortingPhasePool(2, minBytesBufferLength, minLinesBufferLength, bytesProviderMock.Object))
+               new SortingPhasePool(2, minBytesBufferLength, minLinesBufferLength, 100, bytesProviderMock.Object))
         {
             CancellationTokenSource cts = new CancellationTokenSource();
             pool.Run(cts.Token);
@@ -75,6 +76,43 @@ public class SortingPhasePoolTests
     }
 
     [Fact]
+    public async Task CheckChannels()
+    {
+        var channel = Channel.CreateBounded<int>(6);
+        _testOutputHelper.WriteLine("Channel created");
+
+        var writer = channel.Writer;
+        var reader = channel.Reader;
+
+        for (int i = 0; i < 5; i++)
+        {
+            await writer.WriteAsync(i);
+        }
+        _testOutputHelper.WriteLine($"Items to read after writing  {channel.Reader.Count}");
+        await Task.Delay(50);
+        for (int i = 0; i < 3; i++)
+        {
+            var v = await reader.ReadAsync();
+            _testOutputHelper.WriteLine($"Read {i} v={v}");
+        }
+        await Task.Delay(50);
+        _testOutputHelper.WriteLine($"Items to read left  {channel.Reader.Count}");
+        await Task.Delay(50);
+        writer.Complete();
+        await Task.Delay(50);
+        _testOutputHelper.WriteLine($"Channel completed, items to read {channel.Reader.Count}");
+        await Task.Delay(50);
+        
+        while (reader.TryRead(out var item))
+        {
+            _testOutputHelper.WriteLine($"after closing {item}");
+        }
+        
+        _testOutputHelper.WriteLine($"Final {reader.Count}, ");
+        Assert.Equal(2,3);
+    }
+
+    [Fact]
     public async Task PoolManager_ShouldAllowReuseBuffers()
     {
         int minBytesBufferLength = 200;
@@ -85,7 +123,7 @@ public class SortingPhasePoolTests
         bytesProviderMock.Setup(p => p.ProvideBytes(It.IsAny<Memory<byte>>())).Returns(result);
         FilledBufferPackage third;
         using (SortingPhasePool pool =
-               new SortingPhasePool(2, minBytesBufferLength, minLinesBufferLength, bytesProviderMock.Object))
+               new SortingPhasePool(2, minBytesBufferLength, minLinesBufferLength, 100, bytesProviderMock.Object))
         {
             CancellationTokenSource cts = new CancellationTokenSource();
             pool.Run(cts.Token);
@@ -106,7 +144,7 @@ public class SortingPhasePoolTests
             third = await askingNextPackage;
 
             bytesProviderMock.Verify(p => p.ProvideBytes(It.IsAny<Memory<byte>>()), Times.Exactly(3));
-            Assert.Equal(result.Size, third.WrittenBytes);
+            Assert.Equal(result.Size, third.WrittenBytesLength);
         }
     }
 }

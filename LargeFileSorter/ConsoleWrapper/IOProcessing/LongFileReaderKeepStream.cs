@@ -2,7 +2,6 @@
 using Infrastructure.Parameters;
 using LogsHub;
 using SortingEngine;
-using SortingEngine.RowData;
 
 namespace ConsoleWrapper.IOProcessing;
 
@@ -37,6 +36,9 @@ internal class LongFileReaderKeepStream : IBytesProducer
    }
    public static IBytesProducer CreateForSync(string filePath, int offset, int streamBufferSize, ILogger logger)
    {
+      //todo
+      Console.WriteLine($"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss zzz}) LongFileReaderKeepStream created");
+      
       LongFileReaderKeepStream instance = new LongFileReaderKeepStream(offset, logger, CancellationToken.None);
       instance.Init(filePath, streamBufferSize, false);
       return instance;
@@ -53,18 +55,26 @@ internal class LongFileReaderKeepStream : IBytesProducer
 
    public async Task<ReadingResult> ProvideBytesAsync(Memory<byte> buffer)
    {
+      //todo
+      Console.WriteLine($"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss zzz}) LongFileReaderKeepStream reading Async");
       using (AsyncLock.Releaser _ = await _lock.LockAsync())
       {
          int length = await _stream.ReadAsync(buffer, _cancellationToken);
+         //todo
+         Console.WriteLine($"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss zzz}) LongFileReaderKeepStream read {length} bytes Async");
          return ReadingResult.Ok(length, length);
       }
    }
 
    public ReadingResult ProvideBytes(Memory<byte> buffer)
    {
+      //todo
+      Console.WriteLine($"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss zzz}) LongFileReaderKeepStream reading Sync");
       lock (_lockObj)
       { 
          int length = _stream.Read(buffer.Span);
+         //todo
+         Console.WriteLine($"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss zzz}) LongFileReaderKeepStream read {length} bytes Sync");
          return ReadingResult.Ok(length, length);
       }
    }

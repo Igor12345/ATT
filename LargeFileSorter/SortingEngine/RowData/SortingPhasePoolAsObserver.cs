@@ -3,7 +3,6 @@ using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Threading.Channels;
 using Infrastructure.Parameters;
-using SortingEngine.DataStructures;
 using SortingEngine.Entities;
 
 namespace SortingEngine.RowData;
@@ -39,8 +38,7 @@ public class SortingPhasePoolAsObserver : IDisposable
         {
             if (package.IsLastPackage)
             {
-                ReadyForExtractionPackage last = new ReadyForExtractionPackage(Array.Empty<byte>(),
-                    ExpandingStorage<Line>.Empty, package.Id, true, 0);
+                ReadyForExtractionPackage last = ReadyForExtractionPackage.Empty with { IsLastPackage = true };
                 await _writer.WriteAsync(last);
                 
                 return;
@@ -51,7 +49,7 @@ public class SortingPhasePoolAsObserver : IDisposable
             //todo replace
             ReadyForExtractionPackage nextPackage = new ReadyForExtractionPackage(initialPackage,
                 (_poolAsObserver._maxLineLength - package.RemainedBytesLength)..(_poolAsObserver._maxLineLength +
-                    initialPackage.WrittenBytes));
+                    initialPackage.WrittenBytesLength));
             
             package.RemainedBytes.CopyTo(nextPackage.LineData);
 
@@ -66,7 +64,7 @@ public class SortingPhasePoolAsObserver : IDisposable
         public ValueTask OnCompletedAsync() => ValueTask.CompletedTask;
     }
 
-    private class ReadyReleaseBuffersObserver : IAsyncObserver<AfterSortingPhasePackage>
+    private class ReadyReleaseBuffersObserver : IAsyncObserver<AfterSavingBufferPackage>
     {
         private readonly SortingPhasePoolAsObserver _poolAsObserver;
         private readonly ChannelWriter<ReadyForExtractionPackage> _writer;
@@ -77,7 +75,7 @@ public class SortingPhasePoolAsObserver : IDisposable
             _writer = _poolAsObserver._packagesQueue.Writer;
         }
 
-        public ValueTask OnNextAsync(AfterSortingPhasePackage package)
+        public ValueTask OnNextAsync(AfterSavingBufferPackage package)
         {
             ReleaseTakenStorages(package);
 
@@ -87,11 +85,11 @@ public class SortingPhasePoolAsObserver : IDisposable
             return ValueTask.CompletedTask;
         }
 
-        private void ReleaseTakenStorages(AfterSortingPhasePackage package)
+        private void ReleaseTakenStorages(AfterSavingBufferPackage package)
         {
             _poolAsObserver._pool.ReleaseBuffer(package.ParsedRecords);
             _poolAsObserver._pool.ReuseBuffer(package.RowData);
-            ArrayPool<Line>.Shared.Return(package.SortedLines);
+            ArrayPool<Line>.Shared.Return(package.BufferForSortedLines);
         }
 
         //Here can be some smart handler
@@ -102,7 +100,7 @@ public class SortingPhasePoolAsObserver : IDisposable
 
     public IAsyncObserver<PreReadPackage> ReadyProcessingNextChunk => _readyProcessingNextChunkObserver;
 
-    public IAsyncObserver<AfterSortingPhasePackage> ReleaseBuffers => _releaseBuffersObserver;
+    public IAsyncObserver<AfterSavingBufferPackage> ReleaseBuffers => _releaseBuffersObserver;
 
     public IAsyncObservable<ReadyForExtractionPackage> StreamLinesByBatches(CancellationToken token)
     {
@@ -148,7 +146,7 @@ public class SortingPhasePoolAsObserver : IDisposable
         _pool.Run(cancellationToken);
         FilledBufferPackage package = await _pool.TryAcquireNextFilledBufferAsync(-1);
         ReadyForExtractionPackage first =
-            new ReadyForExtractionPackage(package, _maxLineLength..(_maxLineLength + package.WrittenBytes));
+            new ReadyForExtractionPackage(package, _maxLineLength..(_maxLineLength + package.WrittenBytesLength));
         await _packagesQueue.Writer.WriteAsync(first, cancellationToken);
     }
 
