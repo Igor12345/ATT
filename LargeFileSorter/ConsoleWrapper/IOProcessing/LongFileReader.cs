@@ -63,28 +63,28 @@ internal class LongFileReader : IBytesProducer
       return ReadingResult.Ok(length + offset, length);
    }
 
-   public async Task<ReadyForExtractionPackage> WriteBytesToBufferAsync(ReadyForExtractionPackage inputPackage)
-   {
-      await Task.Yield();
-      ReadingResult result;
-
-      using (var _ = await _lock.LockAsync())
-      {
-         if (inputPackage.Id != _lastProcessedPackage++)
-            throw new InvalidOperationException("Wrong packages sequence.");
-
-         result = await ReadBytesAsync(inputPackage.RowData, inputPackage.StartOfLine, _cancellationToken);
-      }
-
-      //todo handle in railway style 
-      if (!result.Success)
-         throw new InvalidOperationException(result.Message);
-
-      var nextPackage = result.ActuallyRead == 0
-         ? inputPackage with { IsLastPackage = true, WrittenBytesLength = result.Size }
-         : inputPackage with { WrittenBytesLength = result.Size };
-      return nextPackage;
-   }
+   // public async Task<ReadyForExtractionPackage> WriteBytesToBufferAsync(ReadyForExtractionPackage inputPackage)
+   // {
+   //    await Task.Yield();
+   //    ReadingResult result;
+   //
+   //    using (var _ = await _lock.LockAsync())
+   //    {
+   //       if (inputPackage.Id != _lastProcessedPackage++)
+   //          throw new InvalidOperationException("Wrong packages sequence.");
+   //
+   //       result = await ReadBytesAsync(inputPackage.RowData, inputPackage.StartOfLine, _cancellationToken);
+   //    }
+   //
+   //    //todo handle in railway style 
+   //    if (!result.Success)
+   //       throw new InvalidOperationException(result.Message);
+   //
+   //    ReadyForExtractionPackage nextPackage = result.ActuallyRead == 0
+   //       ? inputPackage with { IsLastPackage = true, WrittenBytesLength = result.Size }
+   //       : inputPackage with { WrittenBytesLength = result.Size };
+   //    return nextPackage;
+   // }
 
    private async ValueTask Log(string message)
    {

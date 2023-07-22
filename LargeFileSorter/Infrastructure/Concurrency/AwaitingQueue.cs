@@ -3,7 +3,7 @@
 public class AwaitingQueue<T>
 {
     private readonly Queue<T> _queue = new();
-    private readonly SemaphoreSlim _semaphore = new(1, 1);
+    private readonly SemaphoreSlim _semaphore = new(0, 1);
     private SpinLock _lock = new();
 
     public void Enqueue(T item)

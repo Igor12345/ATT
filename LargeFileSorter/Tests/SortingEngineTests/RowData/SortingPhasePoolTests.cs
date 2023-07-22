@@ -1,4 +1,6 @@
-﻿using SortingEngine.RowData;
+﻿using Moq;
+using SortingEngine;
+using SortingEngine.RowData;
 
 namespace SortingEngineTests.RowData;
 
@@ -9,15 +11,22 @@ public class SortingPhasePoolTests
     {
         int minBytesBufferLength = 200;
         int minLinesBufferLength = 200;
-        SortingPhasePool pool =
-            new SortingPhasePool(2, minBytesBufferLength, minLinesBufferLength);
+        ReadingResult result = ReadingResult.Ok(23,23);
+        Mock<IBytesProducer> bytesProviderMock = new Mock<IBytesProducer>();
+        bytesProviderMock.Setup(p => p.ProvideBytesAsync(It.IsAny<Memory<byte>>())).ReturnsAsync(result);
+        FilledBufferPackage first;
+        using (SortingPhasePool pool =
+               new SortingPhasePool(2, minBytesBufferLength, minLinesBufferLength, bytesProviderMock.Object))
+        {
+            CancellationTokenSource cts = new CancellationTokenSource();
+            pool.Run(cts.Token);
 
-        ReadyForExtractionPackage package = await pool.TryAcquireNextFilledBufferAsync();
+            first = await pool.TryAcquireNextFilledBufferAsync(-1);
+        }
 
-        Assert.NotNull(package);
-        Assert.NotNull(package.ParsedRecords);
-        Assert.NotNull(package.RowData);
-        Assert.True(package.RowData.Length >= minBytesBufferLength);
+        bytesProviderMock.Verify(p => p.ProvideBytesAsync(It.IsAny<Memory<byte>>()), Times.Exactly(2));
+        Assert.NotNull(first);
+        Assert.Equal(result.Size, first.WrittenBytes);
     }
 
     [Fact]
@@ -25,18 +34,29 @@ public class SortingPhasePoolTests
     {
         int minBytesBufferLength = 200;
         int minLinesBufferLength = 200;
-        SortingPhasePool pool =
-            new SortingPhasePool(2, minBytesBufferLength, minLinesBufferLength);
+        ReadingResult result = ReadingResult.Ok(23,23);
+        Mock<IBytesProducer> bytesProviderMock = new Mock<IBytesProducer>();
+        bytesProviderMock.Setup(p => p.ProvideBytesAsync(It.IsAny<Memory<byte>>())).ReturnsAsync(result);
+        FilledBufferPackage first;
+        FilledBufferPackage second;
+        Task<FilledBufferPackage> askingNextPackage;
+        using (SortingPhasePool pool =
+               new SortingPhasePool(2, minBytesBufferLength, minLinesBufferLength, bytesProviderMock.Object))
+        {
+            CancellationTokenSource cts = new CancellationTokenSource();
+            pool.Run(cts.Token);
 
-        ReadyForExtractionPackage package1 = await pool.TryAcquireNextFilledBufferAsync();
-        ReadyForExtractionPackage package2 = await pool.TryAcquireNextFilledBufferAsync();
-        Task<ReadyForExtractionPackage> askingNextPackage = pool.TryAcquireNextFilledBufferAsync();
+            first = await pool.TryAcquireNextFilledBufferAsync(-1);
+            second = await pool.TryAcquireNextFilledBufferAsync(0);
+            askingNextPackage = pool.TryAcquireNextFilledBufferAsync(1);
+        }
         Task timeLimit = Task.Delay(50);
 
         Task winner = await Task.WhenAny(askingNextPackage, timeLimit);
-
-        Assert.NotNull(package1);
-        Assert.NotNull(package2);
+        
+        bytesProviderMock.Verify(p => p.ProvideBytesAsync(It.IsAny<Memory<byte>>()), Times.Exactly(2));
+        Assert.NotNull(first);
+        Assert.NotNull(second);
         Assert.Same(winner, timeLimit);
     }
 
@@ -45,20 +65,35 @@ public class SortingPhasePoolTests
     {
         int minBytesBufferLength = 200;
         int minLinesBufferLength = 200;
-        SortingPhasePool pool =
-            new SortingPhasePool(2, minBytesBufferLength, minLinesBufferLength);
+        
+        ReadingResult result = ReadingResult.Ok(23,23);
+        Mock<IBytesProducer> bytesProviderMock = new Mock<IBytesProducer>();
+        bytesProviderMock.Setup(p => p.ProvideBytesAsync(It.IsAny<Memory<byte>>())).ReturnsAsync(result);
+        FilledBufferPackage first;
+        FilledBufferPackage second;
+        Task<FilledBufferPackage> askingNextPackage;
+        using (SortingPhasePool pool =
+               new SortingPhasePool(2, minBytesBufferLength, minLinesBufferLength, bytesProviderMock.Object))
+        {
+            CancellationTokenSource cts = new CancellationTokenSource();
+            pool.Run(cts.Token);
 
-        ReadyForExtractionPackage package1 = await pool.TryAcquireNextFilledBufferAsync();
-        Task<ReadyForExtractionPackage> askingNextPackage = pool.TryAcquireNextFilledBufferAsync();
-        Task timeLimit = Task.Delay(50);
+            first = await pool.TryAcquireNextFilledBufferAsync(-1);
+            second = await pool.TryAcquireNextFilledBufferAsync(0);
+            askingNextPackage = pool.TryAcquireNextFilledBufferAsync(1);
+            Task timeLimit = Task.Delay(50);
+            Task winner = await Task.WhenAny(askingNextPackage, timeLimit);
 
-        Task winner = await Task.WhenAny(askingNextPackage, timeLimit);
+            Assert.NotNull(first);
+            Assert.NotNull(second);
+            Assert.Same(winner, timeLimit);
+            bytesProviderMock.Verify(p => p.ProvideBytesAsync(It.IsAny<Memory<byte>>()), Times.Exactly(2));
 
-        Assert.Same(winner, timeLimit);
+            pool.ReuseBuffer(new byte[5]);
+        }
 
-        pool.ReuseBuffer(package1.RowData);
-
-        ReadyForExtractionPackage package3 = await askingNextPackage;
-        Assert.Same(package3.RowData, package1.RowData);
+        FilledBufferPackage third = await askingNextPackage;
+        bytesProviderMock.Verify(p => p.ProvideBytesAsync(It.IsAny<Memory<byte>>()), Times.Exactly(3));
+        Assert.Equal(result.Size, third.WrittenBytes);
     }
 }

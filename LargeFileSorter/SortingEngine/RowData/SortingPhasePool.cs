@@ -21,6 +21,7 @@ public class SortingPhasePool : IDisposable
     private SpinLock _lock;
     private SpinLock _readLock;
     private readonly AwaitingQueue<OrderedBuffer> _filledBuffers;
+    private CancellationTokenSource? _cts;
 
     public SortingPhasePool(int numberOfBuffers, int inputBuffersLength, int recordChunksLength, IBytesProducer bytesProducer)
     {
@@ -42,7 +43,8 @@ public class SortingPhasePool : IDisposable
 
     public void Run(CancellationToken cancellationToken)
     {
-        Task<Task<bool>> t = Task.Factory.StartNew<Task<bool>>(static async (state) =>
+        _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        Task.Factory.StartNew<Task<bool>>(static async (state) =>
             {
                 if (state == null)
                     throw new NullReferenceException(nameof(state));
@@ -76,8 +78,44 @@ public class SortingPhasePool : IDisposable
                 } while (true);
 
                 return true;
-            }, this, cancellationToken,
+            }, this, _cts.Token,
             TaskCreationOptions.LongRunning | TaskCreationOptions.PreferFairness, TaskScheduler.Default);
+    }
+
+    public async Task<FilledBufferPackage> TryAcquireNextFilledBufferAsync(int lastIndex)
+    {
+        bool lockTaken = false;
+        try
+        {
+            _lock.Enter(ref lockTaken);
+            OrderedBuffer nextBuffer = await _filledBuffers.DequeueAsync();
+            if (nextBuffer.Index != lastIndex + 1)
+            {
+                throw new InvalidOperationException(
+                    $"Wrong order of prepared buffers, expected buffer for the package {lastIndex}, but was: {nextBuffer.Index}.");
+            }
+
+            ExpandingStorage<Line> linesStorage = RentLinesStorage();
+
+            //todo return another entity, last parameter is useful
+            return new FilledBufferPackage(nextBuffer.Buffer, linesStorage, nextBuffer.Index,
+                nextBuffer.WrittenBytes == 0, nextBuffer.WrittenBytes);
+        }
+        finally
+        {
+            if (lockTaken) _lock.Exit(false);
+        }
+    }
+
+    public void ReleaseBuffer(ExpandingStorage<Line> expandingStorage)
+    {
+        _lineStorages.Push(expandingStorage);
+    }
+
+    public void ReuseBuffer(byte[] buffer)
+    {
+        _emptyBuffers.Push(buffer);
+        _semaphore.Release();
     }
 
     private async Task<byte[]> TryRentNextEmptyBufferAsync()
@@ -108,31 +146,6 @@ public class SortingPhasePool : IDisposable
         }
     }
 
-    public async Task<FilledBufferPackage> TryAcquireNextFilledBufferAsync(int lastIndex)
-    {
-        bool lockTaken = false;
-        try
-        {
-            _lock.Enter(ref lockTaken);
-            OrderedBuffer nextBuffer = await _filledBuffers.DequeueAsync();
-            if (nextBuffer.Index != lastIndex + 1)
-            {
-                throw new InvalidOperationException(
-                    $"Wrong order of prepared buffers, expected buffer for the package {lastIndex}, but was: {nextBuffer.Index}.");
-            }
-
-            ExpandingStorage<Line> linesStorage = RentLinesStorage();
-
-            //todo return another entity, last parameter is useful
-            return new FilledBufferPackage(nextBuffer.Buffer, linesStorage, nextBuffer.Index,
-                nextBuffer.WrittenBytes == 0, nextBuffer.WrittenBytes);
-        }
-        finally
-        {
-            if (lockTaken) _lock.Exit(false);
-        }
-    }
-
     private ExpandingStorage<Line> RentLinesStorage()
     {
         ExpandingStorage<Line> storage;
@@ -145,22 +158,12 @@ public class SortingPhasePool : IDisposable
         return storage;
     }
 
-    public void ReleaseBuffer(ExpandingStorage<Line> expandingStorage)
-    {
-        _lineStorages.Push(expandingStorage);
-    }
-
-    public void ReuseBuffer(byte[] buffer)
-    {
-        _emptyBuffers.Push(buffer);
-        _semaphore.Release();
-    }
-
     public void Dispose()
     {
         while (_lineStorages.TryPop(out var storage))
         {
             storage.Dispose();
         }
+        _cts?.Cancel();
     }
 }
