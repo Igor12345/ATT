@@ -20,14 +20,13 @@ internal class DataChunkManager : IDisposable
    private readonly LinesExtractor _extractor;
    private int _loadedLines;
 
-   public DataChunkManager(string file, Memory<byte> rowStorage, int offset, LinesExtractor extractor,
-      Func<ExpandingStorage<Line>> recordsStorageProvider, int maxLineLength, Func<Result> flushOutputBuffer)
+   public DataChunkManager(Func<Stream> dataStreamFactory, Memory<byte> rowStorage, int offset, LinesExtractor extractor,
+      ExpandingStorage<Line> recordsStorage, int maxLineLength, Func<Result> flushOutputBuffer)
    {
-      _rowStorage = rowStorage;
+      _rowStorage = Guard.NotNull(rowStorage);
       _offset = offset;
-      _recordsStorage = recordsStorageProvider();
-      //todo
-      _dataSource = File.OpenRead(file);
+      _recordsStorage = Guard.NotNull(recordsStorage);
+      _dataSource = dataStreamFactory();
       _remindedBytesCapacity = maxLineLength;
       _flushOutputBuffer = Guard.NotNull(flushOutputBuffer);
       _extractor = Guard.NotNull(extractor);
@@ -98,6 +97,8 @@ internal class DataChunkManager : IDisposable
 
    public void Dispose()
    {
+      if (_remainedBytes != null)
+         ArrayPool<byte>.Shared.Return(_remainedBytes);
       _dataSource.Dispose();
       _recordsStorage.Dispose();
    }

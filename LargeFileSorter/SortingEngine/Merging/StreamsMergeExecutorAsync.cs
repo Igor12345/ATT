@@ -1,4 +1,5 @@
 ﻿using Infrastructure.Parameters;
+using LogsHub;
 using SortingEngine.Algorithms;
 using SortingEngine.Comparators;
 using SortingEngine.DataStructures;
@@ -10,6 +11,8 @@ namespace SortingEngine.Merging;
 
 public sealed class StreamsMergeExecutorAsync
 {
+   private readonly Func<string, Stream> _dataStreamFactory;
+   private readonly ILogger _logger;
    private readonly CancellationToken _cancellationToken;
    private readonly IConfig _config;
    private readonly ISeveralTimesLinesWriter _linesWriter;
@@ -18,12 +21,16 @@ public sealed class StreamsMergeExecutorAsync
    private Line[] _outputBuffer = null!;
    private int _lastLine;
    private Memory<byte> _inputBuffer;
+   private int _reported;
    
    public StreamsMergeExecutorAsync(IConfig config, ISeveralTimesLinesWriter linesWriter,
+      Func<string, Stream> dataStreamFactory, ILogger logger,
       CancellationToken cancellationToken)
    {
       _config = Guard.NotNull(config);
       _linesWriter = Guard.NotNull(linesWriter);
+      _dataStreamFactory = Guard.NotNull(dataStreamFactory);
+      _logger = Guard.NotNull(logger);
       _cancellationToken = Guard.NotNull(cancellationToken);
    }
 
@@ -48,15 +55,39 @@ public sealed class StreamsMergeExecutorAsync
       LineParser parser = new LineParser(KmpMatcher.CreateForThisPattern(_config.DelimiterBytes), _config.Encoding);
       IParticularSubstringMatcher eolFinder = KmpMatcher.CreateForThisPattern(_config.EolBytes);
       LinesExtractor extractor = new LinesExtractor(eolFinder, _config.EolBytes.Length, parser);
+
+      Func<Task<Result>> flushOutputBuffer = () => FlushOutputBufferAsync();
       for (int i = 0; i < _files.Length; i++)
       {
          int from = i * _config.MergeBufferLength;
          int to = (i + 1) * _config.MergeBufferLength;
-         managers[i] = new DataChunkManagerAsync(_files[i], _inputBuffer[from..to], from, extractor,
-            () => new ExpandingStorage<Line>(_config.RecordsBufferLength), _config.MaxLineLength, _cancellationToken);
+         int j = i;
+         managers[i] = new DataChunkManagerAsync(() => _dataStreamFactory(_files[j]), _inputBuffer[from..to], from, extractor,
+            new ExpandingStorage<Line>(_config.RecordsBufferLength), _config.MaxLineLength, flushOutputBuffer,
+            _cancellationToken);
       }
 
       return managers;
+   }
+
+   private async Task<Result> InitializeQueue(DataChunkManagerAsync[] managers,
+      IndexPriorityQueue<Line, IComparer<Line>> queue)
+   {
+      for (int i = 0; i < _files.Length; i++)
+      {
+         (ExtractionResult extractionResult, bool hasLine, Line line) = await managers[i].TryGetNextLineAsync();
+         if (!extractionResult.Success)
+         {
+            return Result.Error(extractionResult.Message);
+         }
+
+         if (hasLine)
+         {
+            queue.Enqueue(line, i);
+         }
+      }
+
+      return Result.Ok;
    }
 
    private async Task<Result> ExecuteMergeAsync()
@@ -82,37 +113,30 @@ public sealed class StreamsMergeExecutorAsync
          _outputBuffer[_lastLine++] = line;
          if (_lastLine >= _outputBuffer.Length)
          {
-            Result writingResult = await WriteLinesFromBuffer(_outputBuffer, _outputBuffer.Length, _inputBuffer);
+            Result writingResult = await FlushOutputBufferAsync();
             if (!writingResult.Success)
                return writingResult;
             _lastLine = 0;
          }
       }
-      return _lastLine == 0 ? Result.Ok : await WriteLinesFromBuffer(_outputBuffer, _lastLine, _inputBuffer);
+      return _lastLine == 0 ? Result.Ok : await FlushOutputBufferAsync();
    }
 
-   private async Task<Result> InitializeQueue(DataChunkManagerAsync[] managers,
-      IndexPriorityQueue<Line, IComparer<Line>> queue)
+   private async Task<Result> FlushOutputBufferAsync()
    {
-      for (int i = 0; i < _files.Length; i++)
+      Result result = await _linesWriter.WriteLinesAsync(_outputBuffer, _lastLine, _inputBuffer, _cancellationToken);
+      await ReportProgressAsync(_lastLine);
+      _lastLine = 0;
+      return result;
+   }
+
+   private async Task ReportProgressAsync(int lines)
+   {
+      _reported += lines;
+      if (_reported > 500_000)
       {
-         (ExtractionResult extractionResult, bool hasLine, Line line) = await managers[i].TryGetNextLineAsync();
-         if (!extractionResult.Success)
-         {
-            return Result.Error(extractionResult.Message);
-         }
-
-         if (hasLine)
-         {
-            queue.Enqueue(line, i);
-         }
+         await _logger.LogAsync($"{DateTime.Now:hh:mm:ss-fff}: Next {_reported} lines has been added to the file.");
+         _reported = 0;
       }
-
-      return Result.Ok;
-   }
-
-   private async Task<Result> WriteLinesFromBuffer(Line[] lines, int linesNumber, ReadOnlyMemory<byte> source)
-   {
-      return await _linesWriter.WriteLinesAsync(lines, linesNumber, source, _cancellationToken);
    }
 }

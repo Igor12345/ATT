@@ -6,6 +6,7 @@ using SortingEngine.RowData;
 
 namespace SortingEngine.Merging;
 
+//This class uses only for comparison with synchronous version 
 internal class DataChunkManagerAsync : IAsyncDisposable
 {
    private readonly Stream _dataSource;
@@ -16,20 +17,20 @@ internal class DataChunkManagerAsync : IAsyncDisposable
    private byte[]? _remainedBytes;
    private int _remindedBytesLength;
    private readonly int _remindedBytesCapacity;
+   private readonly Func<Task<Result>> _flushOutputBuffer;
    private readonly LinesExtractor _extractor;
    private int _loadedLines;
    private readonly CancellationToken _token;
 
-   public DataChunkManagerAsync(string file, Memory<byte> rowStorage, int offset, LinesExtractor extractor,
-      Func<ExpandingStorage<Line>> recordsStorageProvider, int maxLineLength, CancellationToken token)
+   public DataChunkManagerAsync(Func<Stream> dataStreamFactory, Memory<byte> rowStorage, int offset, LinesExtractor extractor,
+      ExpandingStorage<Line> recordsStorage, int maxLineLength, Func<Task<Result>> flushOutputBuffer, CancellationToken token)
    {
-      _rowStorage = rowStorage;
+      _rowStorage = Guard.NotNull(rowStorage);
       _offset = offset;
-      _recordsStorage = recordsStorageProvider();
-      //todo
-      _dataSource = File.OpenRead(file);
-      _dataSource = File.OpenRead(file);
+      _recordsStorage = Guard.NotNull(recordsStorage);
+      _dataSource = dataStreamFactory();
       _remindedBytesCapacity = maxLineLength;
+      _flushOutputBuffer = Guard.NotNull(flushOutputBuffer);
       _extractor = Guard.NotNull(extractor);
       _token = Guard.NotNull(token);
    }
@@ -62,6 +63,10 @@ internal class DataChunkManagerAsync : IAsyncDisposable
 
    private async Task<ExtractionResult> LoadLinesAsync()
    {
+      Result flushBufferResult = await _flushOutputBuffer();
+      if (!flushBufferResult.Success)
+         return ExtractionResult.Error(flushBufferResult.Message);
+      
       _recordsStorage.Clear();
 
       if (_remindedBytesLength > 0)
@@ -69,7 +74,7 @@ internal class DataChunkManagerAsync : IAsyncDisposable
          _remainedBytes.CopyTo(_rowStorage);
       }
 
-      int received = await _dataSource.ReadAsync(_rowStorage[_remindedBytesLength..]);
+      int received = await _dataSource.ReadAsync(_rowStorage[_remindedBytesLength..], _token);
       if (received == 0)
          return ExtractionResult.Ok(0, -1);
       _currentPosition = 0;

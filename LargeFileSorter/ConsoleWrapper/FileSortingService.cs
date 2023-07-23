@@ -2,7 +2,6 @@
 //and the merge phase will slow down by almost 30%.
 
 // #define MERGE_ASYNC
-#define READ_ASYNC
 
 using System.Diagnostics;
 using System.Runtime;
@@ -89,7 +88,7 @@ internal class FileSortingService : IHostedService
       Result result = configuration.UseOneWay
          ? Result.Ok
 #if MERGE_ASYNC
-         : await MergingPhaseAsync(configuration, cancellationToken);
+         : await MergingPhaseAsync(configuration, logger, cancellationToken);
 #else
          :  MergingPhase(configuration, logger);
 #endif
@@ -124,7 +123,7 @@ internal class FileSortingService : IHostedService
       return sortingResult;
    }
 
-   private static async Task<Result> MergingPhaseAsync(IConfig configuration, CancellationToken cancellationToken)
+   private static async Task<Result> MergingPhaseAsync(IConfig configuration, ILogger logger, CancellationToken cancellationToken)
    {
       await using ISeveralTimesLinesWriter resultWriter = LinesWriter.CreateForMultipleWriting(configuration.Output,
          configuration.MaxLineLength, configuration.WriteStreamBufferSize, configuration.Encoding);
@@ -132,8 +131,12 @@ internal class FileSortingService : IHostedService
       Console.WriteLine("The merge phase runs asynchronously.");
       Stopwatch sw = new Stopwatch();
       sw.Start();
-      StreamsMergeExecutorAsync mergerAsync = new StreamsMergeExecutorAsync(configuration, resultWriter, cancellationToken);
+
+      Func<string, Stream> streamFactory = filePath => new FileStream(filePath!, FileMode.Open, FileAccess.Read,
+         FileShare.Read, bufferSize: configuration.WriteStreamBufferSize, true);
+      StreamsMergeExecutorAsync mergerAsync = new StreamsMergeExecutorAsync(configuration, resultWriter, streamFactory, logger, cancellationToken);
       Result result = await mergerAsync.MergeWithOrderAsync();
+      
       sw.Stop();
       Console.WriteLine($"---> Merge completed in {sw.Elapsed.TotalSeconds:F2} sec, {sw.Elapsed.TotalMilliseconds} ms");
       
@@ -146,10 +149,17 @@ internal class FileSortingService : IHostedService
          configuration.MaxLineLength, configuration.WriteStreamBufferSize, configuration.Encoding);
 
       Console.WriteLine("The merge phase is executed in synchronous mode.");
+
       Stopwatch sw = new Stopwatch();
       sw.Start();
-      using StreamsMergeExecutor merger = new StreamsMergeExecutor(configuration, resultWriter, logger);
+
+      Func<string, Stream> streamFactory = filePath => new FileStream(filePath!, FileMode.Open, FileAccess.Read,
+         FileShare.Read, bufferSize: configuration.WriteStreamBufferSize, false);
+      
+      using StreamsMergeExecutor merger =
+         new StreamsMergeExecutor(configuration, resultWriter, streamFactory, logger);
       Result result = merger.MergeWithOrder();
+      
       sw.Stop();
       Console.WriteLine($"---> Merge completed in {sw.Elapsed.TotalSeconds:F2} sec, {sw.Elapsed.TotalMilliseconds} ms");
 

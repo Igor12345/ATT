@@ -11,6 +11,7 @@ namespace SortingEngine.Merging;
 
 public sealed class StreamsMergeExecutor :IDisposable
 {
+   private readonly Func<string, Stream> _dataStreamFactory;
    private readonly ILogger _logger;
    private readonly IConfig _config;
    private readonly ISeveralTimesLinesWriter _linesWriter;
@@ -22,10 +23,12 @@ public sealed class StreamsMergeExecutor :IDisposable
    private DataChunkManager[]? _managers;
    private int _reported;
 
-   public StreamsMergeExecutor(IConfig config, ISeveralTimesLinesWriter linesWriter, ILogger logger)
+   public StreamsMergeExecutor(IConfig config, ISeveralTimesLinesWriter linesWriter,
+      Func<string, Stream> dataStreamFactory, ILogger logger)
    {
       _config = Guard.NotNull(config);
       _linesWriter = Guard.NotNull(linesWriter);
+      _dataStreamFactory = Guard.NotNull(dataStreamFactory);
       _logger = Guard.NotNull(logger);
    }
 
@@ -41,6 +44,7 @@ public sealed class StreamsMergeExecutor :IDisposable
 
    private void Initialize()
    {
+      //todo dependency on the file system, can be removed
       _files = Directory.GetFiles(_config.TemporaryFolder);
       _inputBuffer = new byte[_config.MergeBufferLength * _files.Length].AsMemory();
       _outputBuffer = new Line[_config.OutputBufferLength];
@@ -58,8 +62,10 @@ public sealed class StreamsMergeExecutor :IDisposable
       {
          int from = i * _config.MergeBufferLength;
          int to = (i + 1) * _config.MergeBufferLength;
-         managers[i] = new DataChunkManager(_files[i], _inputBuffer[from..to], from, extractor,
-            () => new ExpandingStorage<Line>(_config.RecordsBufferLength), _config.MaxLineLength, flushOutputBuffer);
+         int j = i;
+         managers[i] = new DataChunkManager(() => _dataStreamFactory(_files[j]), _inputBuffer[from..to], from,
+            extractor, new ExpandingStorage<Line>(_config.RecordsBufferLength), _config.MaxLineLength,
+            flushOutputBuffer);
       }
 
       return managers;
