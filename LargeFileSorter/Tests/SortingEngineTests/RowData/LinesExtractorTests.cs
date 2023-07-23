@@ -121,61 +121,171 @@ public class LinesExtractorTests
 
 public class LineParserTests
 {
+    // https://www.geeksforgeeks.org/kmp-algorithm-for-pattern-searching/
     [Theory]
-    [InlineData(". 4", "123. 456")]
-    public void ShouldBuildCorrectPrefixFunction(string pattern, string text)
+    [InlineData("aaaa", new byte[]{0,1,2,3})]
+    [InlineData("abc", new byte[]{0,0,0})]
+    [InlineData("AABAACAABAA", new byte[]{0, 1, 0, 1, 2, 0, 1, 2, 3, 4, 5})]
+    [InlineData("AAACAAAAAC", new byte[]{0, 1, 2, 0, 1, 2, 3, 3, 3, 4})]
+    [InlineData("AAABAAA", new byte[]{0, 1, 2, 0, 1, 2, 3})]
+    public void ShouldBuildCorrectPrefixFunction(string pattern, byte[] prefixResult)
     {
-        int index = KmpAlgorithm(pattern, text);
+        var prefix = BuildPrefix(pattern);
 
-        var g = index;
-        var r = pattern[1];
+        for (int i = 0; i < pattern.Length; i++)
+        {
+            Assert.Equal(prefixResult[i], prefix[i]);
+        }
     }
 
-    private static int KmpAlgorithm(string pattern, string text)
+    [Theory]
+    [InlineData("efg", "abc defg 5", 5)]
+    [InlineData("bca", "abc defg 5", -1)]
+    [InlineData("24", "ab24c de24fg 5", 2)]
+    [InlineData(". ", "1234. de24fg 5", 4)]
+    public void ShouldDoSearchPatternInString(string pattern, string text, int index)
     {
-        int[] prefix = BuildPrefix(pattern);
-        int index;
-        int q = 0;
+        var prefix = BuildPrefix(pattern);
+        int foundAt = KmpAlgorithm(pattern, text, prefix);
+        Assert.Equal(index, foundAt);
+    }
+    
+    [Theory]
+    [InlineData("efg", "abc defg 5", 5)]
+    [InlineData("bca", "abc defg 5", -1)]
+    [InlineData("24", "ab24c de24fg 5", 2)]
+    [InlineData(". ", "1234. de24fg 5", 4)]
+    public void ShouldDoSearchPatternInBytesArray(string pattern, string text, int index)
+    {
+        Encoding encoding = Encoding.UTF8;
+        var patternBytes = encoding.GetBytes(pattern);
+        var textBytes = encoding.GetBytes(text);
+        var prefix = BuildPrefix(patternBytes);
+        int foundAt = KmpAlgorithm(patternBytes, textBytes, prefix);
+        Assert.Equal(index, foundAt);
+    }
 
-        for (int i = 0; i < text.Length; i++)
+    private static int KmpAlgorithm(string pattern, string text, int[] prefix)
+    {
+        int p = 0;
+        int t = 0;
+
+        while (t < text.Length)
         {
-            while (q > 0 && pattern[q + 1] != text[i])
+            if (text[t] == pattern[p])
             {
-                q = prefix[q];
+                p++;
+                t++;
+            }
+            else
+            {
+                if (p == 0)
+                {
+                    t++;
+                }
+                else
+                {
+                    p = prefix[t - 1];
+                }
             }
 
-            if (pattern[q + 1] == text[i])
-                q++;
-            if (q == pattern.Length)
-                index = i - pattern.Length;
+            if (p == pattern.Length)
+            {
+                return t - pattern.Length;
+            }
         }
 
-        index = -1;
-        return index;
+        return -1;
     }
 
     private static int[] BuildPrefix(string pattern)
     {
-        int[] prefix = new int[pattern.Length];
+        int ln = pattern.Length;
+        int[] prefix = new int[ln];
         prefix[0] = 0;
-        int index = 0;
+        int index = 1;
+        int pr = 0;
 
-        for (int i = 1; i < pattern.Length; i++)
+        while (index < ln)
         {
-            int k = prefix[i - 1];
-            while (pattern[k] != pattern[i] && k > 0)
+            if (pattern[index] == pattern[pr])
             {
-                k = prefix[k - 1];
-            }
-            if (pattern[k] == pattern[i])
+                pr++;
+                prefix[index] = pr;
+                index++;
+            }else if (pr != 0)
             {
-                prefix[i] = k + 1;
+                pr = prefix[pr - 1];
             }
             else
             {
-                prefix[i] = 0;
+                prefix[index] = 0;
+                index++;
             }
         }
+
         return prefix;
+    }
+    
+    private static int[] BuildPrefix(byte[] pattern)
+    {
+        int ln = pattern.Length;
+        int[] prefix = new int[ln];
+        prefix[0] = 0;
+        int index = 1;
+        int pr = 0;
+
+        while (index < ln)
+        {
+            if (pattern[index] == pattern[pr])
+            {
+                pr++;
+                prefix[index] = pr;
+                index++;
+            }else if (pr != 0)
+            {
+                pr = prefix[pr - 1];
+            }
+            else
+            {
+                prefix[index] = 0;
+                index++;
+            }
+        }
+
+        return prefix;
+    }
+    
+    private static int KmpAlgorithm(byte[] pattern, byte[] text, int[] prefix)
+    {
+        int p = 0;
+        int t = 0;
+
+        while (t < text.Length)
+        {
+            if (text[t] == pattern[p])
+            {
+                p++;
+                t++;
+            }
+            else
+            {
+                if (p == 0)
+                {
+                    t++;
+                }
+                else
+                {
+                    p = prefix[t - 1];
+                }
+            }
+
+            if (p == pattern.Length)
+            {
+                return t - pattern.Length;
+            }
+        }
+
+        return -1;
     }
 }
