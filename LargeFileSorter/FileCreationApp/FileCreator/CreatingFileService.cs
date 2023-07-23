@@ -31,7 +31,8 @@ internal sealed class CreatingFileService : IHostedService
         LinesGenerator generator = new LinesGenerator(lineCreator);
         await using LinesWriter linesWriter = LinesWriter.Create(_config, _logger);
 
-        byte[] buffer = new byte[_config.MaxLineLength]; 
+        //4 should be enough
+        byte[] buffer = new byte[_config.MaxLineLength * 6]; 
         foreach (int lineLength in generator.Generate(buffer.AsMemory()))
         {
             if (_linesToLog >= _config.LogEveryThsLine)

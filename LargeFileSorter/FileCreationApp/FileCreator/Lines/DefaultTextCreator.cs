@@ -7,7 +7,9 @@ public class DefaultTextCreator : ITextCreator
 {
     private readonly IRuntimeConfiguration _config;
     private readonly Random _random;
-    private readonly byte[] _charactersPool;
+    private readonly char[] _charactersPool;
+    private readonly Dictionary<char, byte[]> _characterBytes;
+    
     private readonly int _charactersLength;
 
     public DefaultTextCreator(IRuntimeConfiguration config)
@@ -17,7 +19,8 @@ public class DefaultTextCreator : ITextCreator
             ? new Random(_config.Seed)
             : new Random();
 
-        _charactersPool = _config.Encoding.GetBytes(_config.PossibleCharacters);
+        _charactersPool = _config.PossibleCharacters.ToArray();
+        _characterBytes = _charactersPool.ToDictionary(c => c, c => _config.Encoding.GetBytes(new[] { c }));
         _charactersLength = _charactersPool.Length;
     }
 
@@ -31,9 +34,15 @@ public class DefaultTextCreator : ITextCreator
     {
         int length = _random.Next(1, _config.MaxTextLength);
 
+        int j = 0;
         for (int i = 0; i < length; i++)
         {
-            buffer[i] = _charactersPool[_random.Next(0, _charactersLength - 1)];
+            var letter = _charactersPool[_random.Next(0, _charactersLength - 1)];
+            byte[] bytes = _characterBytes[letter];
+            foreach (byte b in bytes)
+            {
+                buffer[j++] = b;
+            }
         }
 
         return length;
