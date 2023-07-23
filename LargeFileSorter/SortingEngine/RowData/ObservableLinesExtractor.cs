@@ -1,6 +1,7 @@
 ﻿using System.Buffers;
 using System.Reactive.Subjects;
 using Infrastructure.ByteOperations;
+using Infrastructure.Parameters;
 
 namespace SortingEngine.RowData;
 
@@ -11,9 +12,9 @@ public sealed class ObservableLinesExtractor
 
     private readonly LinesExtractor _linesExtractor;
 
-    public ObservableLinesExtractor(byte[] eol, byte[] lineDelimiter)
+    public ObservableLinesExtractor(LinesExtractor linesExtractor)
     {
-        _linesExtractor = new LinesExtractor(eol, lineDelimiter);
+        _linesExtractor = Guard.NotNull(linesExtractor);
     }
 
     //todo split on parser

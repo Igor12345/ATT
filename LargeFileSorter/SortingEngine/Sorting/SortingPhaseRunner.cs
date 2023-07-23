@@ -1,8 +1,10 @@
 ﻿using System.Diagnostics;
 using System.Reactive.Linq;
+using System.Text;
 using Infrastructure.MemoryTools;
 using Infrastructure.Parameters;
 using LogsHub;
+using SortingEngine.Algorithms;
 using SortingEngine.RowData;
 using SortingEngine.RuntimeConfiguration;
 
@@ -25,8 +27,9 @@ public class SortingPhaseRunner
         Stopwatch sw = new Stopwatch();
         sw.Start();
 
-        ObservableLinesExtractor extractor = new ObservableLinesExtractor(
-            configuration.EolBytes, configuration.DelimiterBytes);
+        LineParser parser = new LineParser(KmpMatcher.CreateForPattern(configuration.DelimiterBytes), Encoding.UTF8);
+        LinesExtractor linesExtractor = new LinesExtractor(configuration.EolBytes, parser);
+        ObservableLinesExtractor extractor = new ObservableLinesExtractor(linesExtractor);
 
         IntermediateResultsDirector chunksDirector = IntermediateResultsDirector.Create(_linesWriter, configuration);
 

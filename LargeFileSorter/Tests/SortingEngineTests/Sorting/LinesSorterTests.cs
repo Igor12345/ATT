@@ -46,7 +46,7 @@ public class LinesSorterTestData : IEnumerable<object[]>
                 "123. abc;",
                 "123. def"
             };
-            ExpandingStorage<Line> linesStorage = new ExpandingStorage<Line>(20);
+            ExpandingStorage<Line> linesStorage = new ExpandingStorage<Line>(TestConstants.MaxNumberLength);
             byte[] source =
                 DataGenerator.UTF8.FillLinesStorageFromStrings(new[] { origin[1], origin[0], origin[2] }, linesStorage);
 
@@ -63,7 +63,7 @@ public class LinesSorterTestData : IEnumerable<object[]>
                 "323. abc",
                 "234. abcd"
             };
-            ExpandingStorage<Line> linesStorage = new ExpandingStorage<Line>(20);
+            ExpandingStorage<Line> linesStorage = new ExpandingStorage<Line>(TestConstants.MaxNumberLength);
             byte[] source =
                 DataGenerator.UTF8.FillLinesStorageFromStrings(new[] { origin[1], origin[0], origin[2] }, linesStorage);
 
@@ -80,7 +80,7 @@ public class LinesSorterTestData : IEnumerable<object[]>
                 "321. abc",
                 "12. def"
             };
-            ExpandingStorage<Line> linesStorage = new ExpandingStorage<Line>(20);
+            ExpandingStorage<Line> linesStorage = new ExpandingStorage<Line>(TestConstants.MaxNumberLength);
             byte[] source =
                 DataGenerator.UTF8.FillLinesStorageFromStrings(new[] { origin[1], origin[0], origin[2] }, linesStorage);
 

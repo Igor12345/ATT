@@ -50,7 +50,7 @@ public class ConfigurationValidator
         string possibleCharacters = string.IsNullOrEmpty(baseConf.PossibleCharacters)
             ? _defaultConf.PossibleCharacters
             : baseConf.PossibleCharacters;
-        int ulongLength = 20;
+        int ulongLength = 21;
         int delimiterLength = encoding.GetBytes(delimiter).Length;
         int eolLength = encoding.GetBytes(Environment.NewLine).Length;
         int maxLineLength = baseConf.MaxLineLength.HasValue

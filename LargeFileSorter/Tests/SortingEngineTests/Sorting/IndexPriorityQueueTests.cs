@@ -1,4 +1,5 @@
-﻿using SortingEngine.Sorting;
+﻿using SortingEngine.DataStructures;
+using SortingEngine.Sorting;
 
 namespace SortingEngineTests.Sorting
 {

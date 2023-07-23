@@ -1,10 +1,10 @@
 ﻿using Infrastructure.Parameters;
+using SortingEngine.Algorithms;
 using SortingEngine.Comparators;
 using SortingEngine.DataStructures;
 using SortingEngine.Entities;
 using SortingEngine.RowData;
 using SortingEngine.RuntimeConfiguration;
-using SortingEngine.Sorting;
 
 namespace SortingEngine.Merging;
 
@@ -76,9 +76,9 @@ public sealed class StreamsMergeExecutorAsync
    private DataChunkManagerAsync[] CreateDataChunkManagers()
    {
       DataChunkManagerAsync[] managers = new DataChunkManagerAsync[_files.Length];
-      var eolBytes = _config.EolBytes;
-      var delimiterBytes = _config.DelimiterBytes;
-      LinesExtractor extractor = new LinesExtractor(eolBytes, delimiterBytes);
+      //KmpMatcher can be a Singleton. Work for DI
+      LineParser parser = new LineParser(KmpMatcher.CreateForPattern(_config.DelimiterBytes), _config.Encoding);
+      LinesExtractor extractor = new LinesExtractor(_config.EolBytes, parser);
       for (int i = 0; i < _files.Length; i++)
       {
          int from = i * _config.MergeBufferLength;

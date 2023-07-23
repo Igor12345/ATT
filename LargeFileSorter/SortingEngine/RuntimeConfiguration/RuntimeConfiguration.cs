@@ -1,4 +1,5 @@
-﻿using Infrastructure.Parameters;
+﻿using System.Text;
+using Infrastructure.Parameters;
 
 namespace SortingEngine.RuntimeConfiguration;
 
@@ -15,7 +16,7 @@ public class RuntimeConfiguration : IConfig
    public string InputFile { get; private set; } = null!;
    public int MergeBufferLength { get; private set; }
    public int OutputBufferLength { get; private set; }
-   // public Encoding Encoding { get; private set; } = Encoding.UTF8;
+   public Encoding Encoding { get; private set; } = Encoding.UTF8;
    public int MaxLineLength { get; private set; }
    public byte[] DelimiterBytes { get; private set; }
    public byte[] EolBytes { get; private set; }
@@ -117,6 +118,7 @@ public class RuntimeConfiguration : IConfig
          return this;
       }
 
+      //todo build delimiter prefix here
       public IConfigBuilder UseDelimiter(byte[] delimiterBytes)
       {
          _configuration.DelimiterBytes = delimiterBytes;
@@ -126,6 +128,12 @@ public class RuntimeConfiguration : IConfig
       public IConfigBuilder UseEolBytes(byte[] eolBytes)
       {
          _configuration.EolBytes = eolBytes;
+         return this;
+      }
+
+      public IConfigBuilder UseEncoding(Encoding encoding)
+      {
+         _configuration.Encoding = encoding;
          return this;
       }
 

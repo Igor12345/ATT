@@ -1,5 +1,4 @@
-﻿using Infrastructure.ByteOperations;
-using Infrastructure.Parameters;
+﻿using Infrastructure.Parameters;
 using SortingEngine.DataStructures;
 using SortingEngine.Entities;
 
@@ -9,18 +8,18 @@ namespace SortingEngine.RowData
    public class LinesExtractor
    {
       private readonly byte[] _eol;
-      private readonly byte[] _lineDelimiter;
-      
+      private readonly LineParser _parser;
+
       /// <summary>
       /// This class works only with bytes and knows nothing about encoding.
       /// It needs to know the byte sequences for the end of a line and for the delimiter between a number and a text to extract and then parse lines.
       /// </summary>
       /// <param name="eol">The byte sequence of the end of a line in the used encoding</param>
-      /// <param name="lineDelimiter">The byte sequence of the delimiter in the used encoding</param>
-      public LinesExtractor(byte[] eol, byte[] lineDelimiter)
+      /// <param name="parser">The line parser</param>
+      public LinesExtractor(byte[] eol, LineParser parser)
       {
          _eol = Guard.NotNull(eol);
-         _lineDelimiter = Guard.NotNull(lineDelimiter);
+         _parser = Guard.NotNull(parser);
       }
 
       //this is hardcoded for UTF-8
@@ -39,7 +38,7 @@ namespace SortingEngine.RowData
                
                //text will include eof. the question with the last line.
                endLine = i + 2;
-               var result = ParseLine(input[startLine..endLine], startLine);
+               var result = _parser.Parse(input[startLine..endLine], startLine);
 
                if (!result.Success)
                   return ExtractionResult.Error(result.Message);
@@ -52,34 +51,6 @@ namespace SortingEngine.RowData
          }
 
          return ExtractionResult.Ok(lineIndex, endOfLastLine + 1);
-      }
-
-      private Result<Line> ParseLine(ReadOnlySpan<byte> lineSpan, int startIndex)
-      {
-         Span<char> numberChars = stackalloc char[Constants.MaxNumberLength];
-         for (int i = 0; i < lineSpan.Length - 1; i++)
-         {
-            //todo support delimiter any length
-            if (lineSpan[i] == _lineDelimiter[0] && lineSpan[i + 1] == _lineDelimiter[1])
-            {
-               if (i >= numberChars.Length)
-                  break;
-               for (int j = 0; j < i; j++)
-               {
-                  //todo only utf-8 encoding (codes of numbers < 128)
-                  numberChars[j] = (char)lineSpan[j];
-               }
-
-               bool success = ulong.TryParse(numberChars, out var number);
-               if (!success)
-                  return Result<Line>.Error($"wrong line: {ByteToStringConverter.Convert(lineSpan)}");
-               
-               //text will include ". " and eol
-               return Result<Line>.Ok(new Line(number, startIndex + i, startIndex + lineSpan.Length));
-            }
-         }
-
-         return Result<Line>.Error($"wrong line: {ByteToStringConverter.Convert(lineSpan)}");
       }
    }
 }

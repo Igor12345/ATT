@@ -1,4 +1,6 @@
-﻿namespace SortingEngine.RuntimeConfiguration;
+﻿using System.Text;
+
+namespace SortingEngine.RuntimeConfiguration;
 
 //in this case it was a bad idea
 public interface IConfigBuilder
@@ -17,4 +19,5 @@ public interface IConfigBuilder
    IConfigBuilder UseMaxLineLength(int maxLineLength);
    IConfigBuilder UseOneWay(bool useOneStepSorting);
    IConfigBuilder UseKeepReadStreamOpen(bool keepReadStreamOpen);
+   IConfigBuilder UseEncoding(Encoding encoding);
 }

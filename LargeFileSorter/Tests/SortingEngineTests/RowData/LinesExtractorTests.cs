@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using SortingEngine;
+using SortingEngine.Algorithms;
 using SortingEngine.DataStructures;
 using SortingEngine.Entities;
 using SortingEngine.RowData;
@@ -12,12 +13,13 @@ public class LinesExtractorTests
     [Fact]
     public void RecordsExtractor_CannotBeCreatedWithoutProvidedEolAndDelimiter()
     {
+        LineParser parser = new LineParser(KmpMatcher.CreateForPattern(new byte[2]), Encoding.Default);
 #pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
-        Assert.Throws<ArgumentNullException>(() => new LinesExtractor(null, new byte[2]));
+        Assert.Throws<ArgumentNullException>(() => new LinesExtractor(null, parser));
         Assert.Throws<ArgumentNullException>(() => new LinesExtractor(new byte[] { 1 }, null));
 #pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
 
-        LinesExtractor extractor = new LinesExtractor(new byte[] { 1 }, new byte[] { 2 });
+        LinesExtractor extractor = new LinesExtractor(new byte[] { 1 }, parser);
         Assert.NotNull(extractor);
     }
 
@@ -115,177 +117,8 @@ public class LinesExtractorTests
 
     private static LinesExtractor GetUsual(Encoding encoding)
     {
-        return new LinesExtractor(encoding.GetBytes(Environment.NewLine), encoding.GetBytes(TestConstants.Delimiter));
-    }
-}
-
-public class LineParserTests
-{
-    // https://www.geeksforgeeks.org/kmp-algorithm-for-pattern-searching/
-    [Theory]
-    [InlineData("aaaa", new byte[]{0,1,2,3})]
-    [InlineData("abc", new byte[]{0,0,0})]
-    [InlineData("AABAACAABAA", new byte[]{0, 1, 0, 1, 2, 0, 1, 2, 3, 4, 5})]
-    [InlineData("AAACAAAAAC", new byte[]{0, 1, 2, 0, 1, 2, 3, 3, 3, 4})]
-    [InlineData("AAABAAA", new byte[]{0, 1, 2, 0, 1, 2, 3})]
-    public void ShouldBuildCorrectPrefixFunction(string pattern, byte[] prefixResult)
-    {
-        var prefix = BuildPrefix(pattern);
-
-        for (int i = 0; i < pattern.Length; i++)
-        {
-            Assert.Equal(prefixResult[i], prefix[i]);
-        }
-    }
-
-    [Theory]
-    [InlineData("efg", "abc defg 5", 5)]
-    [InlineData("bca", "abc defg 5", -1)]
-    [InlineData("24", "ab24c de24fg 5", 2)]
-    [InlineData(". ", "1234. de24fg 5", 4)]
-    public void ShouldDoSearchPatternInString(string pattern, string text, int index)
-    {
-        var prefix = BuildPrefix(pattern);
-        int foundAt = KmpAlgorithm(pattern, text, prefix);
-        Assert.Equal(index, foundAt);
-    }
-    
-    [Theory]
-    [InlineData("efg", "abc defg 5", 5)]
-    [InlineData("bca", "abc defg 5", -1)]
-    [InlineData("24", "ab24c de24fg 5", 2)]
-    [InlineData(". ", "1234. de24fg 5", 4)]
-    public void ShouldDoSearchPatternInBytesArray(string pattern, string text, int index)
-    {
-        Encoding encoding = Encoding.UTF8;
-        var patternBytes = encoding.GetBytes(pattern);
-        var textBytes = encoding.GetBytes(text);
-        var prefix = BuildPrefix(patternBytes);
-        int foundAt = KmpAlgorithm(patternBytes, textBytes, prefix);
-        Assert.Equal(index, foundAt);
-    }
-
-    private static int KmpAlgorithm(string pattern, string text, int[] prefix)
-    {
-        int p = 0;
-        int t = 0;
-
-        while (t < text.Length)
-        {
-            if (text[t] == pattern[p])
-            {
-                p++;
-                t++;
-            }
-            else
-            {
-                if (p == 0)
-                {
-                    t++;
-                }
-                else
-                {
-                    p = prefix[t - 1];
-                }
-            }
-
-            if (p == pattern.Length)
-            {
-                return t - pattern.Length;
-            }
-        }
-
-        return -1;
-    }
-
-    private static int[] BuildPrefix(string pattern)
-    {
-        int ln = pattern.Length;
-        int[] prefix = new int[ln];
-        prefix[0] = 0;
-        int index = 1;
-        int pr = 0;
-
-        while (index < ln)
-        {
-            if (pattern[index] == pattern[pr])
-            {
-                pr++;
-                prefix[index] = pr;
-                index++;
-            }else if (pr != 0)
-            {
-                pr = prefix[pr - 1];
-            }
-            else
-            {
-                prefix[index] = 0;
-                index++;
-            }
-        }
-
-        return prefix;
-    }
-    
-    private static int[] BuildPrefix(byte[] pattern)
-    {
-        int ln = pattern.Length;
-        int[] prefix = new int[ln];
-        prefix[0] = 0;
-        int index = 1;
-        int pr = 0;
-
-        while (index < ln)
-        {
-            if (pattern[index] == pattern[pr])
-            {
-                pr++;
-                prefix[index] = pr;
-                index++;
-            }else if (pr != 0)
-            {
-                pr = prefix[pr - 1];
-            }
-            else
-            {
-                prefix[index] = 0;
-                index++;
-            }
-        }
-
-        return prefix;
-    }
-    
-    private static int KmpAlgorithm(byte[] pattern, byte[] text, int[] prefix)
-    {
-        int p = 0;
-        int t = 0;
-
-        while (t < text.Length)
-        {
-            if (text[t] == pattern[p])
-            {
-                p++;
-                t++;
-            }
-            else
-            {
-                if (p == 0)
-                {
-                    t++;
-                }
-                else
-                {
-                    p = prefix[t - 1];
-                }
-            }
-
-            if (p == pattern.Length)
-            {
-                return t - pattern.Length;
-            }
-        }
-
-        return -1;
+        LineParser parser = new LineParser(KmpMatcher.CreateForPattern(encoding.GetBytes(TestConstants.Delimiter)),
+            Encoding.UTF8);
+        return new LinesExtractor(encoding.GetBytes(Environment.NewLine), parser);
     }
 }

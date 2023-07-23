@@ -6,7 +6,8 @@ namespace Infrastructure.ByteOperations;
 
 public class LongToBytesConverter : IDisposable, IAsyncDisposable
 {
-   private readonly byte[] _buffer = ArrayPool<byte>.Shared.Rent(20);
+   //todo const or config
+   private readonly byte[] _buffer = ArrayPool<byte>.Shared.Rent(21);
 
    //only for benchmarks
    public (ReadOnlyMemory<byte>, int length) ConvertLongToBytes(ulong value)

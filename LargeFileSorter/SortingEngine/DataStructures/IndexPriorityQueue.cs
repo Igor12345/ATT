@@ -1,6 +1,7 @@
 ﻿using Infrastructure.Parameters;
 
-namespace SortingEngine.Sorting
+//This class can be moved to a separate library, but for two classes (+KMP algorithm), in this particular case, it makes no sense.
+namespace SortingEngine.DataStructures
 {
    //can be internal if make this assembly friendly for tests
    //There is an "official" implementation: System.Collections.Generic.PriorityQueue

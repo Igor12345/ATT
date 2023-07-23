@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using Infrastructure.Parameters;
 using SortingEngine;
+using SortingEngine.Algorithms;
 using SortingEngine.DataStructures;
 using SortingEngine.Entities;
 using SortingEngine.RowData;
@@ -61,7 +62,8 @@ public class DataGenerator
     public (Line[], byte[]) CreateLinesFromStrings(string[] originalStrings)
     {
         byte[] source = CreateWholeBytes(originalStrings, RandomBytes(242));
-        LinesExtractor extractor = new LinesExtractor(_eol, _delimiter);
+        LineParser parser = new LineParser(KmpMatcher.CreateForPattern(_delimiter), Encoding.UTF8);
+        LinesExtractor extractor = new LinesExtractor(_eol, parser);
         ExpandingStorage<Line> linesStorage = new ExpandingStorage<Line>(100);
         ExtractionResult result = extractor.ExtractRecords(source.AsSpan(), linesStorage);
 
@@ -77,7 +79,8 @@ public class DataGenerator
     public byte[] FillLinesStorageFromStrings(string[] originalStrings, ExpandingStorage<Line> linesStorage)
     {
         byte[] source = CreateWholeBytes(originalStrings, RandomBytes(242));
-        LinesExtractor extractor = new LinesExtractor(_eol, _delimiter);
+        LineParser parser = new LineParser(KmpMatcher.CreateForPattern(_delimiter), Encoding.UTF8);
+        LinesExtractor extractor = new LinesExtractor(_eol, parser);
         ExtractionResult result = extractor.ExtractRecords(source.AsSpan(), linesStorage);
 
         Line[] lines = new Line[result.LinesNumber];

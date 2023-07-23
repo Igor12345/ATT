@@ -54,6 +54,7 @@ namespace SortingEngine.RuntimeEnvironment
             .UseFileAndFolder(path, "")
             .UseKeepReadStreamOpen(_baseConfiguration.KeepReadStreamOpen ?? true)
             .UseMaxLineLength(maxLineLength)
+            .UseEncoding(encoding)
             .UseEolBytes(eolBytes)
             .UseDelimiter(delimiterBytes)
             .UseOneWay(useOneStepSorting));

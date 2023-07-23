@@ -19,6 +19,8 @@ namespace SortingEngine.RuntimeConfiguration
       //todo freeze
       byte[] DelimiterBytes { get; }
       byte[] EolBytes { get; }
+      
+      Encoding Encoding { get; }
       bool UseOneWay { get; }
       bool KeepReadStreamOpen { get; }
    }

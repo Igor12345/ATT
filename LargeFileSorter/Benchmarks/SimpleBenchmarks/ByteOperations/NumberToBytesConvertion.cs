@@ -41,7 +41,8 @@ public class NumberToBytesConversion
     {
         int s = 0;
 
-        Span<byte> buffer = stackalloc byte[20];
+        int maxNumberLength = 21;
+        Span<byte> buffer = stackalloc byte[maxNumberLength];
         for (int i = 0; i < N; i++)
         { 
             int length = LongToBytesConverter.WriteULongToBytes(Numbers[i], buffer);
