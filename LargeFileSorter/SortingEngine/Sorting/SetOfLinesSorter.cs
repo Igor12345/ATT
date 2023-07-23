@@ -48,7 +48,7 @@ public class SetOfLinesSorter
     private async ValueTask Log(string message)
     {
         //in the real projects it will be structured logs
-        string prefix = $"{GetType()}, at: {DateTime.UtcNow:hh:mm:ss-fff}, ({Thread.CurrentThread.ManagedThreadId})";
+        string prefix = $"{GetType()}, at: {DateTime.Now:hh:mm:ss-fff}, ({Thread.CurrentThread.ManagedThreadId})";
         await _logger.LogAsync(prefix + message);
     }
 }

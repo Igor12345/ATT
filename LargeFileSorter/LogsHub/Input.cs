@@ -11,9 +11,14 @@ internal class Input
 
     private readonly Channel<LogEntry> _input;
     
-    public ValueTask Log(LogEntry record)
+    public ValueTask LogAsync(LogEntry record)
     {
         return _input.Writer.WriteAsync(record);
+    }
+
+    public bool Log(LogEntry record)
+    {
+        return _input.Writer.TryWrite(record);
     }
 }
 

@@ -77,7 +77,7 @@ internal class FileSortingService : IHostedService
       ILogger logger = Logger.Create(cancellationToken);
       // ILogger logger = Logger.CreateEmpty(cancellationToken);
 
-      Console.WriteLine($"Starting at: {DateTime.UtcNow:hh:mm:ss-fff}, sorting file: {validInput.File}.");
+      Console.WriteLine($"Starting at: {DateTime.Now:hh:mm:ss-fff}, sorting file: {validInput.File}.");
 
       Result sortingResult = await SortingPhase(cancellationToken, configuration, validInput, logger);
       if (!sortingResult.Success)
@@ -91,10 +91,10 @@ internal class FileSortingService : IHostedService
 #if MERGE_ASYNC
          : await MergingPhaseAsync(configuration, cancellationToken);
 #else
-         :  MergingPhase(configuration);
+         :  MergingPhase(configuration, logger);
 #endif
       
-      Console.WriteLine($"Completed at: {DateTime.UtcNow:hh:mm:ss-fff}, the file: {configuration.Output}.");
+      Console.WriteLine($"Completed at: {DateTime.Now:hh:mm:ss-fff}, the file: {configuration.Output}.");
 
       return result;
    }
@@ -120,7 +120,7 @@ internal class FileSortingService : IHostedService
       SortingPhaseRunner sortingPhase = new SortingPhaseRunner(bytesReader, writer);
       Result sortingResult = await sortingPhase.Execute(configuration, semaphore, logger, cancellationToken);
 
-      Console.WriteLine($"Sorting phase completed at: {DateTime.UtcNow:hh:mm:ss-fff}.");
+      Console.WriteLine($"Sorting phase completed at: {DateTime.Now:hh:mm:ss-fff}.");
       return sortingResult;
    }
 
@@ -140,7 +140,7 @@ internal class FileSortingService : IHostedService
       return result;
    }
 
-   private static Result MergingPhase(IConfig configuration)
+   private static Result MergingPhase(IConfig configuration, ILogger logger)
    {
       using ISeveralTimesLinesWriter resultWriter = LinesWriter.CreateForMultipleWriting(configuration.Output,
          configuration.MaxLineLength, configuration.WriteStreamBufferSize, configuration.Encoding);
@@ -148,7 +148,7 @@ internal class FileSortingService : IHostedService
       Console.WriteLine("The merge phase is executed in synchronous mode.");
       Stopwatch sw = new Stopwatch();
       sw.Start();
-      using StreamsMergeExecutor merger = new StreamsMergeExecutor(configuration, resultWriter);
+      using StreamsMergeExecutor merger = new StreamsMergeExecutor(configuration, resultWriter, logger);
       Result result = merger.MergeWithOrder();
       sw.Stop();
       Console.WriteLine($"---> Merge completed in {sw.Elapsed.TotalSeconds:F2} sec, {sw.Elapsed.TotalMilliseconds} ms");

@@ -22,12 +22,17 @@ public class Logger : ILogger
 
     public ValueTask LogAsync(LogEntry record)
     {
-        return _input.Log(record);
+        return _input.LogAsync(record);
     }
 
     public ValueTask LogAsync(Func<LogEntry> getRecord)
     {
         return LogAsync(getRecord());
+    }
+
+    public bool Log(LogEntry record)
+    {
+        return _input.Log(record);
     }
 
     public async ValueTask StopAsync()

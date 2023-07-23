@@ -2,13 +2,9 @@
 
 public class EmptyLogger : ILogger
 {
-    public ValueTask LogAsync(LogEntry record)
-    {
-        return ValueTask.CompletedTask;
-    }
+    public bool Log(LogEntry record) => true;
 
-    public ValueTask LogAsync(Func<LogEntry> getRecord)
-    {
-        return ValueTask.CompletedTask;
-    }
+    public ValueTask LogAsync(LogEntry record) => ValueTask.CompletedTask;
+
+    public ValueTask LogAsync(Func<LogEntry> getRecord) => ValueTask.CompletedTask;
 }

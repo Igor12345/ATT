@@ -1,4 +1,5 @@
 ﻿using Infrastructure.Parameters;
+using LogsHub;
 using SortingEngine.Algorithms;
 using SortingEngine.Comparators;
 using SortingEngine.DataStructures;
@@ -10,6 +11,7 @@ namespace SortingEngine.Merging;
 
 public sealed class StreamsMergeExecutor :IDisposable
 {
+   private readonly ILogger _logger;
    private readonly IConfig _config;
    private readonly ISeveralTimesLinesWriter _linesWriter;
    private string[] _files = null!;
@@ -18,11 +20,13 @@ public sealed class StreamsMergeExecutor :IDisposable
    private int _lastLine;
    private Memory<byte> _inputBuffer;
    private DataChunkManager[]? _managers;
+   private int _reported;
 
-   public StreamsMergeExecutor(IConfig config, ISeveralTimesLinesWriter linesWriter)
+   public StreamsMergeExecutor(IConfig config, ISeveralTimesLinesWriter linesWriter, ILogger logger)
    {
       _config = Guard.NotNull(config);
       _linesWriter = Guard.NotNull(linesWriter);
+      _logger = Guard.NotNull(logger);
    }
 
    //todo file system dependence
@@ -116,8 +120,19 @@ public sealed class StreamsMergeExecutor :IDisposable
    private Result FlushOutputBuffer()
    {
       Result result = _linesWriter.WriteLines(_outputBuffer, _lastLine, _inputBuffer);
+      ReportProgress(_lastLine);
       _lastLine = 0;
       return result;
+   }
+
+   private void ReportProgress(int lines)
+   {
+      _reported += lines;
+      if (_reported > 500_000)
+      {
+         _logger.Log($"{DateTime.Now:hh:mm:ss-fff}: Next {_reported} lines has been added to the file.");
+         _reported = 0;
+      }
    }
 
    public void Dispose()
