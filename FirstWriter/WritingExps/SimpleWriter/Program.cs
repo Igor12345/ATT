@@ -21,9 +21,19 @@ Console.WriteLine($"char - {'z'}; byte - {(byte)'z'}");
 Console.WriteLine($"char - {'A'}; byte - {(byte)'A'}");
 Console.WriteLine($"char - {'Z'}; byte - {(byte)'Z'}");
 Console.WriteLine($"char - {'0'}; byte - {(byte)'0'}");
+Console.WriteLine($"char - {'0'}; byte - {(byte)'0'}");
+Console.WriteLine($"char - {'1'}; byte - {(byte)'1'}");
+Console.WriteLine($"char - {'2'}; byte - {(byte)'2'}");
+Console.WriteLine($"char - {'3'}; byte - {(byte)'3'}");
+Console.WriteLine($"char - {'4'}; byte - {(byte)'4'}");
+Console.WriteLine($"char - {'5'}; byte - {(byte)'5'}");
+Console.WriteLine($"char - {'6'}; byte - {(byte)'6'}");
+Console.WriteLine($"char - {'7'}; byte - {(byte)'7'}");
+Console.WriteLine($"char - {'8'}; byte - {(byte)'8'}");
 Console.WriteLine($"char - {'9'}; byte - {(byte)'9'}");
 Console.WriteLine($"char - {' '}; byte - {(byte)' '}");
 Console.WriteLine($"char - {'.'}; byte - {(byte)'.'}");
+Console.WriteLine($"char - /n/r; byte - {(byte)Environment.NewLine[0]} {(byte)Environment.NewLine[1]}");
 
 // var numberCreator = TextCreator.NumbersCreator;
 //

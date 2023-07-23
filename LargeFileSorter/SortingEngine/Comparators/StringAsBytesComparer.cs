@@ -14,8 +14,15 @@ public class StringAsBytesComparer
       if (strB.Length == 0)
          return 1;
       
+      // Most common case, first character is different.
+      //all lines start from ". "
+      // if ((strA[2] - strB[2]) != 0)
+      // {
+      //    return strA[2] - strB[2];
+      // }
 
-      int length = Math.Min(strA.Length, strB.Length);
+      int minLength = Math.Min(strA.Length, strB.Length);
+      int length = minLength;
       int diffOffset = -1;
 
       int i = 0;
@@ -60,18 +67,16 @@ public class StringAsBytesComparer
          // we already see a difference in the unrolled loop above
          return strA[diffOffset] - strB[diffOffset];
       }
-      
-      while (length > 0)
+
+      while (i < minLength)
       {
          int c;
-
-         length--;
-         if ((c = strA[length] - strB[length]) != 0)
+         if ((c = strA[i] - strB[i++]) != 0)
          {
             return c;
          }
       }
-      
+
       return strA.Length - strB.Length;
    }
 }

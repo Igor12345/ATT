@@ -1,4 +1,6 @@
-﻿using Infrastructure.Parameters;
+﻿using System.Text;
+using Infrastructure.ByteOperations;
+using Infrastructure.Parameters;
 using SortingEngine.Algorithms;
 using SortingEngine.DataStructures;
 using SortingEngine.Entities;
@@ -42,6 +44,13 @@ namespace SortingEngine.RowData
             var result = _lineParser.Parse(input[startLine..endLine]);
             if (!result.Success)
                return ExtractionResult.Error(result.Message);
+            
+            //todo
+            if (result.Value.Number == 476732903372746310)
+            {
+               string text = ByteToStringConverter.Convert(input[startLine..endLine], Encoding.UTF8);
+            }
+            
             Line line = result.Value with
             {
                From = result.Value.From + startLine + offset, To = result.Value.To + startLine + offset

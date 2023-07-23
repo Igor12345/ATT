@@ -11,6 +11,11 @@ namespace CoreTests
       [InlineData("", "")]
       [InlineData("b", "")]
       [InlineData("", "c")]
+      [InlineData(". 1", ". a")]
+      [InlineData(". 11", ". A")]
+      [InlineData(". 132", ". 113")]
+      [InlineData(". 1342", ". 11135")]
+      [InlineData("132", "113")]
       [InlineData("a b", "a b")]
       [InlineData("aB", "ab")]
       [InlineData("_a", "_a")]
@@ -76,6 +81,15 @@ namespace CoreTests
          var d = string.CompareOrdinal("Σ", "π");
          var d1 = string.CompareOrdinal("σ", "π");
          var d2 = string.CompareOrdinal("σ", "Σ");
+         var d3 = string.CompareOrdinal(". 1", ". a");
+         var d4 = string.CompareOrdinal(". 1", ". 11");
+         var d5 = string.CompareOrdinal(". a", ". 11");
+         string[] str = new string[]
+         {
+            ". B", ". 111", ". 1a", ". 1"
+         };
+         Array.Sort(str);
+         // str
          var t = d;
       }
    }
