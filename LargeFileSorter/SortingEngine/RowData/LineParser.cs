@@ -20,7 +20,7 @@ public class LineParser
         _maxLength = _encoding.GetByteCount(ulong.MaxValue.ToString());
     }
 
-    public Result<Line> Parse(ReadOnlySpan<byte> lineSpan, int initialOffset)
+    public Result<Line> Parse(ReadOnlySpan<byte> lineSpan)
     {
         Span<char> numberChars = stackalloc char[_maxLength];
         int endOfNumber = _substringMatcher.Find(lineSpan);
@@ -31,10 +31,10 @@ public class LineParser
             bool success = ulong.TryParse(numberChars, out var number);
             if (success)
             {
-                return Result<Line>.Ok(new Line(number, initialOffset + endOfNumber, initialOffset + lineSpan.Length));
+                return Result<Line>.Ok(new Line(number, endOfNumber, lineSpan.Length));
             }
         }
 
-        return Result<Line>.Error($"wrong line: {ByteToStringConverter.Convert(lineSpan)}");
+        return Result<Line>.Error($"wrong line: {ByteToStringConverter.Convert(lineSpan, _encoding)}");
     }
 }

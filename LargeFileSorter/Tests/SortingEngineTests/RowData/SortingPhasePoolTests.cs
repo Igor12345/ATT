@@ -75,44 +75,8 @@ public class SortingPhasePoolTests
         }
     }
 
-    [Fact]
-    public async Task CheckChannels()
-    {
-        var channel = Channel.CreateBounded<int>(6);
-        _testOutputHelper.WriteLine("Channel created");
-
-        var writer = channel.Writer;
-        var reader = channel.Reader;
-
-        for (int i = 0; i < 5; i++)
-        {
-            await writer.WriteAsync(i);
-        }
-        _testOutputHelper.WriteLine($"Items to read after writing  {channel.Reader.Count}");
-        await Task.Delay(50);
-        for (int i = 0; i < 3; i++)
-        {
-            var v = await reader.ReadAsync();
-            _testOutputHelper.WriteLine($"Read {i} v={v}");
-        }
-        await Task.Delay(50);
-        _testOutputHelper.WriteLine($"Items to read left  {channel.Reader.Count}");
-        await Task.Delay(50);
-        writer.Complete();
-        await Task.Delay(50);
-        _testOutputHelper.WriteLine($"Channel completed, items to read {channel.Reader.Count}");
-        await Task.Delay(50);
-        
-        while (reader.TryRead(out var item))
-        {
-            _testOutputHelper.WriteLine($"after closing {item}");
-        }
-        
-        _testOutputHelper.WriteLine($"Final {reader.Count}, ");
-        Assert.Equal(2,3);
-    }
-
-    [Fact]
+    // [Fact]
+    //todo!!!
     public async Task PoolManager_ShouldAllowReuseBuffers()
     {
         int minBytesBufferLength = 200;

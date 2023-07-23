@@ -75,8 +75,9 @@ public sealed class StreamsMergeExecutor
    {
       DataChunkManager[] managers = new DataChunkManager[_files.Length];
       //KmpMatcher can be a Singleton. Work for DI
-      LineParser parser = new LineParser(KmpMatcher.CreateForPattern(_config.DelimiterBytes), _config.Encoding);
-      LinesExtractor extractor = new LinesExtractor(_config.EolBytes, parser);
+      LineParser parser = new LineParser(KmpMatcher.CreateForThisPattern(_config.DelimiterBytes), _config.Encoding);
+      IParticularSubstringMatcher eolFinder = KmpMatcher.CreateForThisPattern(_config.EolBytes);
+      LinesExtractor extractor = new LinesExtractor(eolFinder, _config.EolBytes.Length, parser);
       for (int i = 0; i < _files.Length; i++)
       {
          int from = i * _config.MergeBufferLength;

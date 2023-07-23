@@ -10,40 +10,48 @@ namespace SortingEngineTests.RowData;
 
 public class LinesExtractorTests
 {
+    
+    private readonly Encoding[] _encodings = {
+        Encoding.UTF8,  
+        Encoding.UTF32
+    };
+    
     [Fact]
     public void RecordsExtractor_CannotBeCreatedWithoutProvidedEolAndDelimiter()
     {
-        LineParser parser = new LineParser(KmpMatcher.CreateForPattern(new byte[2]), Encoding.Default);
+        LineParser parser = new LineParser(KmpMatcher.CreateForThisPattern(new byte[2]), Encoding.Default);
+        IParticularSubstringMatcher eolFinder = KmpMatcher.CreateForThisPattern(new byte[2]);
 #pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
-        Assert.Throws<ArgumentNullException>(() => new LinesExtractor(null, parser));
-        Assert.Throws<ArgumentNullException>(() => new LinesExtractor(new byte[] { 1 }, null));
+        Assert.Throws<ArgumentNullException>(() => new LinesExtractor(null, 2, parser));
+        Assert.Throws<ArgumentNullException>(() => new LinesExtractor( eolFinder, 1, null));
 #pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
 
-        LinesExtractor extractor = new LinesExtractor(new byte[] { 1 }, parser);
+        LinesExtractor extractor = new LinesExtractor(eolFinder, 1, parser);
         Assert.NotNull(extractor);
     }
 
     [Fact]
     public void RecordsExtractor_ShouldRecognizeCorrectLines()
     {
-        Encoding encoding = Encoding.UTF8;
+        foreach (Encoding encoding in _encodings)
+        {
+            byte[] input = DataGenerator.Use(encoding).CreateWholeBytes(
+                new[] { "12345. abcπ ΣF*GH!", "678910. @ijk3 lm-Ππ Σσ;" },
+                DataGenerator.RandomBytes(12));
+            ExpandingStorage<Line> linesStorage = new ExpandingStorage<Line>(500);
+            LinesExtractor extractor = GetUsual(encoding);
 
-        byte[] input = DataGenerator.Use(encoding).CreateWholeBytes(
-            new[] { "12345. abcd EF*GH!", "678910. @ijk3 lm-NO PQ;" },
-            DataGenerator.RandomBytes(12));
-        ExpandingStorage<Line> linesStorage = new ExpandingStorage<Line>(500);
-        LinesExtractor extractor = GetUsual(encoding);
+            ExtractionResult result = extractor.ExtractRecords(input, linesStorage);
 
-        ExtractionResult result = extractor.ExtractRecords(input, linesStorage);
+            Assert.True(result.Success);
+            Assert.Equal(2, result.LinesNumber);
+            Assert.Equal(input.Length - 12, result.StartRemainingBytes);
 
-        Assert.True(result.Success);
-        Assert.Equal(2, result.LinesNumber);
-        Assert.Equal(input.Length - 12, result.StartRemainingBytes);
-
-        string str1 = LinesUtils.LineToString(linesStorage[0], input);
-        Assert.Equal("12345. abcd EF*GH!" + Environment.NewLine, str1);
-        string str2 = LinesUtils.LineToString(linesStorage[1], input);
-        Assert.Equal("678910. @ijk3 lm-NO PQ;" + Environment.NewLine, str2);
+            string str1 = LinesUtils.LineToString(linesStorage[0], input, encoding);
+            Assert.Equal("12345. abcπ ΣF*GH!" + Environment.NewLine, str1);
+            string str2 = LinesUtils.LineToString(linesStorage[1], input, encoding);
+            Assert.Equal("678910. @ijk3 lm-Ππ Σσ;" + Environment.NewLine, str2);
+        }
     }
 
     [Fact]
@@ -117,8 +125,9 @@ public class LinesExtractorTests
 
     private static LinesExtractor GetUsual(Encoding encoding)
     {
-        LineParser parser = new LineParser(KmpMatcher.CreateForPattern(encoding.GetBytes(TestConstants.Delimiter)),
-            Encoding.UTF8);
-        return new LinesExtractor(encoding.GetBytes(Environment.NewLine), parser);
+        LineParser parser = new LineParser(KmpMatcher.CreateForThisPattern(encoding.GetBytes(TestConstants.Delimiter)),
+            encoding);
+        IParticularSubstringMatcher eolFinder = KmpMatcher.CreateForThisPattern(encoding.GetBytes(Environment.NewLine));
+        return new LinesExtractor( eolFinder, encoding.GetBytes(Environment.NewLine).Length, parser);
     }
 }

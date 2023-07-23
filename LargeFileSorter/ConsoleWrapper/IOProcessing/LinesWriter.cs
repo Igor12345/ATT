@@ -1,15 +1,19 @@
 ﻿using System.Buffers;
+using System.Text;
 using Infrastructure.ByteOperations;
 using Infrastructure.Parameters;
 using SortingEngine;
 using SortingEngine.Entities;
 using SortingEngine.RowData;
+using Constants = Infrastructure.ByteOperations.Constants;
 
 namespace ConsoleWrapper.IOProcessing;
 
 //not the best decision, only as a temporary case, for this proof of concept
 public class LinesWriter : IOneTimeLinesWriter, ISeveralTimesLinesWriter
 {
+   private readonly Encoding _encoding;
+
    private readonly int _bufferSize;
    // private readonly int _charLength;
    private readonly int _maxLineLength;
@@ -17,26 +21,30 @@ public class LinesWriter : IOneTimeLinesWriter, ISeveralTimesLinesWriter
    private FileStream? _fileStream;
    private FileStream? _syncFileStream;
 
-   private LinesWriter(string filePath, int charLength, int bufferSize) : this(charLength, bufferSize)
+   private LinesWriter(string filePath, int charLength, int bufferSize, Encoding encoding) : this(charLength,
+      bufferSize, encoding)
    {
       _filePath = Guard.NotNullOrEmpty(filePath);
    }
 
-   private LinesWriter(int maxLineLength, int bufferSize)
+   private LinesWriter(int maxLineLength, int bufferSize, Encoding encoding)
    {
       _maxLineLength = Guard.Positive(maxLineLength);
       _bufferSize = Guard.Positive(bufferSize);
+      _encoding = Guard.NotNull(encoding);
    }
 
-   public static IOneTimeLinesWriter CreateForOnceWriting(int maxLineLength, int bufferSize)
+   public static IOneTimeLinesWriter CreateForOnceWriting(int maxLineLength, int bufferSize,
+      Encoding encoding)
    {
-      LinesWriter instance = new LinesWriter(maxLineLength, bufferSize);
+      LinesWriter instance = new LinesWriter(maxLineLength, bufferSize, encoding);
       return instance;
    }
 
-   public static ISeveralTimesLinesWriter CreateForMultipleWriting(string filePath, int maxLineLength, int bufferSize)
+   public static ISeveralTimesLinesWriter CreateForMultipleWriting(string filePath, int maxLineLength, int bufferSize,
+      Encoding encoding)
    {
-      LinesWriter instance = new LinesWriter(filePath, maxLineLength, bufferSize);
+      LinesWriter instance = new LinesWriter(filePath, maxLineLength, bufferSize, encoding);
       return instance;
    }
 

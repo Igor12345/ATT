@@ -13,13 +13,7 @@ public class StringAsBytesComparer
 
       if (strB.Length == 0)
          return 1;
-
-      // Most common case, first character is different.
-      //all lines start from ". "
-      if ((strA[2] - strB[2]) != 0)
-      {
-         return strA[2] - strB[2];
-      }
+      
 
       int length = Math.Min(strA.Length, strB.Length);
       int diffOffset = -1;

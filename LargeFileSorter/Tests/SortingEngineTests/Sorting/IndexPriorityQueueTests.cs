@@ -74,18 +74,18 @@ namespace SortingEngineTests.Sorting
          queue.Enqueue(value2, key2);
 
          (int v, int k) = queue.Peek();
-         Assert.Equal(value2, v);
-         Assert.Equal(key2, k);
-
-         (v, k) = queue.Dequeue();
-         Assert.Equal(value2, v);
-         Assert.Equal(key2, k);
-
-         Assert.True(queue.Any());
+         Assert.Equal(value1, v);
+         Assert.Equal(key1, k);
 
          (v, k) = queue.Dequeue();
          Assert.Equal(value1, v);
          Assert.Equal(key1, k);
+
+         Assert.True(queue.Any());
+
+         (v, k) = queue.Dequeue();
+         Assert.Equal(value2, v);
+         Assert.Equal(key2, k);
 
          Assert.False(queue.Any());
       }
@@ -111,10 +111,10 @@ namespace SortingEngineTests.Sorting
 
          Assert.Equal(4, sortedValues.Count);
          Assert.Collection(sortedValues,
-            item => Assert.Equal(1, item),
-            item => Assert.Equal(2, item),
+            item => Assert.Equal(5, item),
             item => Assert.Equal(4, item),
-            item => Assert.Equal(5, item)
+            item => Assert.Equal(2, item),
+            item => Assert.Equal(1, item)
          );
       }
 

@@ -1,5 +1,6 @@
 ﻿using System.Buffers;
 using System.Reactive.Subjects;
+using System.Text;
 using Infrastructure.ByteOperations;
 using Infrastructure.Parameters;
 
@@ -47,7 +48,7 @@ public sealed class ObservableLinesExtractor
         package.LineData[result.StartRemainingBytes..].CopyTo(remainedBytes);
 
         //todo delete
-        var l = ByteToStringConverter.Convert(remainedBytes);
+        var l = ByteToStringConverter.Convert(remainedBytes, Encoding.UTF8);
         Console.WriteLine($"----> Remained bytes after package {package.Id} are: {l}");
         
         SortingPhasePackage nextPackage = new SortingPhasePackage(package, result.LinesNumber);

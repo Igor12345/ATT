@@ -27,8 +27,9 @@ public class SortingPhaseRunner
         Stopwatch sw = new Stopwatch();
         sw.Start();
 
-        LineParser parser = new LineParser(KmpMatcher.CreateForPattern(configuration.DelimiterBytes), Encoding.UTF8);
-        LinesExtractor linesExtractor = new LinesExtractor(configuration.EolBytes, parser);
+        LineParser parser = new LineParser(KmpMatcher.CreateForThisPattern(configuration.DelimiterBytes), Encoding.UTF8);
+        IParticularSubstringMatcher eolFinder = KmpMatcher.CreateForThisPattern(configuration.EolBytes);
+        LinesExtractor linesExtractor = new LinesExtractor(eolFinder, configuration.EolBytes.Length, parser);
         ObservableLinesExtractor extractor = new ObservableLinesExtractor(linesExtractor);
 
         IntermediateResultsDirector chunksDirector = IntermediateResultsDirector.Create(_linesWriter, configuration);

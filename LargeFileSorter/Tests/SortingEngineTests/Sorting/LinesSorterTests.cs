@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.Text;
 using SortingEngine.DataStructures;
 using SortingEngine.Entities;
 using SortingEngine.Sorting;
@@ -16,7 +17,7 @@ public class LinesSorterTests
         Line[] sortedLines = sorter.Sort(input.LinesStorage, input.Origin.Length);
 
         string[] converted = sortedLines.Take(input.Origin.Length)
-            .Select(line => LinesUtils.LineToString(line, input.Source)).ToArray();
+            .Select(line => LinesUtils.LineToString(line, input.Source, Encoding.UTF8)).ToArray();
 
         Action<string>[] asserts = input.Origin.Select<string, Action<string>>(str =>
         {

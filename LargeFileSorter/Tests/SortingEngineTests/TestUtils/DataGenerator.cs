@@ -62,8 +62,9 @@ public class DataGenerator
     public (Line[], byte[]) CreateLinesFromStrings(string[] originalStrings)
     {
         byte[] source = CreateWholeBytes(originalStrings, RandomBytes(242));
-        LineParser parser = new LineParser(KmpMatcher.CreateForPattern(_delimiter), Encoding.UTF8);
-        LinesExtractor extractor = new LinesExtractor(_eol, parser);
+        LineParser parser = new LineParser(KmpMatcher.CreateForThisPattern(_delimiter), Encoding.UTF8);
+        IParticularSubstringMatcher eolFinder = KmpMatcher.CreateForThisPattern(_eol);
+        LinesExtractor extractor = new LinesExtractor(eolFinder, _eol.Length, parser);
         ExpandingStorage<Line> linesStorage = new ExpandingStorage<Line>(100);
         ExtractionResult result = extractor.ExtractRecords(source.AsSpan(), linesStorage);
 
@@ -79,8 +80,9 @@ public class DataGenerator
     public byte[] FillLinesStorageFromStrings(string[] originalStrings, ExpandingStorage<Line> linesStorage)
     {
         byte[] source = CreateWholeBytes(originalStrings, RandomBytes(242));
-        LineParser parser = new LineParser(KmpMatcher.CreateForPattern(_delimiter), Encoding.UTF8);
-        LinesExtractor extractor = new LinesExtractor(_eol, parser);
+        LineParser parser = new LineParser(KmpMatcher.CreateForThisPattern(_delimiter), Encoding.UTF8);
+        IParticularSubstringMatcher eolFinder = KmpMatcher.CreateForThisPattern(_eol);
+        LinesExtractor extractor = new LinesExtractor(eolFinder, _eol.Length, parser);
         ExtractionResult result = extractor.ExtractRecords(source.AsSpan(), linesStorage);
 
         Line[] lines = new Line[result.LinesNumber];

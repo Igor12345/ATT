@@ -14,6 +14,8 @@ namespace CoreTests
       [InlineData("a b", "a b")]
       [InlineData("aB", "ab")]
       [InlineData("_a", "_a")]
+      [InlineData("a", "A")]
+      [InlineData("aaaa", "AAAA")]
       [InlineData("abc", "ab")]
       [InlineData("ab", "abc")]
       [InlineData("abcdefg", "abcdefg")]

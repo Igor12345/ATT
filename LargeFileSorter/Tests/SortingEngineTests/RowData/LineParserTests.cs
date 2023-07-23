@@ -12,6 +12,7 @@ public class LineParserTests
         Encoding.ASCII, 
         Encoding.UTF32
     };
+    
     private readonly string _pattern = ". ";
 
     [Theory]
@@ -41,9 +42,9 @@ public class LineParserTests
                 expectedTo = expectedFrom + encoding.GetByteCount(_pattern) + encoding.GetByteCount(parts[1]); //end of text in fact
             }
             
-            LineParser parser = new LineParser(KmpMatcher.CreateForPattern(patternBytes), encoding);
+            LineParser parser = new LineParser(KmpMatcher.CreateForThisPattern(patternBytes), encoding);
 
-            var result = parser.Parse(textBytes.AsSpan(), 0);
+            var result = parser.Parse(textBytes.AsSpan());
             Assert.True(validLine == result.Success, $"For encoding {encoding.EncodingName}");
             if (validLine)
             {

@@ -1,6 +1,7 @@
 ﻿using System.Buffers;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Text;
 
 namespace Infrastructure.ByteOperations;
 
@@ -25,6 +26,28 @@ public class LongToBytesConverter : IDisposable, IAsyncDisposable
    public static int WriteULongToBytes(ulong value, Span<byte> destination)
    {
       return ConvertULongToBytesInternal(value, destination);
+   }
+   
+   //todo benchmark
+   public static int WriteULongToBytes(ulong value, Span<byte> destination, Encoding encoding)
+   {
+      int lengthUtf8 = ConvertULongToBytesInternal(value, destination);
+
+      if (encoding.Equals(Encoding.UTF8)|| encoding.Equals(Encoding.Default) || encoding.Equals(Encoding.ASCII))
+         return lengthUtf8;
+      
+      Span<char> chars = stackalloc char[lengthUtf8];
+      Encoding.UTF8.GetChars(destination[..lengthUtf8], chars);
+      int length = encoding.GetBytes(chars, destination);
+      return length;
+   }
+   
+   //todo benchmark
+   public static int WriteULongToBytesStandard(ulong value, Span<byte> destination, Encoding encoding)
+   {
+      ReadOnlySpan<char> chars = value.ToString().AsSpan();
+      int length = encoding.GetBytes(chars, destination);
+      return length;
    }
 
    //by motives System.Number

@@ -4,7 +4,6 @@ using BenchmarkDotNet.Toolchains.InProcess.NoEmit;
 namespace SimpleBenchmarks.IOOperations;
 
 // [SimpleJob(RunStrategy.Monitoring, launchCount: 1, warmupCount: 2)]
-// [Config(typeof(InProcessNoEmitConfig))]
 public class SyncVsAsyncOperations
 {
     private const string FilePathSync1 = "testSync1.data";

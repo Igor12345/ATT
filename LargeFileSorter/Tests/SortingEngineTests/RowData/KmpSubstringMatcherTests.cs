@@ -29,7 +29,7 @@ public class KmpSubstringMatcherTests
                 expectedAt = encoding.GetByteCount(text[..expectedIndex]);
             }
             
-            IParticularSubstringMatcher patternSeeker = KmpMatcher.CreateForPattern(patternBytes);
+            IParticularSubstringMatcher patternSeeker = KmpMatcher.CreateForThisPattern(patternBytes);
             int index = patternSeeker.Find(textBytes);
             
             Assert.Equal(expectedAt, index);

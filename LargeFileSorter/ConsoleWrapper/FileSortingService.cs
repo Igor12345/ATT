@@ -115,7 +115,7 @@ internal class FileSortingService : IHostedService
 #endif
       
       IOneTimeLinesWriter writer = LinesWriter.CreateForOnceWriting(configuration.MaxLineLength,
-         configuration.ReadStreamBufferSize);
+         configuration.ReadStreamBufferSize, configuration.Encoding);
 
       SortingPhaseRunner sortingPhase = new SortingPhaseRunner(bytesReader, writer);
       Result sortingResult = await sortingPhase.Execute(configuration, semaphore, logger, cancellationToken);
@@ -127,7 +127,7 @@ internal class FileSortingService : IHostedService
    private static async Task<Result> MergingPhaseAsync(IConfig configuration, CancellationToken cancellationToken)
    {
       await using ISeveralTimesLinesWriter resultWriter = LinesWriter.CreateForMultipleWriting(configuration.Output,
-         configuration.MaxLineLength, configuration.WriteStreamBufferSize);
+         configuration.MaxLineLength, configuration.WriteStreamBufferSize, configuration.Encoding);
 
       Console.WriteLine("The merge phase runs asynchronously.");
       Stopwatch sw = new Stopwatch();
@@ -143,7 +143,7 @@ internal class FileSortingService : IHostedService
    private static Result MergingPhase(IConfig configuration)
    {
       using ISeveralTimesLinesWriter resultWriter = LinesWriter.CreateForMultipleWriting(configuration.Output,
-         configuration.MaxLineLength, configuration.WriteStreamBufferSize);
+         configuration.MaxLineLength, configuration.WriteStreamBufferSize, configuration.Encoding);
 
       Console.WriteLine("The merge phase is executed in synchronous mode.");
       Stopwatch sw = new Stopwatch();

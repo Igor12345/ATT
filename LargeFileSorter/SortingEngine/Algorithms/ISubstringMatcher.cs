@@ -13,7 +13,7 @@ public interface IParticularSubstringMatcher
 
 public class KmpMatcher : ISubstringMatcher
 {
-    public static IParticularSubstringMatcher CreateForPattern(byte[] pattern)
+    public static IParticularSubstringMatcher CreateForThisPattern(byte[] pattern)
     {
         var preBuiltPrefix = BuildPrefix(pattern);
         ParticularMatcher instance = new ParticularMatcher(pattern, preBuiltPrefix);
@@ -77,8 +77,10 @@ public class KmpMatcher : ISubstringMatcher
     {
         int p = 0;
         int t = 0;
+        int textLength = text.Length;
+        int patternLength = pattern.Length;
 
-        while (t < text.Length)
+        while (t < textLength)
         {
             if (text[t] == pattern[p])
             {
@@ -88,19 +90,13 @@ public class KmpMatcher : ISubstringMatcher
             else
             {
                 if (p == 0)
-                {
                     t++;
-                }
                 else
-                {
-                    p = prefix[t - 1];
-                }
+                    p = prefix[p - 1];
             }
 
-            if (p == pattern.Length)
-            {
-                return t - pattern.Length;
-            }
+            if (p == patternLength)
+                return t - patternLength;
         }
 
         return -1;
