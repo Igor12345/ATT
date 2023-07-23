@@ -44,7 +44,7 @@ internal class FileSortingService : IHostedService
          ? $"---> Success - {sw.Elapsed.TotalMinutes:F2} min, {sw.Elapsed.Seconds:F2} sec; " +
            $"Total execution time: {sw.Elapsed.TotalSeconds:F2} sec, {sw.Elapsed.TotalMilliseconds} ms"
          : $"---> Error: {finalResult.Message}");
-
+      
       Console.ReadLine();
    }
 
@@ -148,7 +148,7 @@ internal class FileSortingService : IHostedService
       Console.WriteLine("The merge phase is executed in synchronous mode.");
       Stopwatch sw = new Stopwatch();
       sw.Start();
-      StreamsMergeExecutor merger = new StreamsMergeExecutor(configuration, resultWriter);
+      using StreamsMergeExecutor merger = new StreamsMergeExecutor(configuration, resultWriter);
       Result result = merger.MergeWithOrder();
       sw.Stop();
       Console.WriteLine($"---> Merge completed in {sw.Elapsed.TotalSeconds:F2} sec, {sw.Elapsed.TotalMilliseconds} ms");

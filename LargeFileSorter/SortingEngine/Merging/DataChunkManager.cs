@@ -6,7 +6,7 @@ using SortingEngine.RowData;
 
 namespace SortingEngine.Merging;
 
-internal class DataChunkManager : IAsyncDisposable
+internal class DataChunkManager : IDisposable
 {
    private readonly Stream _dataSource;
    private readonly Memory<byte> _rowStorage;
@@ -16,11 +16,12 @@ internal class DataChunkManager : IAsyncDisposable
    private byte[]? _remainedBytes;
    private int _remindedBytesLength;
    private readonly int _remindedBytesCapacity;
+   private readonly Func<Result> _flushOutputBuffer;
    private readonly LinesExtractor _extractor;
    private int _loadedLines;
 
    public DataChunkManager(string file, Memory<byte> rowStorage, int offset, LinesExtractor extractor,
-      Func<ExpandingStorage<Line>> recordsStorageProvider, int maxLineLength)
+      Func<ExpandingStorage<Line>> recordsStorageProvider, int maxLineLength, Func<Result> flushOutputBuffer)
    {
       _rowStorage = rowStorage;
       _offset = offset;
@@ -28,6 +29,7 @@ internal class DataChunkManager : IAsyncDisposable
       //todo
       _dataSource = File.OpenRead(file);
       _remindedBytesCapacity = maxLineLength;
+      _flushOutputBuffer = Guard.NotNull(flushOutputBuffer);
       _extractor = Guard.NotNull(extractor);
    }
 
@@ -59,12 +61,14 @@ internal class DataChunkManager : IAsyncDisposable
 
    private ExtractionResult LoadLines()
    {
+      Result flushBufferResult = _flushOutputBuffer();
+      if (!flushBufferResult.Success)
+         return ExtractionResult.Error(flushBufferResult.Message);
+      
       _recordsStorage.Clear();
 
       if (_remindedBytesLength > 0)
-      {
          _remainedBytes.CopyTo(_rowStorage);
-      }
 
       int received = _dataSource.Read(_rowStorage.Span[_remindedBytesLength..]);
       if (received == 0)
@@ -92,11 +96,9 @@ internal class DataChunkManager : IAsyncDisposable
       return result;
    }
 
-   public ValueTask DisposeAsync()
+   public void Dispose()
    {
-      if (_remainedBytes != null)
-         ArrayPool<byte>.Shared.Return(_remainedBytes);
-
-      return _dataSource.DisposeAsync();
+      _dataSource.Dispose();
+      _recordsStorage.Dispose();
    }
 }

@@ -57,6 +57,7 @@ namespace SortingEngine.RuntimeEnvironment
             .UseEncoding(encoding)
             .UseEolBytes(eolBytes)
             .UseDelimiter(delimiterBytes)
+            .DeleteTempDir(_baseConfiguration.CleanUp??true)
             .UseOneWay(useOneStepSorting));
 
          return config;

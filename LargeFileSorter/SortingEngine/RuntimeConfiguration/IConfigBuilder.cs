@@ -20,4 +20,5 @@ public interface IConfigBuilder
    IConfigBuilder UseOneWay(bool useOneStepSorting);
    IConfigBuilder UseKeepReadStreamOpen(bool keepReadStreamOpen);
    IConfigBuilder UseEncoding(Encoding encoding);
+   IConfigBuilder DeleteTempDir(bool cleanUp);
 }

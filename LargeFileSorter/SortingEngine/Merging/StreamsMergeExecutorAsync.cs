@@ -41,6 +41,24 @@ public sealed class StreamsMergeExecutorAsync
       _outputBuffer = new Line[_config.OutputBufferLength];
    }
 
+   private DataChunkManagerAsync[] CreateDataChunkManagers()
+   {
+      DataChunkManagerAsync[] managers = new DataChunkManagerAsync[_files.Length];
+      //KmpMatcher can be a Singleton. Work for DI
+      LineParser parser = new LineParser(KmpMatcher.CreateForThisPattern(_config.DelimiterBytes), _config.Encoding);
+      IParticularSubstringMatcher eolFinder = KmpMatcher.CreateForThisPattern(_config.EolBytes);
+      LinesExtractor extractor = new LinesExtractor(eolFinder, _config.EolBytes.Length, parser);
+      for (int i = 0; i < _files.Length; i++)
+      {
+         int from = i * _config.MergeBufferLength;
+         int to = (i + 1) * _config.MergeBufferLength;
+         managers[i] = new DataChunkManagerAsync(_files[i], _inputBuffer[from..to], from, extractor,
+            () => new ExpandingStorage<Line>(_config.RecordsBufferLength), _config.MaxLineLength, _cancellationToken);
+      }
+
+      return managers;
+   }
+
    private async Task<Result> ExecuteMergeAsync()
    {
       DataChunkManagerAsync[] managers = CreateDataChunkManagers();
@@ -71,24 +89,6 @@ public sealed class StreamsMergeExecutorAsync
          }
       }
       return _lastLine == 0 ? Result.Ok : await WriteLinesFromBuffer(_outputBuffer, _lastLine, _inputBuffer);
-   }
-
-   private DataChunkManagerAsync[] CreateDataChunkManagers()
-   {
-      DataChunkManagerAsync[] managers = new DataChunkManagerAsync[_files.Length];
-      //KmpMatcher can be a Singleton. Work for DI
-      LineParser parser = new LineParser(KmpMatcher.CreateForThisPattern(_config.DelimiterBytes), _config.Encoding);
-      IParticularSubstringMatcher eolFinder = KmpMatcher.CreateForThisPattern(_config.EolBytes);
-      LinesExtractor extractor = new LinesExtractor(eolFinder, _config.EolBytes.Length, parser);
-      for (int i = 0; i < _files.Length; i++)
-      {
-         int from = i * _config.MergeBufferLength;
-         int to = (i + 1) * _config.MergeBufferLength;
-         managers[i] = new DataChunkManagerAsync(_files[i], _inputBuffer[from..to], from, extractor,
-            () => new ExpandingStorage<Line>(_config.RecordsBufferLength), _config.MaxLineLength, _cancellationToken);
-      }
-
-      return managers;
    }
 
    private async Task<Result> InitializeQueue(DataChunkManagerAsync[] managers,

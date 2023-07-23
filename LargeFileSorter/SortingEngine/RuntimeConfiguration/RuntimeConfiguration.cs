@@ -26,6 +26,7 @@ public class RuntimeConfiguration : IConfig
    public int WriteStreamBufferSize { get; private set; }
    public bool UseOneWay { get; private set; }
    public bool KeepReadStreamOpen { get; private set; }
+   public bool CleanUp { get; private set; }
 
    public static IConfig Create(Action<IConfigBuilder> buildConfig)
    {
@@ -152,6 +153,12 @@ public class RuntimeConfiguration : IConfig
       public IConfigBuilder UseKeepReadStreamOpen(bool keepReadStreamOpen)
       {
          _configuration.KeepReadStreamOpen = keepReadStreamOpen;
+         return this;
+      }
+
+      public IConfigBuilder DeleteTempDir(bool cleanUp)
+      {
+         _configuration.CleanUp = cleanUp;
          return this;
       }
    }

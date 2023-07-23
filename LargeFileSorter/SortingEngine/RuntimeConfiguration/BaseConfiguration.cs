@@ -13,7 +13,7 @@ public class BaseConfiguration
     
     public int AvailableMemory { get; set; }
     public bool? KeepReadStreamOpen { get; set; }
-    
     public int? MaxLineLength { get; set; } 
     public string? Delimiter { get; set; }
+    public bool? CleanUp { get; set; }
 }

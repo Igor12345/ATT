@@ -23,5 +23,6 @@ namespace SortingEngine.RuntimeConfiguration
       Encoding Encoding { get; }
       bool UseOneWay { get; }
       bool KeepReadStreamOpen { get; }
+      bool CleanUp { get; }
    }
 }
