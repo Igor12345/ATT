@@ -57,13 +57,6 @@ public class SortingPhaseRunner
             .Do(async p => await logger.LogAsync(() =>
                 new LogEntry($"Ready to read the next chunk of data. package: {p.Id}.")))
             
-            // .Select(async p => await _bytesProducer.WriteBytesToBufferAsync(p))
-            //
-            // .Do(async p => await logger.LogAsync(() =>
-            //     new LogEntry(
-            //         $"The next chunk of data has been read. package: {p.Id}, " +
-            //         $"contains: {p.WrittenBytesLength} bytes, this is the last part: {p.IsLastPackage}.")))
-            
             .Select(async p => await extractor.ExtractNextPartAsync(p))
             .Publish();
 
