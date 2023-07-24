@@ -26,16 +26,13 @@ internal class LongFileReaderKeepStream : IBytesProducer
    public static IBytesProducer CreateForAsync(string filePath, int streamBufferSize, ILogger logger,
       CancellationToken cancellationToken)
    {
-      //todo offset
       LongFileReaderKeepStream instance = new LongFileReaderKeepStream(logger, cancellationToken);
       instance.Init(filePath, streamBufferSize, true);
       return instance;
    }
+   
    public static IBytesProducer CreateForSync(string filePath, int streamBufferSize, ILogger logger)
-   {
-      //todo
-      Console.WriteLine($"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss fff}) LongFileReaderKeepStream created");
-      
+   {  
       LongFileReaderKeepStream instance = new LongFileReaderKeepStream(logger, CancellationToken.None);
       instance.Init(filePath, streamBufferSize, false);
       return instance;
@@ -51,26 +48,16 @@ internal class LongFileReaderKeepStream : IBytesProducer
 
    public async Task<ReadingResult> ProvideBytesAsync(Memory<byte> buffer)
    {
-      //todo
-      Console.WriteLine($"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss fff}) LongFileReaderKeepStream reading Async");
-      using (AsyncLock.Releaser _ = await _lock.LockAsync())
-      {
-         int length = await _stream.ReadAsync(buffer, _cancellationToken);
-         //todo
-         Console.WriteLine($"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss fff}) LongFileReaderKeepStream read {length} bytes Async");
-         return ReadingResult.Ok(length);
-      }
+      using AsyncLock.Releaser _ = await _lock.LockAsync();
+      int length = await _stream.ReadAsync(buffer, _cancellationToken);
+      return ReadingResult.Ok(length);
    }
 
    public ReadingResult ProvideBytes(Memory<byte> buffer)
    {
-      //todo
-      Console.WriteLine($"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss fff}) LongFileReaderKeepStream reading Sync");
       lock (_lockObj)
       { 
          int length = _stream.Read(buffer.Span);
-         //todo
-         Console.WriteLine($"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss fff}) LongFileReaderKeepStream read {length} bytes Sync");
          return ReadingResult.Ok(length);
       }
    }

@@ -47,7 +47,6 @@ public class SortingPhasePoolTests
         ReadingResult result = ReadingResult.Ok(23);
         Mock<IBytesProducer> bytesProviderMock = new Mock<IBytesProducer>();
         
-        //TODO  !!! try with ProvideBytesAsync to handle the case with last, empty package
         bytesProviderMock.Setup(p => p.ProvideBytes(It.IsAny<Memory<byte>>())).Returns(result);
         FilledBufferPackage first;
         FilledBufferPackage second;

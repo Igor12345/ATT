@@ -18,13 +18,8 @@ public sealed class ObservableLinesExtractor
         _linesExtractor = Guard.NotNull(linesExtractor);
     }
 
-    //todo split on parser
     public async Task<(SortingPhasePackage, PreReadPackage)> ExtractNextPartAsync(ReadyForExtractionPackage package)
     {
-        //todo
-        Console.WriteLine(
-            $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss fff}) ObservableLinesExtractor Processing {package.Id} is last {package.IsLastPackage}");
-
         ExtractionResult result = _linesExtractor.ExtractRecords(package.LineData.Span, package.ParsedRecords);
 
         if (!result.Success)
@@ -38,19 +33,10 @@ public sealed class ObservableLinesExtractor
 
         int remainingBytesLength = package.LineData.Length - result.StartRemainingBytes;
 
-        //todo
-        Console.WriteLine(
-            $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss fff}) ObservableLinesExtractor " +
-            $"Processed {package.Id} extracted {result.LinesNumber} lines, left {remainingBytesLength} bytes");
-
         //will be returned in SortingPhasePoolManager
         byte[] remainedBytes = ArrayPool<byte>.Shared.Rent(remainingBytesLength);
         package.LineData[result.StartRemainingBytes..].CopyTo(remainedBytes);
 
-        //todo delete
-        var l = ByteToStringConverter.Convert(remainedBytes, Encoding.UTF8);
-        Console.WriteLine($"----> Remained bytes after package {package.Id} are: {l}");
-        
         SortingPhasePackage nextPackage = new SortingPhasePackage(package, result.LinesNumber);
 
         PreReadPackage preReadPackage = package.IsLastPackage

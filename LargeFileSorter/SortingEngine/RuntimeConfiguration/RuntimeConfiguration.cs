@@ -119,7 +119,7 @@ public class RuntimeConfiguration : IConfig
          return this;
       }
 
-      //todo build delimiter prefix here
+      //todo build delimiter prefix here?
       public IConfigBuilder UseDelimiter(byte[] delimiterBytes)
       {
          _configuration.DelimiterBytes = delimiterBytes;

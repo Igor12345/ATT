@@ -19,12 +19,6 @@ public class SetOfLinesSorter
 
     public async Task<AfterSortingPhasePackage> ProcessPackageAsync(SortingPhasePackage package)
     {
-        //todo
-        Console.WriteLine(
-            $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss fff}) SetOfLinesSorter ProcessPackageAsync, " +
-            $"package {package.Id}, lines {package.LinesNumber}, is last {package.IsLastPackage}");
-        //todo remove
-        // ReadOnlyMemory<byte> inputBytes = package.RowData.AsMemory()[..package.OccupiedLength];
         Line[] sorted = SortLines(package.LineData, package.LinesNumber, package.ParsedRecords);
 
         await Log(

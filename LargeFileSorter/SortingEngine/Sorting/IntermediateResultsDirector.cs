@@ -42,11 +42,6 @@ internal class IntermediateResultsDirector
 
    private Result WriteRecords(AfterSortingPhasePackage package)
    {
-      //todo
-      Console.WriteLine(
-         $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss fff}) IntermediateResultsDirector WriteRecords, " +
-         $"package {package.Id}, lines {package.LinesNumber}, is last {package.IsLastPackage}");
-      
       if (package.LinesNumber == 0)
          return Result.Ok;
 
@@ -69,11 +64,6 @@ internal class IntermediateResultsDirector
 
    public async ValueTask<AfterSortingPhasePackage> ProcessPackageAsync(AfterSortingPhasePackage package)
    {
-      //todo
-      Console.WriteLine(
-         $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss fff}) IntermediateResultsDirector ProcessPackageAsync, " +
-         $"package {package.Id}, lines {package.LinesNumber}, is last {package.IsLastPackage}");
-
       Result result = WriteRecords(package);
       if (!result.Success)
       {
@@ -81,29 +71,14 @@ internal class IntermediateResultsDirector
          throw new InvalidOperationException(result.Message);
       }
 
-      //todo
-      Console.WriteLine(
-         $" --->  ({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss fff}) IntermediateResultsDirector ProcessPackageAsync, " +
-         $"sending _sortedLinesSaved {package.Id}");
-
       AfterSavingBufferPackage nextPackage = new AfterSavingBufferPackage(package);
       await _sortedLinesSavedSubject.OnNextAsync(nextPackage);
 
       bool allProcessed = CheckIfAllProcessed(package);
 
       if (allProcessed)
-      {
-         //todo
-         Console.WriteLine(
-            $" --->  ({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss fff}) IntermediateResultsDirector ProcessPackageAsync, " +
-            $" !!! allProcessed {package.Id} !!! <----");
          await _sortedLinesSavedSubject.OnCompletedAsync();
-      }
 
-//todo
-      Console.WriteLine(
-         $" --->  ({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss fff}) IntermediateResultsDirector ProcessPackageAsync, " +
-         $"return AfterSortingPhasePackage {package.Id}");
       return package;
    }
 

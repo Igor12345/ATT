@@ -54,43 +54,5 @@ namespace CoreTests
             _ => 0
          };
       }
-
-      //todo
-      // https://learn.microsoft.com/en-us/dotnet/standard/base-types/character-encoding-introduction
-      [Fact]
-      public void TryCyrillic()
-      {
-         Encoding encoding = Encoding.UTF8;
-         Encoding encoding32 = Encoding.UTF32;
-         string one = "abcd";
-         string two = "Ππ Σσ";
-         // string two = "абвг \u03a0\u03a3";
-
-         var bytesOne = encoding.GetBytes(one);
-         var bytesTwo = encoding.GetBytes(two);
-
-         var strOne = string.Join(", ", bytesOne);
-         var strTwo = string.Join(", ", bytesTwo);
-         
-         // Assert.Same(strOne, strTwo);
-
-         var a = string.CompareOrdinal("a", "b");
-         var A = string.CompareOrdinal("a", "A");
-         var b = string.CompareOrdinal("b", "б");
-         var c = string.CompareOrdinal("a", "π");
-         var d = string.CompareOrdinal("Σ", "π");
-         var d1 = string.CompareOrdinal("σ", "π");
-         var d2 = string.CompareOrdinal("σ", "Σ");
-         var d3 = string.CompareOrdinal(". 1", ". a");
-         var d4 = string.CompareOrdinal(". 1", ". 11");
-         var d5 = string.CompareOrdinal(". a", ". 11");
-         string[] str = new string[]
-         {
-            ". B", ". 111", ". 1a", ". 1"
-         };
-         Array.Sort(str);
-         // str
-         var t = d;
-      }
    }
 }

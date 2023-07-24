@@ -4,7 +4,6 @@ using SortingEngine.Entities;
 
 namespace SortingEngine.RowData;
 
-//todo move?
 public readonly record struct OrderedBuffer(int Index, byte[] Buffer, int WrittenBytes);
 public abstract record BasePackage(int Id, bool IsLastPackage, byte[] RowData, ExpandingStorage<Line> ParsedRecords);
 
@@ -22,13 +21,6 @@ public record FilledBufferPackage : BasePackage
     {
         WrittenBytesLength = Guard.NotNegative(writtenBytes);
     }
-
-    //todo record's constructor
-    // protected FilledBufferPackage(FilledBufferPackage source, int writtenBytes) :
-    //     this((BasePackage)source, writtenBytes)
-    // {
-    //     WrittenBytesLength = Guard.NotNegative(writtenBytes);
-    // }
 
     public int WrittenBytesLength { get; }
 }
@@ -101,38 +93,4 @@ public record PreReadPackage(
     int RemainedBytesLength)
 {
     public static PreReadPackage LastPackage(int packageNumber) => new(packageNumber, true, Array.Empty<byte>(), 0);
-}
-
-public class ReadyForExtractionPackageCl
-{
-
-    public ReadyForExtractionPackageCl(FilledBufferPackage filledBufferPackage, Range lineLocation)
-    {
-        
-        RowData = filledBufferPackage.RowData;
-        IsLastPackage = filledBufferPackage.IsLastPackage;
-        ParsedRecords = filledBufferPackage.ParsedRecords;
-        Id = filledBufferPackage.Id;
-        
-        //todo + MaxLineLength!!!
-        LineData = RowData.AsMemory(lineLocation);
-    }
-    public ReadyForExtractionPackageCl(byte[] rowData, ExpandingStorage<Line> linesStorage, int id, bool isLast, int startOfLine)
-    {
-        RowData = rowData;
-        IsLastPackage = isLast;
-        ParsedRecords = linesStorage;
-        Id = id;
-        LineData = rowData.AsMemory(startOfLine);
-    }
-
-    public byte[] RowData { get; init; }
-    public ExpandingStorage<Line> ParsedRecords { get; init; }
-    public int Id { get; init; }
-    public bool IsLastPackage { get; init; }
-
-    public Memory<byte> LineData { get; init; }
-
-    public int StartOfLine { get; init; }
-    public int WrittenBytesLength { get; init; }
 }

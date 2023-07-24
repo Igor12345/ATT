@@ -28,7 +28,6 @@ public class LongToBytesConverter : IDisposable, IAsyncDisposable
       return ConvertULongToBytesInternal(value, destination);
    }
    
-   //todo benchmark
    public static int WriteULongToBytes(ulong value, Span<byte> destination, Encoding encoding)
    {
       int lengthUtf8 = ConvertULongToBytesInternal(value, destination);
@@ -42,7 +41,6 @@ public class LongToBytesConverter : IDisposable, IAsyncDisposable
       return length;
    }
    
-   //todo benchmark
    public static int WriteULongToBytesStandard(ulong value, Span<byte> destination, Encoding encoding)
    {
       ReadOnlySpan<char> chars = value.ToString().AsSpan();

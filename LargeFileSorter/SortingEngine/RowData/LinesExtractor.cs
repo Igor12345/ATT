@@ -45,12 +45,6 @@ namespace SortingEngine.RowData
             if (!result.Success)
                return ExtractionResult.Error(result.Message);
             
-            //todo
-            if (result.Value.Number == 476732903372746310)
-            {
-               string text = ByteToStringConverter.Convert(input[startLine..endLine], Encoding.UTF8);
-            }
-            
             Line line = result.Value with
             {
                From = result.Value.From + startLine + offset, To = result.Value.To + startLine + offset
