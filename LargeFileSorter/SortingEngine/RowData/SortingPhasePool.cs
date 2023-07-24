@@ -1,7 +1,4 @@
-﻿// #define READ_ASYNC 
-//todo deadlock!!!
-
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using Infrastructure.Concurrency;
 using Infrastructure.Parameters;
 using SortingEngine.DataStructures;
