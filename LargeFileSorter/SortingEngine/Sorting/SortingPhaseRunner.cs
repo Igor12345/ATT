@@ -57,7 +57,7 @@ public class SortingPhaseRunner
             .Do(async p => await logger.LogAsync(() =>
                 new LogEntry($"Ready to read the next chunk of data. package: {p.Id}.")))
             
-            .Select(async p => await extractor.ExtractNextPartAsync(p))
+            .Select(p => extractor.ExtractNextPart(p))
             .Publish();
 
         await using var backLoopSub = await published.Select(pp => pp.Item2)
@@ -89,7 +89,6 @@ public class SortingPhaseRunner
                 {
                     //Here can be some smarter handler
                     HandleError(ex);
-                    throw ex;
                 },
                 () =>
                 {

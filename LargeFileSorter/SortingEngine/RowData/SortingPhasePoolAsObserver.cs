@@ -4,6 +4,7 @@ using System.Reactive.Linq;
 using System.Threading.Channels;
 using Infrastructure.Parameters;
 using SortingEngine.Entities;
+using Exception = System.Exception;
 
 namespace SortingEngine.RowData;
 
@@ -58,7 +59,11 @@ public class SortingPhasePoolAsObserver : IDisposable
             await _writer.WriteAsync(nextPackage);
         }
 
-        public ValueTask OnErrorAsync(Exception ex) => throw ex;
+        public ValueTask OnErrorAsync(Exception ex)
+        {
+            Console.WriteLine(ex);
+            return ValueTask.CompletedTask;
+        }
 
         public ValueTask OnCompletedAsync() => ValueTask.CompletedTask;
     }
@@ -119,17 +124,26 @@ public class SortingPhasePoolAsObserver : IDisposable
                     (Tuple<IAsyncObserver<ReadyForExtractionPackage>, ChannelReader<ReadyForExtractionPackage>,
                         CancellationToken>)
                     checkedState;
-                while (await reader.WaitToReadAsync(token))
+                try
                 {
-                    ReadyForExtractionPackage package = await reader.ReadAsync(token);
-
-                    if (package.IsLastPackage)
+                    while (await reader.WaitToReadAsync(token))
                     {
-                        await observer.OnCompletedAsync();
-                        break;
-                    }
+                        ReadyForExtractionPackage package = await reader.ReadAsync(token);
 
-                    await observer.OnNextAsync(package);
+                        if (package.IsLastPackage)
+                        {
+                            await observer.OnCompletedAsync();
+                            break;
+                        }
+
+                        await observer.OnNextAsync(package);
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    await observer.OnErrorAsync(e).ConfigureAwait(false);
+                    return false;
                 }
 
                 return true;

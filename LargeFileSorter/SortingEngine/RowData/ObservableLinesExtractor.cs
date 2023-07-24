@@ -1,16 +1,10 @@
 ﻿using System.Buffers;
-using System.Reactive.Subjects;
-using System.Text;
-using Infrastructure.ByteOperations;
 using Infrastructure.Parameters;
 
 namespace SortingEngine.RowData;
 
 public sealed class ObservableLinesExtractor
 {
-    private readonly SimpleAsyncSubject<PreReadPackage> _readyForNextChunkSubject =
-        new SequentialSimpleAsyncSubject<PreReadPackage>();
-
     private readonly LinesExtractor _linesExtractor;
 
     public ObservableLinesExtractor(LinesExtractor linesExtractor)
@@ -18,13 +12,12 @@ public sealed class ObservableLinesExtractor
         _linesExtractor = Guard.NotNull(linesExtractor);
     }
 
-    public async Task<(SortingPhasePackage, PreReadPackage)> ExtractNextPartAsync(ReadyForExtractionPackage package)
+    public (SortingPhasePackage, PreReadPackage) ExtractNextPart(ReadyForExtractionPackage package)
     {
         ExtractionResult result = _linesExtractor.ExtractRecords(package.LineData.Span, package.ParsedRecords);
 
         if (!result.Success)
         {
-            await _readyForNextChunkSubject.OnErrorAsync(new InvalidOperationException(result.Message));
             throw new InvalidOperationException(result.Message);
         }
 
