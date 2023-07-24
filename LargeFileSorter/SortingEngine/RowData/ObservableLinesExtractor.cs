@@ -24,9 +24,6 @@ public sealed class ObservableLinesExtractor
 
         if (!result.Success)
         {
-            Console.WriteLine(
-                $"({Thread.CurrentThread.ManagedThreadId} at: {DateTime.Now:HH:mm:ss fff}) !!!! ObservableLinesExtractor " +
-                $"Processed {package.Id} extracted with error {result.Message}");
             await _readyForNextChunkSubject.OnErrorAsync(new InvalidOperationException(result.Message));
             throw new InvalidOperationException(result.Message);
         }
