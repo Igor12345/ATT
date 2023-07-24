@@ -19,7 +19,7 @@ internal sealed class CreatingFileService : IHostedService
         _config = Guard.NotNull(config);
         _logger = Guard.NotNull(logger);
     }
-    
+
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("Started");
@@ -29,25 +29,27 @@ internal sealed class CreatingFileService : IHostedService
         ITextCreator textCreatorWithDuplicates = new DuplicatesTextCreator(_config, basicTextCreator);
         LineCreator lineCreator = new LineCreator(_config, textCreatorWithDuplicates);
         LinesGenerator generator = new LinesGenerator(lineCreator);
-        await using LinesWriter linesWriter = LinesWriter.Create(_config, _logger);
-
-        //4 should be enough
-        byte[] buffer = new byte[_config.MaxLineLength * 6]; 
-        foreach (int lineLength in generator.Generate(buffer.AsMemory()))
+        await using (LinesWriter linesWriter = LinesWriter.Create(_config, _logger))
         {
-            if (_linesToLog >= _config.LogEveryThsLine)
+            //4 should be enough
+            byte[] buffer = new byte[_config.MaxLineLength * 6];
+            foreach (int lineLength in generator.Generate(buffer.AsMemory()))
             {
-                _linesToLog = 0;
-                _logger.LogInformation("{lines} lines - {bytes} bytes.", _linesCount, _currentLength);
+                if (_linesToLog >= _config.LogEveryThsLine)
+                {
+                    _linesToLog = 0;
+                    _logger.LogInformation("{lines} lines - {bytes} bytes.", _linesCount, _currentLength);
+                }
+
+                _linesToLog++;
+
+                if (TimeToStop(lineLength, out int bytesToWrite))
+                    break;
+                linesWriter.Write(buffer.AsSpan()[..bytesToWrite]);
+                _linesCount++;
             }
-            _linesToLog++;
-            
-            if(TimeToStop(lineLength, out int bytesToWrite))
-                break;
-            linesWriter.Write(buffer.AsSpan()[..bytesToWrite]);
-            _linesCount++;
         }
-        
+
         _logger.LogInformation("All lines created {lines} - {bytes} bytes.", _linesCount, _currentLength);
         _logger.LogInformation($"The file: {_config.FilePath}");
     }

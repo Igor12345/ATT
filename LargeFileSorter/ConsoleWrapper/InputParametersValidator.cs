@@ -68,25 +68,31 @@ public class InputParametersValidator
 
    private static bool TrySelectEncoding(string? encodingName, out Encoding encoding)
    {
-      if (string.Equals(encodingName, "ASCII", StringComparison.OrdinalIgnoreCase) ||
-          string.Equals(encodingName, "US-ASCII", StringComparison.OrdinalIgnoreCase) ||
-          string.Equals(encodingName, "UTF-8", StringComparison.OrdinalIgnoreCase) ||
-          string.Equals(encodingName, "UTF8", StringComparison.OrdinalIgnoreCase) ||
-          string.Equals(encodingName, "Y", StringComparison.OrdinalIgnoreCase))
+      string? pattern = encodingName?.Replace(" ", "").Replace("-", "");
+      if (string.Equals(pattern, "ASCII", StringComparison.OrdinalIgnoreCase) ||
+          string.Equals(pattern, "USASCII", StringComparison.OrdinalIgnoreCase) ||
+          string.Equals(pattern, "UTF8", StringComparison.OrdinalIgnoreCase) ||
+          string.Equals(pattern, "Y", StringComparison.OrdinalIgnoreCase))
       {
          encoding = Encoding.UTF8;
          return true;
       }
 
-      if (string.Equals(encodingName, "UTF-16", StringComparison.OrdinalIgnoreCase)||
-          string.Equals(encodingName, "UTF16", StringComparison.OrdinalIgnoreCase))
+      if (string.Equals(pattern, "UTF16", StringComparison.OrdinalIgnoreCase)||
+          string.Equals(pattern, "UTF16le", StringComparison.OrdinalIgnoreCase)||
+          string.Equals(pattern, "Unicode", StringComparison.OrdinalIgnoreCase))
       {
-         encoding = Encoding.UTF32;
+         encoding = Encoding.Unicode;
          return true;
       }
 
-      if (string.Equals(encodingName, "UTF-32", StringComparison.OrdinalIgnoreCase)||
-          string.Equals(encodingName, "UTF32", StringComparison.OrdinalIgnoreCase))
+      if (string.Equals(pattern, "UTF16be", StringComparison.OrdinalIgnoreCase))
+      {
+         encoding = Encoding.BigEndianUnicode;
+         return true;
+      }
+
+      if (string.Equals(encodingName, "UTF32", StringComparison.OrdinalIgnoreCase))
       {
          encoding = Encoding.UTF32;
          return true;
