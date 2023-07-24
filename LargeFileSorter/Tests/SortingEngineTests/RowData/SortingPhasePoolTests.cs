@@ -73,41 +73,4 @@ public class SortingPhasePoolTests
             Assert.Same(winner, timeLimit);
         }
     }
-
-    // [Fact]
-    //todo!!!
-    public async Task PoolManager_ShouldAllowReuseBuffers()
-    {
-        int minBytesBufferLength = 200;
-        int minLinesBufferLength = 200;
-
-        ReadingResult result = ReadingResult.Ok(23);
-        Mock<IBytesProducer> bytesProviderMock = new Mock<IBytesProducer>();
-        bytesProviderMock.Setup(p => p.ProvideBytes(It.IsAny<Memory<byte>>())).Returns(result);
-        FilledBufferPackage third;
-        using (SortingPhasePool pool =
-               new SortingPhasePool(2, minBytesBufferLength, minLinesBufferLength, 100, bytesProviderMock.Object))
-        {
-            CancellationTokenSource cts = new CancellationTokenSource();
-            pool.Run(cts.Token);
-
-            FilledBufferPackage first = await pool.TryAcquireNextFilledBufferAsync(-1);
-            FilledBufferPackage second = await pool.TryAcquireNextFilledBufferAsync(0);
-            Task<FilledBufferPackage> askingNextPackage = pool.TryAcquireNextFilledBufferAsync(1);
-            Task timeLimit = Task.Delay(50);
-            Task winner = await Task.WhenAny(askingNextPackage, timeLimit);
-
-            Assert.NotNull(first);
-            Assert.NotNull(second);
-            bytesProviderMock.Verify(p => p.ProvideBytes(It.IsAny<Memory<byte>>()), Times.Exactly(2));
-
-            Assert.Same(winner, timeLimit);
-            pool.ReuseBuffer(new byte[5]);
-
-            third = await askingNextPackage;
-
-            bytesProviderMock.Verify(p => p.ProvideBytes(It.IsAny<Memory<byte>>()), Times.Exactly(3));
-            Assert.Equal(result.Length, third.WrittenBytesLength);
-        }
-    }
 }
