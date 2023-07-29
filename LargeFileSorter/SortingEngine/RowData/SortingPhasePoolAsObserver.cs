@@ -2,9 +2,7 @@
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Threading.Channels;
-using Infrastructure.Parameters;
 using SortingEngine.Entities;
-using Exception = System.Exception;
 
 namespace SortingEngine.RowData;
 
@@ -18,8 +16,8 @@ public class SortingPhasePoolAsObserver : IDisposable
     
     public SortingPhasePoolAsObserver(SortingPhasePool pool, int maxLineLength)
     {
-        _pool = Guard.NotNull(pool);
-        _maxLineLength = Guard.Positive(maxLineLength);
+        _pool = NotNull(pool);
+        _maxLineLength = Positive(maxLineLength);
         _readyProcessingNextChunkObserver = new ReadyProcessingNextChunkObserver(this);
         _releaseBuffersObserver = new ReadyReleaseBuffersObserver(this);
     }
@@ -31,7 +29,7 @@ public class SortingPhasePoolAsObserver : IDisposable
 
         public ReadyProcessingNextChunkObserver(SortingPhasePoolAsObserver poolAsObserver)
         {
-            _poolAsObserver = Guard.NotNull(poolAsObserver);
+            _poolAsObserver = NotNull(poolAsObserver);
             _writer = _poolAsObserver._packagesQueue.Writer;
         }
 
@@ -75,7 +73,7 @@ public class SortingPhasePoolAsObserver : IDisposable
 
         public ReadyReleaseBuffersObserver(SortingPhasePoolAsObserver poolAsObserver)
         {
-            _poolAsObserver = Guard.NotNull(poolAsObserver);
+            _poolAsObserver = NotNull(poolAsObserver);
             _writer = _poolAsObserver._packagesQueue.Writer;
         }
 
@@ -116,9 +114,9 @@ public class SortingPhasePoolAsObserver : IDisposable
     {
         ChannelReader<ReadyForExtractionPackage> reader = _packagesQueue.Reader;
 
-        await Task.Factory.StartNew<Task<bool>>(static async (state) =>
+        await Task.Factory.StartNew<Task<bool>>(static async state =>
             {
-                object checkedState = Guard.NotNull(state);
+                object checkedState = NotNull(state);
 
                 var (observer, reader, token) =
                     (Tuple<IAsyncObserver<ReadyForExtractionPackage>, ChannelReader<ReadyForExtractionPackage>,

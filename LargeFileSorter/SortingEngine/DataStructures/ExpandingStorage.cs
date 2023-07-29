@@ -1,6 +1,4 @@
 ﻿using System.Buffers;
-using System.Diagnostics;
-using Infrastructure.Parameters;
 
 namespace SortingEngine.DataStructures
 {
@@ -18,7 +16,7 @@ namespace SortingEngine.DataStructures
 
       public ExpandingStorage(int chunkSize)
       {
-         _minChunkSize = Guard.Positive(chunkSize);
+         _minChunkSize = Positive(chunkSize);
          _buffers = new List<T[]>();
       }
 

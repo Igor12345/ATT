@@ -2,6 +2,7 @@
 using SortingEngine.Comparators;
 using SortingEngine.DataStructures;
 using SortingEngine.Entities;
+using Array = System.Array;
 
 namespace SortingEngine.Sorting;
 

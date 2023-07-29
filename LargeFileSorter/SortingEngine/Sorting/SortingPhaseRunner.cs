@@ -2,7 +2,6 @@
 using System.Reactive.Linq;
 using System.Text;
 using Infrastructure.MemoryTools;
-using Infrastructure.Parameters;
 using LogsHub;
 using SortingEngine.Algorithms;
 using SortingEngine.RowData;
@@ -17,8 +16,8 @@ public class SortingPhaseRunner
 
     public SortingPhaseRunner(IBytesProducer bytesProducer, IOneTimeLinesWriter linesWriter)
     {
-        _bytesProducer = Guard.NotNull(bytesProducer);
-        _linesWriter = Guard.NotNull(linesWriter);
+        _bytesProducer = NotNull(bytesProducer);
+        _linesWriter = NotNull(linesWriter);
     }
 
     public async Task<Result> Execute(IConfig configuration, SemaphoreSlim semaphore, ILogger logger,

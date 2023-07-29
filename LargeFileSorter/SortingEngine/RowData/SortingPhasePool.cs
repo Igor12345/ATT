@@ -1,6 +1,5 @@
 ﻿using System.Collections.Concurrent;
 using Infrastructure.Concurrency;
-using Infrastructure.Parameters;
 using SortingEngine.DataStructures;
 using SortingEngine.Entities;
 
@@ -33,13 +32,13 @@ public class SortingPhasePool : IDisposable
     public SortingPhasePool(int numberOfBuffers, int inputBuffersLength, int recordChunksLength, int maxLineLength,
         IBytesProducer bytesProducer)
     {
-        _bytesProducer = Guard.NotNull(bytesProducer);
+        _bytesProducer = NotNull(bytesProducer);
         _lock = new AsyncLock();
         _readLock = new SpinLock();
-        _numberOfBuffers = Guard.Positive(numberOfBuffers);
-        _maxLineLength = Guard.Positive(maxLineLength);
-        _inputBuffersLength = Math.Min(Guard.Positive(inputBuffersLength), Array.MaxLength);
-        _recordChunksLength = Math.Min(Guard.Positive(recordChunksLength), Array.MaxLength);
+        _numberOfBuffers = Positive(numberOfBuffers);
+        _maxLineLength = Positive(maxLineLength);
+        _inputBuffersLength = Math.Min(Positive(inputBuffersLength), MaxLength);
+        _recordChunksLength = Math.Min(Positive(recordChunksLength), MaxLength);
         _emptyBuffers = new ConcurrentStack<byte[]>();
         
         _semaphore = new SemaphoreSlim(numberOfBuffers, numberOfBuffers);
@@ -55,7 +54,7 @@ public class SortingPhasePool : IDisposable
         _filledBuffers = new AwaitingQueueChannels<OrderedBuffer>(_numberOfBuffers, cancellationToken);
         
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        Task.Factory.StartNew<Task<bool>>(static async (state) =>
+        Task.Factory.StartNew<Task<bool>>(static async state =>
             {
                 if (state == null)
                     throw new NullReferenceException(nameof(state));

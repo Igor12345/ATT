@@ -1,5 +1,4 @@
 ﻿using System.Buffers;
-using Infrastructure.Parameters;
 
 namespace SortingEngine.RowData;
 
@@ -9,7 +8,7 @@ public sealed class ObservableLinesExtractor
 
     public ObservableLinesExtractor(LinesExtractor linesExtractor)
     {
-        _linesExtractor = Guard.NotNull(linesExtractor);
+        _linesExtractor = NotNull(linesExtractor);
     }
 
     public (SortingPhasePackage, PreReadPackage) ExtractNextPart(ReadyForExtractionPackage package)

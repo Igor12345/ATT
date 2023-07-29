@@ -1,5 +1,4 @@
 ﻿using System.Reactive.Subjects;
-using Infrastructure.Parameters;
 using SortingEngine.RowData;
 using SortingEngine.RuntimeConfiguration;
 
@@ -13,14 +12,14 @@ internal class IntermediateResultsDirector
    private readonly string _path;
    private readonly string? _filePath;
    private readonly object _lock = new();
-   private readonly HashSet<int> _processedPackages = new();
+   private readonly System.Collections.Generic.HashSet<int> _processedPackages = new();
    private volatile int _lastPackageNumber = -1;
 
    private IntermediateResultsDirector(IOneTimeLinesWriter linesWriter, IConfig configuration)
    {
-      _linesWriter = Guard.NotNull(linesWriter);
-      _configuration = Guard.NotNull(configuration);
-      _path = Guard.NotNullOrEmpty(configuration.TemporaryFolder);
+      _linesWriter = NotNull(linesWriter);
+      _configuration = NotNull(configuration);
+      _path = NotNullOrEmpty(configuration.TemporaryFolder);
       //use strategy
       if (_configuration.UseOneWay)
          _filePath = _configuration.Output;

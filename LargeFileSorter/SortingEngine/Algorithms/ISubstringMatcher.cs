@@ -1,6 +1,4 @@
-﻿using Infrastructure.Parameters;
-
-namespace SortingEngine.Algorithms;
+﻿namespace SortingEngine.Algorithms;
 
 public interface ISubstringMatcher
 {
@@ -27,8 +25,8 @@ public class KmpMatcher : ISubstringMatcher
 
         public ParticularMatcher(byte[] pattern, int[] preBuiltPrefix)
         {
-            _pattern = Guard.NotNull(pattern);
-            _preBuiltPrefix = Guard.NotNull(preBuiltPrefix);
+            _pattern = NotNull(pattern);
+            _preBuiltPrefix = NotNull(preBuiltPrefix);
         }
         public int Find(ReadOnlySpan<byte> text)
         {

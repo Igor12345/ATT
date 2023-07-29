@@ -16,6 +16,9 @@
 
   <ItemGroup>
     <PackageReference Include="JetBrains.Profiler.Api" Version="1.4.0" />
+    <PackageReference Include="LanguageExt.Core" Version="4.4.3" />
+    <PackageReference Include="LanguageExt.Rx" Version="4.4.3" />
+    <PackageReference Include="LanguageExt.Transformers" Version="4.4.3" />
     <PackageReference Include="System.Reactive.Async" Version="6.0.0-alpha.18" />
   </ItemGroup>
 

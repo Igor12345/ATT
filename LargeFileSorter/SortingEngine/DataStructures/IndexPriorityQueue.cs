@@ -1,4 +1,4 @@
-﻿using Infrastructure.Parameters;
+﻿
 
 //This class can be moved to a separate library, but for two classes (+KMP algorithm), in this particular case, it makes no sense.
 namespace SortingEngine.DataStructures
@@ -18,16 +18,16 @@ namespace SortingEngine.DataStructures
 
       public IndexPriorityQueue(int capacity, TC comparer)
       {
-         _capacity = Guard.Positive(capacity);
+         _capacity = Positive(capacity);
          _items = new (T, int)[Capacity];
-         _comparer = Guard.NotNull(comparer);
+         _comparer = NotNull(comparer);
       }
 
       public IndexPriorityQueue((T, int)[] emptyBuffer, TC comparer)
       {
-         var _ = Guard.Positive(emptyBuffer.Length);
+         var _ = Positive(emptyBuffer.Length);
          _items = emptyBuffer;
-         _comparer = Guard.NotNull(comparer);
+         _comparer = NotNull(comparer);
       }
 
       public int Capacity => _capacity;
