@@ -1,6 +1,5 @@
 ﻿using System.Text;
 using Infrastructure.ByteOperations;
-using Infrastructure.Parameters;
 using SortingEngine.Algorithms;
 using SortingEngine.Entities;
 
@@ -14,8 +13,8 @@ public class LineParser
 
     public LineParser(IParticularSubstringMatcher substringMatcher, Encoding encoding)
     {
-        _substringMatcher = Guard.NotNull(substringMatcher);
-        _encoding = Guard.NotNull(encoding);
+        _substringMatcher = NotNull(substringMatcher);
+        _encoding = NotNull(encoding);
         //todo move somewhere
         _maxLength = _encoding.GetByteCount(ulong.MaxValue.ToString());
     }

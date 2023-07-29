@@ -1,5 +1,4 @@
 ﻿using System.Text;
-using Infrastructure.Parameters;
 
 namespace SortingEngine.RuntimeConfiguration;
 
@@ -54,7 +53,7 @@ public class RuntimeConfiguration : IConfig
       {
          if (string.IsNullOrEmpty(folderForChunks))
          {
-            sourceFile = Guard.PathExist(sourceFile);
+            sourceFile = PathExist(sourceFile);
 
             var sourceDir = Path.GetDirectoryName(sourceFile.AsSpan());
             string fileName = "";

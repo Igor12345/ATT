@@ -1,5 +1,4 @@
 ﻿using System.Text;
-using Infrastructure.Parameters;
 using SortingEngine.RuntimeConfiguration;
 
 namespace SortingEngine.RuntimeEnvironment
@@ -16,7 +15,7 @@ namespace SortingEngine.RuntimeEnvironment
 
       public EnvironmentAnalyzer(BaseConfiguration baseConfiguration)
       {
-         _baseConfiguration = Guard.NotNull(baseConfiguration);
+         _baseConfiguration = NotNull(baseConfiguration);
       }
 
       public IConfig SuggestConfig(string path, Encoding encoding)
@@ -73,7 +72,7 @@ namespace SortingEngine.RuntimeEnvironment
       private int SetBufferLength(int configurationLength, int defaultLength)
       {
          int bufferLength = configurationLength > 0 ? configurationLength : defaultLength;
-         return Math.Min(bufferLength, Array.MaxLength);
+         return Math.Min(bufferLength, MaxLength);
       }
 
       public IConfig SuggestConfig(ValidatedInputParameters inputParameters)
@@ -83,7 +82,7 @@ namespace SortingEngine.RuntimeEnvironment
 
       private string GetOutputPath(string path)
       {
-         path = Guard.FileExist(path);
+         path = FileExist(path);
          var fileName = Path.GetFileNameWithoutExtension(path);
          var extension = Path.GetExtension(path);
          string delimiter = extension.Length > 0 ? "." : "";

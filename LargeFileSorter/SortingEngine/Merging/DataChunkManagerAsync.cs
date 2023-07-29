@@ -1,5 +1,4 @@
 ﻿using System.Buffers;
-using Infrastructure.Parameters;
 using SortingEngine.DataStructures;
 using SortingEngine.Entities;
 using SortingEngine.RowData;
@@ -25,14 +24,14 @@ internal class DataChunkManagerAsync : IAsyncDisposable
    public DataChunkManagerAsync(Func<Stream> dataStreamFactory, Memory<byte> rowStorage, int offset, LinesExtractor extractor,
       ExpandingStorage<Line> recordsStorage, int maxLineLength, Func<Task<Result>> flushOutputBuffer, CancellationToken token)
    {
-      _rowStorage = Guard.NotNull(rowStorage);
+      _rowStorage = NotNull(rowStorage);
       _offset = offset;
-      _recordsStorage = Guard.NotNull(recordsStorage);
+      _recordsStorage = NotNull(recordsStorage);
       _dataSource = dataStreamFactory();
       _remindedBytesCapacity = maxLineLength;
-      _flushOutputBuffer = Guard.NotNull(flushOutputBuffer);
-      _extractor = Guard.NotNull(extractor);
-      _token = Guard.NotNull(token);
+      _flushOutputBuffer = NotNull(flushOutputBuffer);
+      _extractor = NotNull(extractor);
+      _token = NotNull(token);
    }
    
    public async Task<(ExtractionResult, bool, Line)> TryGetNextLineAsync()

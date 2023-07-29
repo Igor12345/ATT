@@ -1,7 +1,4 @@
-﻿using System.Text;
-using Infrastructure.ByteOperations;
-using Infrastructure.Parameters;
-using SortingEngine.Algorithms;
+﻿using SortingEngine.Algorithms;
 using SortingEngine.DataStructures;
 using SortingEngine.Entities;
 
@@ -23,9 +20,9 @@ namespace SortingEngine.RowData
       /// <param name="lineParser">The line parser</param>
       public LinesExtractor(IParticularSubstringMatcher eolFinder, int eolLength, LineParser lineParser)
       {
-         _eolFinder = Guard.NotNull(eolFinder);
-         _eolLength = Guard.NotNull(eolLength);
-         _lineParser = Guard.NotNull(lineParser);
+         _eolFinder = NotNull(eolFinder);
+         _eolLength = NotNull(eolLength);
+         _lineParser = NotNull(lineParser);
       }
 
       public ExtractionResult ExtractRecords(ReadOnlySpan<byte> input, ExpandingStorage<Line> records, int offset = 0)

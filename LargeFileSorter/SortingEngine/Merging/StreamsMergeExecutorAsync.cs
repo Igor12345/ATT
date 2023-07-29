@@ -1,5 +1,4 @@
-﻿using Infrastructure.Parameters;
-using LogsHub;
+﻿using LogsHub;
 using SortingEngine.Algorithms;
 using SortingEngine.Comparators;
 using SortingEngine.DataStructures;
@@ -27,11 +26,11 @@ public sealed class StreamsMergeExecutorAsync
       Func<string, Stream> dataStreamFactory, ILogger logger,
       CancellationToken cancellationToken)
    {
-      _config = Guard.NotNull(config);
-      _linesWriter = Guard.NotNull(linesWriter);
-      _dataStreamFactory = Guard.NotNull(dataStreamFactory);
-      _logger = Guard.NotNull(logger);
-      _cancellationToken = Guard.NotNull(cancellationToken);
+      _config = NotNull(config);
+      _linesWriter = NotNull(linesWriter);
+      _dataStreamFactory = NotNull(dataStreamFactory);
+      _logger = NotNull(logger);
+      _cancellationToken = NotNull(cancellationToken);
    }
 
    //todo file system dependence

@@ -1,5 +1,4 @@
-﻿using Infrastructure.Parameters;
-using LogsHub;
+﻿using LogsHub;
 using SortingEngine.DataStructures;
 using SortingEngine.Entities;
 using SortingEngine.RowData;
@@ -13,8 +12,8 @@ public class SetOfLinesSorter
 
     public SetOfLinesSorter(ILogger logger, Func<ReadOnlyMemory<byte>, ILinesSorter> sorterFactory)
     {
-        _logger = Guard.NotNull(logger);
-        _sorterFactory = Guard.NotNull(sorterFactory);
+        _logger = NotNull(logger);
+        _sorterFactory = NotNull(sorterFactory);
     }
 
     public async Task<AfterSortingPhasePackage> ProcessPackageAsync(SortingPhasePackage package)

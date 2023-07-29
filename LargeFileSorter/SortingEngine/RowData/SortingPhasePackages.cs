@@ -1,5 +1,4 @@
-﻿using Infrastructure.Parameters;
-using SortingEngine.DataStructures;
+﻿using SortingEngine.DataStructures;
 using SortingEngine.Entities;
 
 namespace SortingEngine.RowData;
@@ -13,13 +12,13 @@ public record FilledBufferPackage : BasePackage
         base(basePackage.Index,
             writtenBytes == 0, basePackage.Buffer, ParsedRecords)
     {
-        WrittenBytesLength = Guard.NotNegative(writtenBytes);
+        WrittenBytesLength = NotNegative(writtenBytes);
     }
 
     protected FilledBufferPackage(int Id, bool IsLastPackage, byte[] RowData, ExpandingStorage<Line> ParsedRecords, int writtenBytes) :
         base(Id, IsLastPackage, RowData, ParsedRecords)
     {
-        WrittenBytesLength = Guard.NotNegative(writtenBytes);
+        WrittenBytesLength = NotNegative(writtenBytes);
     }
 
     public int WrittenBytesLength { get; }
@@ -44,7 +43,7 @@ public record ReadyForExtractionPackage : FilledBufferPackage
     public Memory<byte> LineData { get; }
 
     private static readonly ReadyForExtractionPackage _emptyPackage =
-        new(-1, false, Array.Empty<byte>(), new ExpandingStorage<Line>(0), 0);
+        new(-1, false, Empty<byte>(), new ExpandingStorage<Line>(0), 0);
     public static ReadyForExtractionPackage Empty => _emptyPackage;
 }
 
@@ -92,5 +91,5 @@ public record PreReadPackage(
     byte[] RemainedBytes,
     int RemainedBytesLength)
 {
-    public static PreReadPackage LastPackage(int packageNumber) => new(packageNumber, true, Array.Empty<byte>(), 0);
+    public static PreReadPackage LastPackage(int packageNumber) => new(packageNumber, true, Empty<byte>(), 0);
 }
