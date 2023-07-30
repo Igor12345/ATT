@@ -1,5 +1,6 @@
 ﻿namespace SortingEngine;
 
+public record struct Error(string Message);
 
 //There are many open-source libraries, for example: https://github.com/mcintyre321/OneOf
 public record struct Result(bool Success, string Message)
