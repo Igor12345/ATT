@@ -12,14 +12,10 @@ namespace SortingEngineTests.RowDataFunctional;
 
 public class LinesExtractorTests
 {
-    public LinesExtractorTests()
-    {
-    }
-
     private readonly Encoding[] _encodings =
     {
         Encoding.UTF8,
-        // Encoding.UTF32
+        Encoding.UTF32
     };
 
     [Fact]
@@ -69,19 +65,15 @@ public class LinesExtractorTests
             Right: tail => Assert.True(false));
     }
 
-    [Fact]
-    public void FoldTest()
+    private Either<Error, string> Folder(Either<Error, string> state, Either<Error, int> next)
     {
-        var list = new List<Either<Error, int>>()
-        {
-            1, 
-            3,
-            Either<Error, int>.Left(new Error("2")),
-            Either<Error, int>.Left(new Error("4")),
-            5
-        };
-        var r = list.ToSeq().FoldTFast(0, (s, x) => s + x);
-        var t = r;
+        return state.Match(
+            Left: e => e,
+            Right: last =>
+            {
+                var t= next.Map(i => last + " " + i);
+                return t;
+            });
     }
 
     [Fact]

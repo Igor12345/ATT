@@ -13,6 +13,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\SortingEngine\SortingEngine.csproj" />
+    <ProjectReference Include="..\..\Tests\SortingEngineTests\SortingEngineTests.csproj" />
+
   </ItemGroup>
 
 
