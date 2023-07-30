@@ -28,6 +28,7 @@
     <ProjectReference Include="..\LogsHub\LogsHub.csproj" />
 
 
+
   </ItemGroup>
 
 

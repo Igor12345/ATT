@@ -28,16 +28,14 @@ namespace SortingEngine.RowData
       public ExtractionResult ExtractRecords(ReadOnlySpan<byte> input, ExpandingStorage<Line> records, int offset = 0)
       {
          int lineIndex = 0;
-         int endCurrentLineNoEol;
-         int endLine;
          int startLine = 0;
          do
          {
-            endCurrentLineNoEol = _eolFinder.Find(input[startLine..]);
+            var endCurrentLineNoEol = _eolFinder.Find(input[startLine..]);
             if (endCurrentLineNoEol <= 0)
                break;
 
-            endLine = startLine + endCurrentLineNoEol + _eolLength;
+            var endLine = startLine + endCurrentLineNoEol + _eolLength;
             var result = _lineParser.Parse(input[startLine..endLine]);
             if (!result.Success)
                return ExtractionResult.Error(result.Message);

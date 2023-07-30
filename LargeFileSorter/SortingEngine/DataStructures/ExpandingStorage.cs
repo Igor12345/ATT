@@ -10,6 +10,7 @@ namespace SortingEngine.DataStructures
       private int _lastBuffer = -1;
       private long _currentIndex;
       private readonly List<T[]> _buffers;
+      private int _count;
 
       //todo implement null object
       public static ExpandingStorage<T> Empty => new(1);
@@ -62,7 +63,10 @@ namespace SortingEngine.DataStructures
          if (_lastBuffer < 0 || _currentIndex >= _chunkSize)
             RentSpace();
          _buffers[_lastBuffer][_currentIndex++] = item;
+         _count++;
       }
+
+      public int Count => _count; 
 
       public void Clear()
       {
@@ -78,6 +82,7 @@ namespace SortingEngine.DataStructures
          _buffers.Clear();
          _lastBuffer = -1;
          _currentIndex = 0;
+         _count = 0;
       }
    }
 }
