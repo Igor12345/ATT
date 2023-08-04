@@ -99,17 +99,10 @@ public sealed class StreamsMergeExecutor :IDisposable
       Result creatingQueueResult = InitializeQueue(_managers, queue);
       if (!creatingQueueResult.Success)
          return creatingQueueResult;
-      
+
       while (queue.Any())
       {
          var (line, streamIndex) = queue.Dequeue();
-         var (extractionResult, lineAvailable, nextLine) = _managers[streamIndex].TryGetNextLine();
-         if(!extractionResult.Success)
-            return Result.Error(extractionResult.Message);
-         
-         if (lineAvailable)
-            queue.Enqueue(nextLine, streamIndex);
-
          _outputBuffer[_lastLine++] = line;
          if (_lastLine >= _outputBuffer.Length)
          {
@@ -117,8 +110,15 @@ public sealed class StreamsMergeExecutor :IDisposable
             if (!writingResult.Success)
                return writingResult;
          }
+
+         var (extractionResult, lineAvailable, nextLine) = _managers[streamIndex].TryGetNextLine();
+         if (!extractionResult.Success)
+            return Result.Error(extractionResult.Message);
+
+         if (lineAvailable)
+            queue.Enqueue(nextLine, streamIndex);
       }
-      
+
       return _lastLine == 0 ? Result.Ok : FlushOutputBuffer();
    }
 
